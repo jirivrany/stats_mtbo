@@ -3,7 +3,11 @@ from datetime import datetime
 from flask import Flask, request, flash, url_for, redirect, \
      render_template, abort, send_from_directory
 
+from flaskext.mysql import MySQL     
+
+mysql = MySQL()
 app = Flask(__name__)
+mysql.init_app(app)
 app.config.from_pyfile('flaskapp.cfg')
 
 @app.route('/')
