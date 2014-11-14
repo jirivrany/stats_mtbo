@@ -1,0 +1,8 @@
+{% extends "default.html" %}
+{% block content %}
+    <h1>Já sem admin a kdo je víc?</h1>
+    <p> Dva admini...</p>
+    {% for row in data %}
+        <p>{{ row }}</p>
+    {% endfor %}
+{% endblock %}

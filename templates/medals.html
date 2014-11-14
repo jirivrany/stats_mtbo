@@ -1,0 +1,39 @@
+{% extends "default.html" %} {% block content %}
+<h1>{{ title }}</h1>
+<div class="row">
+    <table>
+    <tr>
+        <th>Competitor</th>
+        <th>Gold</th>
+        <th>Silver</th>
+        <th>Bronze</th>
+    </tr>
+        {% for competitor_id in sort %}
+            <tr>
+                <td>
+                <a href="/competitor/{{ competitor_id }}/">
+                    {{ competitors[competitor_id]["first"] }}
+                    {{ competitors[competitor_id]["last"] }}
+                </a>
+                {{ competitors[competitor_id]["nationality"] }}
+                <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                     class="flag flag-{{ flags[competitors[competitor_id]["nationality"]].lower() }}"
+                     alt="{{ competitors[competitor_id]["nationality"] }}" />
+                {{ competitors[competitor_id]["nationality"] }}
+                </td>
+                <td>
+                    {{ table_data[competitor_id][0] }}
+                </td>
+                <td>
+                    {{ table_data[competitor_id][1] }}
+                </td>
+                <td>
+                    {{ table_data[competitor_id][2] }}
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+
+
+</div>
+{% endblock %}

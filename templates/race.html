@@ -1,0 +1,43 @@
+{% extends "default.html" %} {% block content %}
+<h1>{{ title }}</h1>
+<div class="row">
+    <div class="col-md-6">
+        <h2>Women</h2>
+        <ul>
+            {% for row in women %}
+            <li>
+                {{ row[2] }}
+                <a href="/competitor/{{ row[0] }}/">
+                    {{ competitors[row[0]]["first"] }}
+                    {{ competitors[row[0]]["last"] }}
+                </a>
+                <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                     class="flag flag-{{ flags[competitors[row[0]]["nationality"]].lower() }}"
+                     alt="{{ competitors[row[0]]["nationality"] }}" />
+                {{ competitors[row[0]]["nationality"] }}
+                {{ row[3] }}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="col-md-6">
+        <h2>Men</h2>
+        <ul>
+            {% for row in men %}
+            <li>
+                {{ row[2] }}
+                <a href="/competitor/{{ row[0] }}/">
+                    {{ competitors[row[0]]["first"] }}
+                    {{ competitors[row[0]]["last"] }}
+                </a>
+                <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                     class="flag flag-{{ flags[competitors[row[0]]["nationality"]].lower() }}"
+                     alt="{{ competitors[row[0]]["nationality"] }}" />
+                {{ competitors[row[0]]["nationality"] }}
+                {{ row[3] }}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}
