@@ -6,5 +6,5 @@ setup(name='MTBOStats',
       author='Jiri Vrany',
       author_email='jiri.vrany@gmail.com',
       url='http://www.python.org/sigs/distutils-sig/',
-     install_requires=['Flask>=0.10.1', 'MySQL-python', 'Flask-MySQL'],
+     install_requires=['Flask>=0.10.1', 'MySQL-python>=1.2.5', 'Flask-MySQL>=1.2'],
      )

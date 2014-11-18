@@ -1,49 +1,93 @@
-{% extends "default.html" %} 
-{% block content %}
+{% extends "default.html" %} {% block content %}
 <h1>MTBO stats</h1>
+
+<div id="prefetch">
+    <input class="typeahead" type="text" name="cname" placeholder="Type Competitor Name">
+</div>
+
+</form>
 <h2>Races</h2>
-    <div class="row">
-        <div class="col-md-4">
-            <h3>WMTBOC</h3>
-            <ul>
+<div class="row">
+    <div class="col-md-4">
+        <h3>WMTBOC</h3>
+        <ul>
             {% for details in wmtboc %}
-                <li>
-                    <a href="/race/{{ details[0] }}">
+            <li>
+                <a href="/race/{{ details[0] }}">
                         {{ details[1] }}
                         {{ details[4] }}
                         {{ details[3] }}
                     </a>
-                </li>
+            </li>
             {% endfor %}
-            </ul>
-        </div>
-        <div class="col-md-4">
-            <h3>EMTBOC</h3>
-            <ul>
-            {% for details in emtboc %}
-                <li>
-                    <a href="/race/{{ details[0] }}">
-                        {{ details[1] }}
-                        {{ details[4] }}
-                        {{ details[3] }}
-                    </a>
-                </li>
-            {% endfor %}
-            </ul>
-        </div>
-        <div class="col-md-4">
-            <h3>World Cup races</h3>
-            <ul>
-            {% for details in wcup %}
-                <li>
-                    <a href="/race/{{ details[0] }}">
-                        {{ details[1] }}
-                        {{ details[4] }}
-                        {{ details[3] }}
-                    </a>
-                </li>
-            {% endfor %}
-            </ul>
-        </div>
+        </ul>
     </div>
+    <div class="col-md-4">
+        <h3>EMTBOC</h3>
+        <ul>
+            {% for details in emtboc %}
+            <li>
+                <a href="/race/{{ details[0] }}">
+                        {{ details[1] }}
+                        {{ details[4] }}
+                        {{ details[3] }}
+                    </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="col-md-4">
+        <h3>World Cup races</h3>
+        <ul>
+            {% for details in wcup %}
+            <li>
+                <a href="/race/{{ details[0] }}">
+                        {{ details[1] }}
+                        {{ details[4] }}
+                        {{ details[3] }}
+                    </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<script type="text/javascript">
+var countries = new Bloodhound({
+    datumTokenizer: Bloodhound.tokenizers.obj.whitespace('name'),
+    queryTokenizer: Bloodhound.tokenizers.whitespace,
+    limit: 10,
+    prefetch: {
+        // url points to a json file that contains an array of country names, see
+        // https://github.com/twitter/typeahead.js/blob/gh-pages/data/countries.json
+        url: '/api/prefetch/competitor/',
+        // the json file contains an array of strings, but the Bloodhound
+        // suggestion engine expects JavaScript objects so this converts all of
+        // those strings
+        filter: function(respo) {
+            return respo.result;
+        }
+    }
+});
+
+// kicks off the loading/processing of `local` and `prefetch`
+countries.initialize();
+
+// passing in `null` for the `options` arguments will result in the default
+// options being used
+$('#prefetch .typeahead')
+  .typeahead(null, {
+    name: 'countries',
+    displayKey: 'name',
+    // `ttAdapter` wraps the suggestion engine in an adapter that
+    // is compatible with the typeahead jQuery plugin
+    source: countries.ttAdapter()   
+  })
+  .on('typeahead:selected', function($e, datum){
+        var new_url = "/competitor/" + datum.id + "/";
+        window.location.replace(new_url)
+        }
+    );
+</script>
+
 {% endblock %}
