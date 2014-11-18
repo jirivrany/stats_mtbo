@@ -1,7 +1,7 @@
 {% extends "default.html" %} {% block content %}
 <h1>{{ title }}</h1>
 <div class="row">
-    <table>
+    <table class="table-condensed">
     <tr>
         <th>Competitor</th>
         <th>Gold</th>
@@ -15,7 +15,6 @@
                     {{ competitors[competitor_id]["first"] }}
                     {{ competitors[competitor_id]["last"] }}
                 </a>
-                {{ competitors[competitor_id]["nationality"] }}
                 <img src="{{ url_for('static', filename='css/blank.gif') }}"
                      class="flag flag-{{ flags[competitors[competitor_id]["nationality"]].lower() }}"
                      alt="{{ competitors[competitor_id]["nationality"] }}" />

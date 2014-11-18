@@ -73,7 +73,7 @@ def competitor(competitor_id):
 
 
 @app.route('/medals_table/<event>/')
-def medals_table(event):
+def medals_table(event='WMTBOC'):
     model = Results(mysql)
     medal_lines = [model.get_place_count(place, event.upper()) for place in range(1, 4)]
 
