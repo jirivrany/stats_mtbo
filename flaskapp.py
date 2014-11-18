@@ -39,6 +39,13 @@ def nation(code, year):
 
     return flask.render_template('races_team.html', title=title, results=filered_results, competitors=sel_competitors, race_info=RACES)
 
+@app.route('/api/prefetch/competitor/')
+def search_api():
+
+    mock = [{"name": "Olga Vinogradova", "id": 6260}, {"name": "Svetlana Poverina",  "id": 4686}]
+    return flask.jsonify(result=mock)
+
+
 
 @app.route('/race/<race_id>/')
 def race(race_id):
