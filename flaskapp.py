@@ -13,8 +13,8 @@ app = flask.Flask(__name__)
 
 mysql.init_app(app)
 app.config.from_pyfile('flaskapp.cfg')
-RACES = Races(mysql).get_all()
 
+RACES = Races(mysql).get_all()
 COMPETITORS = Competitors(mysql).get_all_present()
 
 @app.route('/')
@@ -42,8 +42,9 @@ def nation(code, year):
 @app.route('/api/prefetch/competitor/')
 def search_api():
 
-    mock = [{"name": "Olga Vinogradova", "id": 6260}, {"name": "Svetlana Poverina",  "id": 4686}]
-    return flask.jsonify(result=mock)
+    data = [{"name": u"{} {}".format(val['first'], val['last']), "id": key} for key, val in COMPETITORS.iteritems()]
+
+    return flask.jsonify(result=data)
 
 
 
