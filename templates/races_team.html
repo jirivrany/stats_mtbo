@@ -8,17 +8,25 @@
                     {{ race_info[race[0][1]]['distance'] }}
                     {{ race_info[race[0][1]]['date'] }}
                 </h2>
-                <ul>
+                <table class="table-condensed">
                     {% for row in race %}
-                    <li>
+                    <tr>
+                        <th>
                         {{ row[2] }}
+                        </th>
+                        <th>
+                        
+                        <a href="/competitor/{{ competitors[row[0]]['competitor_id'] }}/">
                         {{ competitors[row[0]]["first"] }}
                         {{ competitors[row[0]]["last"] }}
-                        {{ competitors[row[0]]["nationality"] }}
+                        </a>
+                        </th>
+                        <td>
                         {{ row[3] }}
-                    </li>
+                        </td>
+                    </tr>
                     {% endfor %}
-                </ul>
+                </table>
             </div>
         </div>
     {% endfor %}
