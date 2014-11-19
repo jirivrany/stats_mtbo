@@ -6,94 +6,98 @@
     <title>MTBO Stats {{ title }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bower_components/bootstrap/dist/css/bootstrap.css') }}">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/typeahead.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/flags.css') }}">
 
-  
+
 
 </head>
 
 <body>
     <div class="container">
         <nav class="navbar navbar-default" role="navigation">
-    <div class="navbar-header">
-        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-        </button>
-        <a class="navbar-brand" href="/">MTBO stats</a>
-    </div>
-    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-        <ul class="nav navbar-nav">
-            <li><a href="/">Events</a></li>
-            <li class="dropdown">
-                <a href="/medals_table/wmtboc/" class="dropdown-toggle" data-toggle="dropdown">Medals <b class="caret"></b></a>
-                <ul class="dropdown-menu">
-                    <li><a href="/medals_table/wmtboc/">WMTBOC</a></li>
-                    <li><a href="/medals_table/emtboc/">EMTBOC</a></li>
-                    <li><a href="/medals_table/wcup/">World Cup</a></li>
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/">MTBO stats</a>
+            </div>
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav">
+                    <li><a href="/">Events</a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="/medals_table/wmtboc/" class="dropdown-toggle" data-toggle="dropdown">Medals <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="/medals_table/wmtboc/">WMTBOC</a>
+                            </li>
+                            <li><a href="/medals_table/emtboc/">EMTBOC</a>
+                            </li>
+                            <li><a href="/medals_table/wcup/">World Cup</a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li><a href="/">About</a>
+                    </li>
+
                 </ul>
-            </li>
-            <li><a href="/">About</a></li>
-            
-        </ul>
-        <div class="col-sm-3 col-md-3 pull-right">
-            <form class="navbar-form" role="search">
-                <div  class="input-group">
-                    <input id="search" type="text" class="form-control" placeholder="Type Competitor Name" name="q">
+                <div class="col-sm-3 col-md-3 pull-right">
+                    <form class="navbar-form" role="search">
+                        <div class="input-group">
+                            <input id="search" type="text" class="form-control" placeholder="Type Competitor Name" name="q">
+                            
+                        </div>
+                    </form>
                 </div>
-            </form>
-        </div>        
-    </div>
-</nav>
-                        
-        
+            </div>
+        </nav>
+
+
         {% block content %} {% endblock %}
     </div>
 
-    <script type=text/javascript src="{{ url_for('static', filename='bower_components/jquery/dist/jquery.min.js') }}"></script>
-    <script type=text/javascript src="{{ url_for('static', filename='bower_components/bootstrap/dist/js/bootstrap.js') }}"></script>
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
     <script type=text/javascript src="{{ url_for('static', filename='bower_components/typeahead.js/dist/typeahead.bundle.js') }}"></script>
     <script type="text/javascript">
-        var countries = new Bloodhound({
-            datumTokenizer: Bloodhound.tokenizers.obj.whitespace('name'),
-            queryTokenizer: Bloodhound.tokenizers.whitespace,
-            limit: 10,
-            prefetch: {
-                // url points to a json file that contains an array of country names, see
-                // https://github.com/twitter/typeahead.js/blob/gh-pages/data/countries.json
-                url: '/api/prefetch/competitor/',
-                // the json file contains an array of strings, but the Bloodhound
-                // suggestion engine expects JavaScript objects so this converts all of
-                // those strings
-                filter: function(respo) {
-                    return respo.result;
-                }
+    var countries = new Bloodhound({
+        datumTokenizer: Bloodhound.tokenizers.obj.whitespace('name'),
+        queryTokenizer: Bloodhound.tokenizers.whitespace,
+        limit: 10,
+        prefetch: {
+            // url points to a json file that contains an array of country names, see
+            // https://github.com/twitter/typeahead.js/blob/gh-pages/data/countries.json
+            url: '/api/prefetch/competitor/',
+            // the json file contains an array of strings, but the Bloodhound
+            // suggestion engine expects JavaScript objects so this converts all of
+            // those strings
+            filter: function(respo) {
+                return respo.result;
             }
-        });
+        }
+    });
 
-        // kicks off the loading/processing of `local` and `prefetch`
-        countries.initialize();
+    // kicks off the loading/processing of `local` and `prefetch`
+    countries.initialize();
 
-        // passing in `null` for the `options` arguments will result in the default
-        // options being used
-        $('#search')
-          .typeahead(null, {
+    // passing in `null` for the `options` arguments will result in the default
+    // options being used
+    $('#search')
+        .typeahead(null, {
             name: 'countries',
             displayKey: 'name',
             // `ttAdapter` wraps the suggestion engine in an adapter that
             // is compatible with the typeahead jQuery plugin
-            source: countries.ttAdapter()   
-          })
-          .on('typeahead:selected', function($e, datum){
-                var new_url = "/competitor/" + datum.id + "/";
-                window.location.replace(new_url)
-                }
-            );
+            source: countries.ttAdapter()
+        })
+        .on('typeahead:selected', function($e, datum) {
+            var new_url = "/competitor/" + datum.id + "/";
+            window.location.replace(new_url)
+        });
     </script>
 </body>
 

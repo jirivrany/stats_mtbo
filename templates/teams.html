@@ -1,0 +1,28 @@
+{% extends "default.html" %} {% block content %}
+<h1>{{ title }}</h1>
+    <table class="table-condensed">
+        <tr>
+            <th>Team</th>
+            <th>Years</th>
+        </tr>
+        {% for team in nations %}
+        <tr>
+            <td>
+                {{ team }}
+                <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                     class="flag flag-{{ flags[team].lower() }}"
+                     alt="{{ team }}" />
+                
+            </td>
+            <td>
+                {% for year in years %}
+                    <a href="/nation/{{team}}/{{year}}/">
+                    {{ year }} 
+                    </a>
+                {% endfor %}
+            </td>
+            
+        </tr>
+        {% endfor %}
+    </table>
+{% endblock %}
