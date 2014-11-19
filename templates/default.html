@@ -63,42 +63,8 @@
     <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
     <script type=text/javascript src="{{ url_for('static', filename='bower_components/typeahead.js/dist/typeahead.bundle.js') }}"></script>
-    <script type="text/javascript">
-    var countries = new Bloodhound({
-        datumTokenizer: Bloodhound.tokenizers.obj.whitespace('name'),
-        queryTokenizer: Bloodhound.tokenizers.whitespace,
-        limit: 10,
-        prefetch: {
-            // url points to a json file that contains an array of country names, see
-            // https://github.com/twitter/typeahead.js/blob/gh-pages/data/countries.json
-            url: '/api/prefetch/competitor/',
-            // the json file contains an array of strings, but the Bloodhound
-            // suggestion engine expects JavaScript objects so this converts all of
-            // those strings
-            filter: function(respo) {
-                return respo.result;
-            }
-        }
-    });
-
-    // kicks off the loading/processing of `local` and `prefetch`
-    countries.initialize();
-
-    // passing in `null` for the `options` arguments will result in the default
-    // options being used
-    $('#search')
-        .typeahead(null, {
-            name: 'countries',
-            displayKey: 'name',
-            // `ttAdapter` wraps the suggestion engine in an adapter that
-            // is compatible with the typeahead jQuery plugin
-            source: countries.ttAdapter()
-        })
-        .on('typeahead:selected', function($e, datum) {
-            var new_url = "/competitor/" + datum.id + "/";
-            window.location.replace(new_url)
-        });
-    </script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/competitor.js') }}"></script>
+    
 </body>
 
 </html>
