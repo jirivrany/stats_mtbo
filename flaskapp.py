@@ -7,7 +7,7 @@ from models.results import Results
 import operator
 from utils import tools
 from collections import defaultdict
-from datetime import date
+
 
 mysql = MySQL()
 app = flask.Flask(__name__)
@@ -32,13 +32,12 @@ def teams():
 
     title = "National teams results per year"
     nations = {com['nationality'] for com in COMPETITORS.itervalues()}
-    years = [2002,]
-    years.extend(range(2004, date.today().year + 1))
+    
 
-    years.reverse()
+    
     nations = sorted(list(nations))
 
-    return flask.render_template('teams.html', title=title, nations=nations, years=years, flags=tools.IOC_INDEX)
+    return flask.render_template('teams.html', title=title, nations=nations, years=tools.years(), flags=tools.IOC_INDEX)
 
 
 @app.route('/nation/<code>/<year>/')
@@ -58,7 +57,13 @@ def nation(code, year):
 
     if filtered_results:
         title = "Team {} results for {}".format(code, year)                   
-        return flask.render_template('races_team.html', title=title, results=filtered_results, competitors=sel_competitors, race_info=RACES)
+        return flask.render_template('races_team.html',
+                                        title=title,
+                                        results=filtered_results,
+                                        competitors=sel_competitors,
+                                        race_info=RACES,
+                                        years=tools.years(),
+                                        team=code)
     else:
         title = "No results for team {} in {}".format(code, year)
         return flask.render_template('races_team_nores.html', title=title)    

@@ -1,33 +1,38 @@
 {% extends "default.html" %} {% block content %}
 <h1>{{ title }}</h1>
-    {% for race in results %}
-        <div class="row">
-            <div class="col-md-6">
-                <h2>
-                    {{ race_info[race[0][1]]['event'] }}
-                    {{ race_info[race[0][1]]['distance'] }}
-                    {{ race_info[race[0][1]]['date'] }}
-                </h2>
-                <table class="table-condensed">
-                    {% for row in race %}
-                    <tr>
-                        <th>
-                        {{ row[2] }}
-                        </th>
-                        <th>
-                        
-                        <a href="/competitor/{{ competitors[row[0]]['competitor_id'] }}/">
+<h5>
+    {% for year in years %}
+    <a href="/nation/{{team}}/{{year}}/">
+                    {{ year }} 
+                    </a>
+    {% endfor %}
+</h5>
+{% for race in results %}
+<div class="row">
+    <div class="col-md-6">
+        <h2>
+            {{ race_info[race[0][1]]['event'] }} {{ race_info[race[0][1]]['distance'] }} {{ race_info[race[0][1]]['date'] }}
+        </h2>
+
+        <table class="table-condensed">
+            {% for row in race %}
+            <tr>
+                <th>
+                    {{ row[2] }}
+                </th>
+                <th>
+
+                    <a href="/competitor/{{ competitors[row[0]]['competitor_id'] }}/">
                         {{ competitors[row[0]]["first"] }}
                         {{ competitors[row[0]]["last"] }}
                         </a>
-                        </th>
-                        <td>
-                        {{ row[3] }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </table>
-            </div>
-        </div>
-    {% endfor %}
-{% endblock %}
+                </th>
+                <td>
+                    {{ row[3] }}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+{% endfor %} {% endblock %}

@@ -14,6 +14,12 @@
         }
     });
 
+    var redirect = function redirect(event, datum) {
+            console.log(event);
+            var new_url = '/competitor/' + datum.id + '/';
+            window.location.replace(new_url);
+    };
+
     // kicks off the loading/processing of `local` and `prefetch`
     countries.initialize();
 
@@ -23,8 +29,8 @@
             displayKey: 'name',
             source: countries.ttAdapter()
         })
-        .on('typeahead:selected', function($e, datum) {
-            var new_url = '/competitor/' + datum.id + '/';
-            window.location.replace(new_url);
-        });    
+        .on('typeahead:selected', redirect)
+        .on('typeahead:autocompleted', redirect);
+
+    
 }($, Bloodhound));
