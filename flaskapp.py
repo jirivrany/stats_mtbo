@@ -27,6 +27,12 @@ def home():
     return flask.render_template('index.html', wmtboc=wmtboc, emtboc=emtboc, wcup=wcup)
 
 
+@app.route('/about/')
+def about():
+    return flask.render_template('about.html')
+
+
+
 @app.route('/teams/')
 def teams():
 
