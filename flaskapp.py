@@ -128,7 +128,9 @@ def medals_table(event='WMTBOC'):
     gold_rank = reversed(
         [y[1] for y in sorted([(converted[x], x) for x in converted.keys()])])
 
-    title = "Medals from world championship"
+
+
+    title = "Medals from {}".format(tools.EVENT_NAMES[event.upper()])
 
     return flask.render_template('medals.html',
                                  title=title,
