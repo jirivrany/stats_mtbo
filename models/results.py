@@ -14,7 +14,7 @@ class Results(object):
         get single competitor by competitor_id
         :return {values}
         """
-        query = "SELECT * from competitor_race WHERE race_id = %s"
+        query = "SELECT * from competitor_race WHERE race_id = %s ORDER BY place"
         self.cursor.execute(query, (race_id,))
         return self.cursor.fetchall()
 
