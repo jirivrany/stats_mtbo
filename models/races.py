@@ -18,6 +18,12 @@ class Races(object):
             'date': db_result[2],
             'distance': db_result[3],
             'event': db_result[4],
+            'venue': db_result[5],
+            'country': db_result[6],
+            'url': db_result[7],
+            'map_m': db_result[8],  
+            'map_w': db_result[9],  
+            'iofurl': db_result[10] 
         }
 
         return result

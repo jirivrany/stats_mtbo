@@ -1,5 +1,10 @@
 {% extends "default.html" %} {% block content %}
 <h1>{{ title }}</h1>
+<h3>Team {{ competitor['nationality'] }}
+<img src="{{ url_for('static', filename='css/blank.gif') }}"
+                     class="flag flag-{{ flags[competitor['nationality']].lower() }}"
+                     alt="{{ competitor['nationality'] }}" /></h3>
+<h3>born {{ competitor['born'] }}</h3>
     <table class="table-condensed">
         <tr>
             <th>date</th>

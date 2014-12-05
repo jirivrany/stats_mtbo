@@ -32,9 +32,7 @@ def teams():
 
     title = "National teams results per year"
     nations = {com['nationality'] for com in COMPETITORS.itervalues()}
-    
 
-    
     nations = sorted(list(nations))
 
     return flask.render_template('teams.html', title=title, nations=nations, years=tools.years(), flags=tools.IOC_INDEX)
@@ -52,21 +50,21 @@ def nation(code, year):
     model = Results(mysql)
     all_results = [model.get_race_results(race[0]) for race in races_year]
     filtered_results = [[row for row in result if row[0] in id_comp]
-                       for result in all_results]
-    filtered_results = [result for result in filtered_results if result]                       
+                        for result in all_results]
+    filtered_results = [result for result in filtered_results if result]
 
     if filtered_results:
-        title = "Team {} results for {}".format(code, year)                   
+        title = "Team {} results for {}".format(code, year)
         return flask.render_template('races_team.html',
-                                        title=title,
-                                        results=filtered_results,
-                                        competitors=sel_competitors,
-                                        race_info=RACES,
-                                        years=tools.years(),
-                                        team=code)
+                                     title=title,
+                                     results=filtered_results,
+                                     competitors=sel_competitors,
+                                     race_info=RACES,
+                                     years=tools.years(),
+                                     team=code)
     else:
         title = "No results for team {} in {}".format(code, year)
-        return flask.render_template('races_team_nores.html', title=title)    
+        return flask.render_template('races_team_nores.html', title=title)
 
 
 @app.route('/api/prefetch/competitor/')
@@ -88,7 +86,13 @@ def race(race_id):
     men = [row for row in data if COMPETITORS[row[0]]["gender"] == 'M']
     title = "{} {} {}".format(race['event'], race['year'], race['distance'])
 
-    return flask.render_template('race.html', title=title, women=women, men=men, competitors=COMPETITORS, flags=tools.IOC_INDEX)
+    return flask.render_template('race.html',
+                                 title=title,
+                                 women=women,
+                                 men=men,
+                                 competitors=COMPETITORS,
+                                 flags=tools.IOC_INDEX,
+                                 race=race)
 
 
 @app.route('/competitor/<competitor_id>/')
@@ -97,10 +101,15 @@ def competitor(competitor_id):
     current = COMPETITORS[int(competitor_id)]
     data = model.get_competitor_results(competitor_id)
     data.sort(key=operator.itemgetter(2))
-    title = "{} {} {}".format(
-        current['first'], current['last'], current['nationality'])
+    title = "{} {}".format(
+        current['first'], current['last'])
 
-    return flask.render_template('competitor.html', title=title, results=data, races=RACES)
+    return flask.render_template('competitor.html',
+                                    title=title,
+                                    results=data,
+                                    races=RACES,
+                                    competitor=current,
+                                    flags=tools.IOC_INDEX)
 
 
 @app.route('/medals_table/<event>/')
