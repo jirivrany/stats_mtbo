@@ -10,15 +10,29 @@
                      class="flag flag-{{ flags[race['country']].lower() }}"
                      alt="{{ race['country'] }}" /> 
 </h2>
-<p>
+<h4>Basic stats</h4>
+<table class="table-condensed">
+<tr>
+    <td>men on start</td>
+    <td>{{ stats['men'] }}</td>
+</tr>
+<tr>
+    <td>women on start</td>
+    <td>{{ stats['women'] }}</td>
+</tr>
+<tr>
+    <td>coutries</td>
+    <td>{{ stats['country'] }}</td>
+</tr>
 {% if race['url'] %}
-    <a href="{{ race['url'] }}">Event website</a>
+    <tr><td colspan="2"><a href="{{ race['url'] }}">Event website</a></td></tr>
+
 {% endif %}
-&nbsp;
 {% if race['iofurl'] %}
-    <a href="http://orienteering.org/events/?event_id={{ race['iofurl'] }}">IOF results page</a>
+    <tr><td colspan="2"> <a href="http://orienteering.org/events/?event_id={{ race['iofurl'] }}">IOF results page</a></td></tr>
+
 {% endif %}
-</p>
+</table>
 </div>
 <div class="row">
     <div class="col-md-6">
