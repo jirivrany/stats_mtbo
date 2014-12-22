@@ -27,6 +27,29 @@ class Results(object):
         self.cursor.execute(query, (competitor_id, ))
         return list(self.cursor.fetchall())
 
+    def get_by_events_id(self, event_list):
+        """
+        get all results for several races
+        :param event list
+        :return list
+        """
+        query = """SELECT DISTINCT competitors.nationality
+                FROM competitor_race, competitors
+                WHERE competitor_race.competitor_id = competitors.id"""
+
+
+        if len(event_list) == 2:
+            query += " AND (competitor_race.race_id = %s OR competitor_race.race_id = %s)"
+        else:
+            query += """ AND (competitor_race.race_id = %s OR
+                        competitor_race.race_id = %s OR competitor_race.race_id = %s)"""
+
+        query += " ORDER BY competitors.nationality"
+        self.cursor.execute(query, event_list)
+        db_result = self.cursor.fetchall()
+
+        return db_result
+
     def get_place_count(self, place, event):
         """
         Counts times has some competitor finished on given place

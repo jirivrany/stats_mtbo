@@ -2,10 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="7ba053e0-d1b8-45be-bf87-52aa76f8daac" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/templates/count.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/templates/count.html" afterPath="$PROJECT_DIR$/templates/count.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/templates/default.html" afterPath="$PROJECT_DIR$/templates/default.html" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flaskapp.py" afterPath="$PROJECT_DIR$/flaskapp.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/templates/race.html" afterPath="$PROJECT_DIR$/templates/race.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/models/races.py" afterPath="$PROJECT_DIR$/models/races.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/models/results.py" afterPath="$PROJECT_DIR$/models/results.py" />
     </list>
     <ignored path="stats.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -31,8 +32,8 @@
       <file leaf-file-name="flaskapp.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/flaskapp.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="1656" max-vertical-offset="3312">
-              <caret line="116" column="101" selection-start-line="116" selection-start-column="101" selection-end-line="116" selection-end-column="101" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="270" max-vertical-offset="3294">
+              <caret line="46" column="102" selection-start-line="46" selection-start-column="102" selection-end-line="46" selection-end-column="102" />
               <folding>
                 <element signature="e#24#36#0" expanded="true" />
               </folding>
@@ -40,26 +41,19 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="race.html" pinned="false" current="true" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/templates/race.html">
+      <file leaf-file-name="results.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/models/results.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.49208632" vertical-offset="216" max-vertical-offset="1800">
-              <caret line="31" column="117" selection-start-line="31" selection-start-column="117" selection-end-line="31" selection-end-column="117" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="races.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/models/races.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1548">
-              <caret line="57" column="11" selection-start-line="57" selection-start-column="11" selection-end-line="57" selection-end-column="11" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1332">
+              <caret line="46" column="51" selection-start-line="46" selection-start-column="51" selection-end-line="46" selection-end-column="51" />
               <folding>
-                <marker date="1417722969059" expanded="true" signature="891:922" placeholder="SELECT * fro..races..." />
-                <marker date="1417722969059" expanded="true" signature="1157:1176" placeholder="SELECT * fro..races..." />
-                <marker date="1417722969059" expanded="true" signature="1560:1615" placeholder="SELECT * FRO..races..." />
-                <marker date="1417722969059" expanded="true" signature="1896:1929" placeholder="SELECT * FRO..races..." />
+                <marker date="1419257289923" expanded="true" signature="345:408" placeholder="SELECT * fro..competitor_race..." />
+                <marker date="1419257289923" expanded="true" signature="676:728" placeholder="SELECT * fro..competitor_race..." />
+                <marker date="1419257289923" expanded="true" signature="1007:1675" placeholder="SELECT DISTI..competitor_race..." />
+                <marker date="1419257289923" expanded="true" signature="1007:1165" placeholder="SELECT DISTI..competitor_race..." />
+                <marker date="1419257289923" expanded="true" signature="1248:1290" placeholder="SELECT * FRO..competitor_race..." />
+                <marker date="1419257289923" expanded="true" signature="1339:1453" placeholder="SELECT * FRO..competitor_race..." />
+                <marker date="1419257289923" expanded="true" signature="1854:2155" placeholder="SELECT t1.co..competitor_race..." />
               </folding>
             </state>
           </provider>
@@ -88,18 +82,18 @@
       <file leaf-file-name="medals.html" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/templates/medals.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-0.0" vertical-offset="0" max-vertical-offset="774">
-              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+            <state vertical-scroll-proportion="-12.0" vertical-offset="0" max-vertical-offset="774">
+              <caret line="18" column="77" selection-start-line="16" selection-start-column="16" selection-end-line="18" selection-end-column="77" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="count.html" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="count.html" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/templates/count.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-0.6666667" vertical-offset="0" max-vertical-offset="162">
-              <caret line="1" column="8" selection-start-line="1" selection-start-column="8" selection-end-line="1" selection-end-column="8" />
+            <state vertical-scroll-proportion="0.1294964" vertical-offset="0" max-vertical-offset="695">
+              <caret line="5" column="17" selection-start-line="5" selection-start-column="17" selection-end-line="5" selection-end-column="17" />
               <folding />
             </state>
           </provider>
@@ -115,21 +109,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="app.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="1188" max-vertical-offset="1386">
-              <caret line="66" column="49" selection-start-line="66" selection-start-column="49" selection-end-line="66" selection-end-column="49" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file leaf-file-name="default.html" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/templates/default.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="36" max-vertical-offset="1530">
-              <caret line="15" column="0" selection-start-line="15" selection-start-column="0" selection-end-line="15" selection-end-column="0" />
+            <state vertical-scroll-proportion="-20.0" vertical-offset="0" max-vertical-offset="1692">
+              <caret line="30" column="43" selection-start-line="30" selection-start-column="43" selection-end-line="30" selection-end-column="43" />
               <folding />
             </state>
           </provider>
@@ -149,11 +133,13 @@
     <option name="changedFiles">
       <list>
         <option value="$PROJECT_DIR$/app.py" />
-        <option value="$PROJECT_DIR$/templates/default.html" />
         <option value="$PROJECT_DIR$/templates/index.html" />
-        <option value="$PROJECT_DIR$/templates/count.html" />
-        <option value="$PROJECT_DIR$/flaskapp.py" />
         <option value="$PROJECT_DIR$/templates/race.html" />
+        <option value="$PROJECT_DIR$/models/races.py" />
+        <option value="$PROJECT_DIR$/models/results.py" />
+        <option value="$PROJECT_DIR$/flaskapp.py" />
+        <option value="$PROJECT_DIR$/templates/default.html" />
+        <option value="$PROJECT_DIR$/templates/count.html" />
       </list>
     </option>
   </component>
@@ -465,7 +451,7 @@
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.12202753" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.19148937" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
@@ -576,34 +562,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/templates/default.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="36" max-vertical-offset="540">
-          <caret line="15" column="0" selection-start-line="15" selection-start-column="0" selection-end-line="15" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/templates/index.html">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="-19.74074" vertical-offset="385" max-vertical-offset="1080">
           <caret line="51" column="0" selection-start-line="51" selection-start-column="0" selection-end-line="51" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/templates/medals.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="774">
-          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/templates/count.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-0.6666667" vertical-offset="0" max-vertical-offset="162">
-          <caret line="1" column="8" selection-start-line="1" selection-start-column="8" selection-end-line="1" selection-end-column="8" />
           <folding />
         </state>
       </provider>
@@ -626,31 +588,71 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/models/races.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1548">
-          <caret line="57" column="11" selection-start-line="57" selection-start-column="11" selection-end-line="57" selection-end-column="11" />
+        <state vertical-scroll-proportion="0.77562326" vertical-offset="646" max-vertical-offset="1584">
+          <caret line="67" column="24" selection-start-line="67" selection-start-column="24" selection-end-line="67" selection-end-column="24" />
           <folding>
-            <marker date="1417722969059" expanded="true" signature="891:922" placeholder="SELECT * fro..races..." />
-            <marker date="1417722969059" expanded="true" signature="1157:1176" placeholder="SELECT * fro..races..." />
-            <marker date="1417722969059" expanded="true" signature="1560:1615" placeholder="SELECT * FRO..races..." />
-            <marker date="1417722969059" expanded="true" signature="1896:1929" placeholder="SELECT * FRO..races..." />
+            <marker date="1419255371183" expanded="true" signature="-1:-1" placeholder="SELECT * fro..races..." />
+            <marker date="1419255371183" expanded="true" signature="-1:-1" placeholder="SELECT * fro..races..." />
+            <marker date="1419255371183" expanded="true" signature="-1:-1" placeholder="SELECT * FRO..races..." />
+            <marker date="1419255371183" expanded="true" signature="-1:-1" placeholder="SELECT * FRO..races..." />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/flaskapp.py">
+    <entry file="file://$PROJECT_DIR$/templates/medals.html">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="1656" max-vertical-offset="3312">
-          <caret line="116" column="101" selection-start-line="116" selection-start-column="101" selection-end-line="116" selection-end-column="101" />
+        <state vertical-scroll-proportion="-12.0" vertical-offset="0" max-vertical-offset="774">
+          <caret line="18" column="77" selection-start-line="16" selection-start-column="16" selection-end-line="18" selection-end-column="77" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/models/results.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1332">
+          <caret line="46" column="51" selection-start-line="46" selection-start-column="51" selection-end-line="46" selection-end-column="51" />
           <folding>
-            <element signature="e#24#36#0" expanded="true" />
+            <marker date="1419257289923" expanded="true" signature="345:408" placeholder="SELECT * fro..competitor_race..." />
+            <marker date="1419257289923" expanded="true" signature="676:728" placeholder="SELECT * fro..competitor_race..." />
+            <marker date="1419257289923" expanded="true" signature="1007:1675" placeholder="SELECT DISTI..competitor_race..." />
+            <marker date="1419257289923" expanded="true" signature="1007:1165" placeholder="SELECT DISTI..competitor_race..." />
+            <marker date="1419257289923" expanded="true" signature="1248:1290" placeholder="SELECT * FRO..competitor_race..." />
+            <marker date="1419257289923" expanded="true" signature="1339:1453" placeholder="SELECT * FRO..competitor_race..." />
+            <marker date="1419257289923" expanded="true" signature="1854:2155" placeholder="SELECT t1.co..competitor_race..." />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/templates/race.html">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.49208632" vertical-offset="216" max-vertical-offset="1800">
-          <caret line="31" column="117" selection-start-line="31" selection-start-column="117" selection-end-line="31" selection-end-column="117" />
+        <state vertical-scroll-proportion="0.75107914" vertical-offset="216" max-vertical-offset="1800">
+          <caret line="41" column="16" selection-start-line="41" selection-start-column="16" selection-end-line="41" selection-end-column="16" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/flaskapp.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="270" max-vertical-offset="3294">
+          <caret line="46" column="102" selection-start-line="46" selection-start-column="102" selection-end-line="46" selection-end-column="102" />
+          <folding>
+            <element signature="e#24#36#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templates/default.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-20.0" vertical-offset="0" max-vertical-offset="1692">
+          <caret line="30" column="43" selection-start-line="30" selection-start-column="43" selection-end-line="30" selection-end-column="43" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templates/count.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.1294964" vertical-offset="0" max-vertical-offset="695">
+          <caret line="5" column="17" selection-start-line="5" selection-start-column="17" selection-end-line="5" selection-end-column="17" />
           <folding />
         </state>
       </provider>

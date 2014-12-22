@@ -1,3 +1,26 @@
 {% extends "default.html" %} {% block content %}
-{{ races }}
+    <h1>{{ title }} participating countries</h1>
+    <table class="table-condensed">
+    <tr>
+        <th>Year</th>
+        <th>Count</th>
+        <th>List of participants</th>
+    </tr>
+    {% for year, vals in wmtboc.iteritems() %}
+        <tr>
+        <th>{{ year }}</th>
+        <td>{{ vals[0] }}</td>
+        <td>
+            {% for code in vals[1] %}
+                <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                         class="flag flag-{{ flags[code[0]].lower() }}"
+                         alt="{{ code[0] }}"
+                        title="{{ code[0] }}"/>
+            {% endfor %}
+        </td>
+        </tr>
+
+    {% endfor %}
+    </table>
+
 {% endblock %}

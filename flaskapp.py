@@ -32,20 +32,19 @@ def about():
     return flask.render_template('about.html')
 
 
-@app.route('/count/')
-def count():
-    wmtboc = Races(mysql).get_by_event('WMTBOC')
+@app.route('/all_time_participation/<event>/')
+def count(event='WMTBOC'):
+    wmtboc = Races(mysql).get_by_event(event.upper())
     per_year = defaultdict(list)
     for race in wmtboc:
         per_year[race[1]].append(race[0])
 
-    country_count = defaultdict(int)
-    for comp in COMPETITORS.itervalues():
-        country_count[comp['nationality']] += 1
+    title = event.upper()
 
-    print len(country_count)
+    wmtboc_table = {year: Results(mysql).get_by_events_id(id_list) for year, id_list in per_year.iteritems()}
+    wmtboc_table = {year: (len(flags), flags) for year, flags in wmtboc_table.iteritems()}
 
-    return flask.render_template('count.html', races=country_count)
+    return flask.render_template('count.html', wmtboc=wmtboc_table, flags=tools.IOC_INDEX, title=title)
 
 
 @app.route('/teams/')
