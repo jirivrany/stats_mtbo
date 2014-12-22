@@ -67,6 +67,8 @@ class Races(object):
 
         return db_result
 
+
+
     def get_by_year(self, year):
         """
         get all races held in given year
