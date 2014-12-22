@@ -32,6 +32,21 @@ def about():
     return flask.render_template('about.html')
 
 
+@app.route('/count/')
+def count():
+    wmtboc = Races(mysql).get_by_event('WMTBOC')
+    per_year = defaultdict(list)
+    for race in wmtboc:
+        per_year[race[1]].append(race[0])
+
+    country_count = defaultdict(int)
+    for comp in COMPETITORS.itervalues():
+        country_count[comp['nationality']] += 1
+
+    print len(country_count)
+
+    return flask.render_template('count.html', races=country_count)
+
 
 @app.route('/teams/')
 def teams():
@@ -90,12 +105,16 @@ def race(race_id):
 
     women = [row for row in data if COMPETITORS[row[0]]["gender"] == 'F']
     men = [row for row in data if COMPETITORS[row[0]]["gender"] == 'M']
+    country = {COMPETITORS[row[0]]["nationality"] for row in data}
+
+
     title = "{} {} {}".format(race['event'], race['year'], race['distance'])
 
     return flask.render_template('race.html',
                                  title=title,
                                  women=women,
                                  men=men,
+                                 stats={'men': len(men), 'women': len(women), 'country': len(country)},
                                  competitors=COMPETITORS,
                                  flags=tools.IOC_INDEX,
                                  race=race)
