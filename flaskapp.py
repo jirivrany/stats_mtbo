@@ -88,10 +88,21 @@ def nation(code, year):
 
 
 @app.route('/api/prefetch/competitor/')
-def search_api():
+def api_search():
 
     data = [{"name": u"{} {}".format(
         val['first'], val['last']), "id": key} for key, val in COMPETITORS.iteritems()]
+
+    return flask.jsonify(result=data)
+
+@app.route('/api/competitor/<competitor_id>/')
+def api_competitor(competitor_id):
+    model = Results(mysql)
+    current = COMPETITORS[int(competitor_id)]
+    data = model.get_competitor_results(competitor_id)
+    data.sort(key=operator.itemgetter(2))
+
+    data = [tools.format_competitor_row(row, RACES) for row in data]
 
     return flask.jsonify(result=data)
 
@@ -123,14 +134,13 @@ def race(race_id):
 def competitor(competitor_id):
     model = Results(mysql)
     current = COMPETITORS[int(competitor_id)]
-    data = model.get_competitor_results(competitor_id)
-    data.sort(key=operator.itemgetter(2))
+    #data = model.get_competitor_results(competitor_id)
+    #data.sort(key=operator.itemgetter(2))
     title = "{} {}".format(
         current['first'], current['last'])
 
     return flask.render_template('competitor.html',
                                     title=title,
-                                    results=data,
                                     races=RACES,
                                     competitor=current,
                                     flags=tools.IOC_INDEX)
