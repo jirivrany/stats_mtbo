@@ -1,9 +1,22 @@
-{% extends "default.html" %} 
-{% block content %}
+{% extends "default.html" %} {% block content %}
 <h1>MTBO stats</h1>
-
-
-<h2>Races</h2>
+<h2>Recent results</h2>
+<div class="row">
+    <ul class="list-unstyled">
+        {% for details in recent %}
+        <li>
+            <a href="/race/{{ details[0] }}">
+                {{ details[2] }}&nbsp;
+                {{ details[4] }} 
+                {{ details[3] }} - 
+                {{ details[5] }}
+                {{ details[6] }} 
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+<h2>All races history</h2>
 <div class="row">
     <div class="col-md-4">
         <h3>WMTBOC</h3>
@@ -48,7 +61,4 @@
         </ul>
     </div>
 </div>
-
-
-
 {% endblock %}
