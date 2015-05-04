@@ -24,7 +24,8 @@ def home():
     wmtboc = Races(mysql).get_by_event('WMTBOC')
     emtboc = Races(mysql).get_by_event('EMTBOC')
     wcup = Races(mysql).get_by_event('WCUP')
-    return flask.render_template('index.html', wmtboc=wmtboc, emtboc=emtboc, wcup=wcup)
+    recent = Races(mysql).get_by_year(2015)
+    return flask.render_template('index.html', wmtboc=wmtboc, emtboc=emtboc, wcup=wcup, recent=recent)
 
 
 @app.route('/about/')
