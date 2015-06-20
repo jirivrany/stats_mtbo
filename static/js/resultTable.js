@@ -69,8 +69,13 @@ var ResultTable = React.createClass({displayName: "ResultTable",
         
         
         var tableRows = this.props.rows.map(function(row){
-            return (React.createElement("tr", {key: row.race_id}, 
-                React.createElement("td", null,  row.date), 
+            return (
+                React.createElement("tr", {key: row.race_id}, 
+                React.createElement("td", null, 
+                    React.createElement("a", {href: "/race/" + row.race_id}, 
+                         row.date
+                    )
+                ), 
                 React.createElement("td", null,  row.result), 
                 React.createElement("td", null,  row.dist), 
                 React.createElement("td", null,  row.event), 
