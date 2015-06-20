@@ -157,14 +157,27 @@ def medals_table(event='WMTBOC'):
     gold_rank = reversed(
         [y[1] for y in sorted([(converted[x], x) for x in converted.keys()])])
 
+    rank = -1
+    skip = 1
+    ranking = []
+    prew = (0, 0, 0)
+    for comp_id in gold_rank:
+        curr = converted[comp_id]
+        if curr == prew:
+            skip += 1
+        else:
+            rank += skip
+            skip = 1
 
+        ranking.append((rank, comp_id))
+        prew = curr
 
-    title = "Medals from {}".format(tools.EVENT_NAMES[event.upper()])
+    title = "Individual medals from {}".format(tools.EVENT_NAMES[event.upper()])
 
     return flask.render_template('medals.html',
                                  title=title,
                                  table_data=converted,
-                                 sort=gold_rank,
+                                 sorting=ranking,
                                  competitors=COMPETITORS,
                                  flags=tools.IOC_INDEX)
 
