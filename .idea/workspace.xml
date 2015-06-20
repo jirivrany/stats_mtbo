@@ -2,9 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="7ba053e0-d1b8-45be-bf87-52aa76f8daac" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/flaskapp.py" afterPath="$PROJECT_DIR$/flaskapp.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/templates/medals.html" afterPath="$PROJECT_DIR$/templates/medals.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/models/races.py" afterPath="$PROJECT_DIR$/models/races.py" />
     </list>
     <ignored path="stats.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -27,12 +25,28 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="flaskapp.py" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="flaskapp.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/flaskapp.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.6731302" vertical-offset="2430" max-vertical-offset="3600">
+            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="3600">
               <caret line="169" column="20" selection-start-line="169" selection-start-column="20" selection-end-line="169" selection-end-column="20" />
               <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="races.py" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/models/races.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.82548475" vertical-offset="862" max-vertical-offset="1584">
+              <caret line="81" column="0" selection-start-line="81" selection-start-column="0" selection-end-line="81" selection-end-column="0" />
+              <folding>
+                <marker date="1434808909840" expanded="true" signature="891:922" placeholder="SELECT * fro..races..." />
+                <marker date="1434808909840" expanded="true" signature="1157:1176" placeholder="SELECT * fro..races..." />
+                <marker date="1434808909840" expanded="true" signature="1560:1615" placeholder="SELECT * FRO..races..." />
+                <marker date="1434808909840" expanded="true" signature="1898:1931" placeholder="SELECT * FRO..races..." />
+                <marker date="1434808909840" expanded="true" signature="1898:1952" placeholder="SELECT * FRO..races..." />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -113,7 +127,6 @@
         <option value="$PROJECT_DIR$/app.py" />
         <option value="$PROJECT_DIR$/templates/index.html" />
         <option value="$PROJECT_DIR$/templates/race.html" />
-        <option value="$PROJECT_DIR$/models/races.py" />
         <option value="$PROJECT_DIR$/models/results.py" />
         <option value="$PROJECT_DIR$/templates/count.html" />
         <option value="$PROJECT_DIR$/utils/tools.py" />
@@ -122,6 +135,7 @@
         <option value="$PROJECT_DIR$/static/css/style.css" />
         <option value="$PROJECT_DIR$/templates/medals.html" />
         <option value="$PROJECT_DIR$/flaskapp.py" />
+        <option value="$PROJECT_DIR$/models/races.py" />
       </list>
     </option>
   </component>
@@ -796,13 +810,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/models/races.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.77562326" vertical-offset="646" max-vertical-offset="1584">
-          <caret line="67" column="24" selection-start-line="67" selection-start-column="24" selection-end-line="67" selection-end-column="24" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/models/results.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1332">
@@ -895,9 +902,23 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/flaskapp.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.6731302" vertical-offset="2430" max-vertical-offset="3600">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="3600">
           <caret line="169" column="20" selection-start-line="169" selection-start-column="20" selection-end-line="169" selection-end-column="20" />
           <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/models/races.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.82548475" vertical-offset="862" max-vertical-offset="1584">
+          <caret line="81" column="0" selection-start-line="81" selection-start-column="0" selection-end-line="81" selection-end-column="0" />
+          <folding>
+            <marker date="1434808909840" expanded="true" signature="891:922" placeholder="SELECT * fro..races..." />
+            <marker date="1434808909840" expanded="true" signature="1157:1176" placeholder="SELECT * fro..races..." />
+            <marker date="1434808909840" expanded="true" signature="1560:1615" placeholder="SELECT * FRO..races..." />
+            <marker date="1434808909840" expanded="true" signature="1898:1931" placeholder="SELECT * FRO..races..." />
+            <marker date="1434808909840" expanded="true" signature="1898:1952" placeholder="SELECT * FRO..races..." />
+          </folding>
         </state>
       </provider>
     </entry>
