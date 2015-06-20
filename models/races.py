@@ -75,7 +75,7 @@ class Races(object):
         :param year string
         :return list
         """
-        query = "SELECT * FROM races WHERE year = %s"
+        query = "SELECT * FROM races WHERE year = %s ORDER BY date DESC"
         self.cursor.execute(query, (year,))
 
         db_result = self.cursor.fetchall()
