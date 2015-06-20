@@ -3,13 +3,17 @@
 <div class="row">
     <table class="table-condensed">
     <tr>
+        <th>Rank</th>
         <th>Competitor</th>
         <th>Gold</th>
         <th>Silver</th>
         <th>Bronze</th>
     </tr>
-        {% for competitor_id in sort %}
+        {% for nr, competitor_id in sorting %}
             <tr>
+                <td>
+                    {{ nr + 1 }}
+                </td>
                 <td>
                 <a href="/competitor/{{ competitor_id }}/">
                     {{ competitors[competitor_id]["first"] }}
