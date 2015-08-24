@@ -188,7 +188,6 @@ def testsql():
     data = list(model.get_place_count('1'))
     data.sort(key=operator.itemgetter(1))
     data.reverse()
-    # return "{} {}".format(data['first'], data['last'])
     return str(data)
 
 
