@@ -20,6 +20,11 @@
 
 <body>
     <div class="container">
+        <div class="container-fluid">
+           <div class="row">
+            <img src="{{ url_for('static', filename=['img/1.jpg', 'img/2.jpg', 'img/martina.jpg']|random ) }}" class="img-responsive">
+           </div>
+        </div>
         <nav class="navbar navbar-default" role="navigation">
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
@@ -28,7 +33,7 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="/">MTBO stats</a>
+                <a class="navbar-brand" href="/">MTBO statistics</a>
             </div>
             <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
                 <ul class="nav navbar-nav">
@@ -48,12 +53,13 @@
                     <li class="dropdown">
                         <a href="/all_time_participation/wmtboc/" class="dropdown-toggle" data-toggle="dropdown">Misc <b class="caret"></b></a>
                         <ul class="dropdown-menu">
-                            <li><a href="/all_time_participation/wmtboc/">all time participants WMTBOC</a>
+                            <li><a href="/all_time_participation/wmtboc/">All time participants WMTBOC</a>
                             </li>
-                            <li><a href="/all_time_participation/emtboc/">all time participants EMTBOC</a>
+                            <li><a href="/all_time_participation/emtboc/">All time participants EMTBOC</a>
                             </li>
                         </ul>
                     </li>
+                    <li><a href="http://orienteering.org/mtb-orienteering/">What is MTBO?</a></li>
                     <li><a href="/about/">About</a>
                     </li>
 
