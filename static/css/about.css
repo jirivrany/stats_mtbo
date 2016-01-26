@@ -2,9 +2,12 @@
     @import url(//fonts.googleapis.com/css?family=Cabin:400,500,700,400italic,500italic,700italic);
     @import url(//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css);
     body {
-        padding: 60px 0px;
+        padding: 0px;
         font-family: 'Cabin', sans-serif;
     }
+
+
+
     .animate {
         -webkit-transition: all 0.3s ease-in-out;
         -moz-transition: all 0.3s ease-in-out;
