@@ -24,7 +24,7 @@ def home():
     wmtboc = Races(mysql).get_by_event('WMTBOC')
     emtboc = Races(mysql).get_by_event('EMTBOC')
     wcup = Races(mysql).get_by_event('WCUP')
-    recent = Races(mysql).get_by_year(2015)
+    recent = Races(mysql).get_by_year(2016)
     return flask.render_template('index.html', wmtboc=wmtboc, emtboc=emtboc, wcup=wcup, recent=recent)
 
 
@@ -95,6 +95,7 @@ def api_search():
         val['first'], val['last']), "id": key} for key, val in COMPETITORS.iteritems()]
 
     return flask.jsonify(result=data)
+
 
 @app.route('/api/competitor/<competitor_id>/')
 def api_competitor(competitor_id):
