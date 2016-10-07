@@ -4,7 +4,8 @@
 # web application in a different framework.  A few examples are
 # provided (cherrypi, gevent), but this file may be altered to run
 # whatever framework is desired - or a completely customized service.
-#
+
+
 import imp
 import os
 import sys
@@ -29,7 +30,6 @@ except IOError:
 # IMPORTANT: Put any additional includes below this line.  If placed above this
 # line, it's possible required libraries won't be in your searchable path
 #
-
 
 #
 #  main():
