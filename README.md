@@ -1,6 +1,6 @@
 # Source code for mtbo.stats.eu
 
-updated 08292017
+updated 08292017-02
 
 # A basic Flask quickstart 
 *With support for serving easy APIs and static content*
