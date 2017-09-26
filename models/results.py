@@ -30,19 +30,24 @@ class Results(object):
     def get_by_events_id(self, event_list):
         """
         get all results for several races
-        :param event list
+        :param event_list
         :return list
         """
         query = """SELECT DISTINCT competitors.nationality
                 FROM competitor_race, competitors
                 WHERE competitor_race.competitor_id = competitors.id"""
 
-
         if len(event_list) == 2:
             query += " AND (competitor_race.race_id = %s OR competitor_race.race_id = %s)"
+        elif len(event_list) == 3:
+            query += """ AND (competitor_race.race_id = %s 
+                OR competitor_race.race_id = %s 
+                OR competitor_race.race_id = %s)"""
         else:
-            query += """ AND (competitor_race.race_id = %s OR
-                        competitor_race.race_id = %s OR competitor_race.race_id = %s)"""
+            query += """ AND (competitor_race.race_id = %s 
+                OR competitor_race.race_id = %s 
+                OR competitor_race.race_id = %s 
+                OR competitor_race.race_id = %s)"""
 
         query += " ORDER BY competitors.nationality"
         self.cursor.execute(query, event_list)
