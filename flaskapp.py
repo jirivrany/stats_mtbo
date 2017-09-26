@@ -8,7 +8,6 @@ import operator
 from utils import tools
 from collections import defaultdict
 
-
 mysql = MySQL()
 app = flask.Flask(__name__)
 app.config.from_pyfile('flaskapp.cfg')
@@ -51,7 +50,6 @@ def count(event='WMTBOC'):
 
 @app.route('/teams/')
 def teams():
-
     title = "National teams results per year"
     nations = {com['nationality'] for com in COMPETITORS.values()}
 
@@ -62,7 +60,6 @@ def teams():
 
 @app.route('/nation/<code>/<year>/')
 def nation(code, year):
-
     code = code.upper()
     sel_competitors = {
         cid: comp for cid, comp in COMPETITORS.items() if comp['nationality'] == code}
@@ -91,9 +88,8 @@ def nation(code, year):
 
 @app.route('/api/prefetch/competitor/')
 def api_search():
-
     data = [{"name": u"{} {}".format(
-        val['first'], val['last']), "id": key} for key, val in COMPETITORS.iteritems()]
+        val['first'], val['last']), "id": key} for key, val in COMPETITORS.items()]
 
     return flask.jsonify(result=data)
 
@@ -119,7 +115,6 @@ def race(race_id):
     men = [row for row in data if COMPETITORS[row[0]]["gender"] == 'M']
     country = {COMPETITORS[row[0]]["nationality"] for row in data}
 
-
     title = "{} {} {}".format(race['event'], race['year'], race['distance'])
 
     return flask.render_template('race.html',
@@ -142,10 +137,10 @@ def competitor(competitor_id):
         current['first'], current['last'])
 
     return flask.render_template('competitor.html',
-                                    title=title,
-                                    races=RACES,
-                                    competitor=current,
-                                    flags=tools.IOC_INDEX)
+                                 title=title,
+                                 races=RACES,
+                                 competitor=current,
+                                 flags=tools.IOC_INDEX)
 
 
 @app.route('/medals_table/<event>/')
@@ -181,15 +176,6 @@ def medals_table(event='WMTBOC'):
                                  sorting=ranking,
                                  competitors=COMPETITORS,
                                  flags=tools.IOC_INDEX)
-
-
-@app.route('/sqltest')
-def testsql():
-    model = Results(mysql)
-    data = list(model.get_place_count('1'))
-    data.sort(key=operator.itemgetter(1))
-    data.reverse()
-    return str(data)
 
 
 @app.errorhandler(404)
