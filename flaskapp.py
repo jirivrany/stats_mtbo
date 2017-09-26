@@ -11,9 +11,9 @@ from collections import defaultdict
 
 mysql = MySQL()
 app = flask.Flask(__name__)
+app.config.from_pyfile('flaskapp.cfg')
 
 mysql.init_app(app)
-app.config.from_pyfile('flaskapp.cfg')
 
 RACES = Races(mysql).get_all()
 COMPETITORS = Competitors(mysql).get_all_present()

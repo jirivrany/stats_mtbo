@@ -4,3 +4,6 @@ flaskapp.cfg
 module_cache/
 
 
+__pycache__/
+models/__pycache__/
+utils/__pycache__/
