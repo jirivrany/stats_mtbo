@@ -37,13 +37,14 @@ def about():
 def count(event='WMTBOC'):
     wmtboc = Races(mysql).get_by_event(event.upper())
     per_year = defaultdict(list)
-    for race in wmtboc:
-        per_year[race[1]].append(race[0])
+    for mrace in wmtboc:
+        per_year[mrace[1]].append(mrace[0])
 
     title = event.upper()
 
-    wmtboc_table = {year: Results(mysql).get_by_events_id(id_list) for year, id_list in per_year.iteritems()}
-    wmtboc_table = {year: (len(flags), flags) for year, flags in wmtboc_table.iteritems()}
+    wmtboc_table = {year: Results(mysql).get_by_events_id(id_list) for year, id_list in per_year.items()}
+
+    wmtboc_table = {year: (len(flags), flags) for year, flags in wmtboc_table.items()}
 
     return flask.render_template('count.html', wmtboc=wmtboc_table, flags=tools.IOC_INDEX, title=title)
 
@@ -52,7 +53,7 @@ def count(event='WMTBOC'):
 def teams():
 
     title = "National teams results per year"
-    nations = {com['nationality'] for com in COMPETITORS.itervalues()}
+    nations = {com['nationality'] for com in COMPETITORS.values()}
 
     nations = sorted(list(nations))
 
@@ -64,12 +65,12 @@ def nation(code, year):
 
     code = code.upper()
     sel_competitors = {
-        cid: comp for cid, comp in COMPETITORS.iteritems() if comp['nationality'] == code}
-    id_comp = {val['competitor_id'] for val in sel_competitors.itervalues()}
+        cid: comp for cid, comp in COMPETITORS.items() if comp['nationality'] == code}
+    id_comp = {val['competitor_id'] for val in sel_competitors.values()}
 
     races_year = Races(mysql).get_by_year(year)
     model = Results(mysql)
-    all_results = [model.get_race_results(race[0]) for race in races_year]
+    all_results = [model.get_race_results(myrace[0]) for myrace in races_year]
     filtered_results = [[row for row in result if row[0] in id_comp]
                         for result in all_results]
     filtered_results = [result for result in filtered_results if result]
@@ -100,7 +101,6 @@ def api_search():
 @app.route('/api/competitor/<competitor_id>/')
 def api_competitor(competitor_id):
     model = Results(mysql)
-    current = COMPETITORS[int(competitor_id)]
     data = model.get_competitor_results(competitor_id)
     data.sort(key=operator.itemgetter(2))
 
@@ -134,10 +134,10 @@ def race(race_id):
 
 @app.route('/competitor/<competitor_id>/')
 def competitor(competitor_id):
-    model = Results(mysql)
+    # model = Results(mysql)
     current = COMPETITORS[int(competitor_id)]
-    #data = model.get_competitor_results(competitor_id)
-    #data.sort(key=operator.itemgetter(2))
+    # data = model.get_competitor_results(competitor_id)
+    # data.sort(key=operator.itemgetter(2))
     title = "{} {}".format(
         current['first'], current['last'])
 
