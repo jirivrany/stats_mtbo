@@ -1,5 +1,6 @@
 .idea/
 *.pyc
+flaskapp.cfg
 module_cache/
 
 
