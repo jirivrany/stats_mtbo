@@ -1,6 +1,7 @@
 .idea/
 *.pyc
 flaskapp.cfg
+config.py
 module_cache/
 
 
