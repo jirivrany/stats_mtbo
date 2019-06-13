@@ -4,7 +4,7 @@
 <img src="{{ url_for('static', filename='css/blank.gif') }}"
                      class="flag flag-{{ flags[competitor['nationality']].lower() }}"
                      alt="{{ competitor['nationality'] }}" /></h3>
-<h3>born {{ competitor['born'] }}</h3>
+<h3>born {{ birth }}</h3>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.12.2/react.min.js"></script>
 
     <div id="competitor" data-cid="{{ competitor['competitor_id'] }}">
