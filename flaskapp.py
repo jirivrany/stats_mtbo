@@ -136,8 +136,11 @@ def competitor(competitor_id):
         medal_lines = [
             model.get_competitor_place_count(competitor_id, place, event.upper()) for place in range(1, 4)]
 
-        converted = tools.merge_medal_lines(*medal_lines)     
-        medal_table[event] = converted[int(competitor_id)]
+        converted = tools.merge_medal_lines(*medal_lines) 
+        try:   
+            medal_table[event] = converted[int(competitor_id)]
+        except KeyError:
+            medal_table[event] = [0,0,0]
 
 
     title = "{} {}".format(
