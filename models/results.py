@@ -71,3 +71,20 @@ class Results(object):
                     GROUP BY t1.competitor_id"
         self.cursor.execute(query, (place, event))
         return self.cursor.fetchall()
+
+    def get_competitor_place_count(self, competitor_id, place, event):
+        """
+        Counts times has some competitor finished on given place
+        :param place string
+        :param event string
+        :return
+        """
+        query = "SELECT t1.competitor_id, COUNT(t1.place)\
+                    FROM competitor_race AS t1\
+                    LEFT JOIN races AS t2\
+                    ON t1.race_id = t2.id\
+                    WHERE t1.place = %s\
+                    AND t2.event = %s\
+                    AND t1.competitor_id = %s"
+        self.cursor.execute(query, (place, event, int(competitor_id)))
+        return self.cursor.fetchall()    

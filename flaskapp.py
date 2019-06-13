@@ -129,10 +129,17 @@ def race(race_id):
 
 @app.route('/competitor/<competitor_id>/')
 def competitor(competitor_id):
-    # model = Results(mysql)
+    model = Results(mysql)
     current = COMPETITORS[int(competitor_id)]
-    # data = model.get_competitor_results(competitor_id)
-    # data.sort(key=operator.itemgetter(2))
+    medal_table = dict.fromkeys(tools.EVENT_NAMES.keys(), [])
+    for event in tools.EVENT_NAMES.keys():
+        medal_lines = [
+            model.get_competitor_place_count(competitor_id, place, event.upper()) for place in range(1, 4)]
+
+        converted = tools.merge_medal_lines(*medal_lines)     
+        medal_table[event] = converted[int(competitor_id)]
+
+
     title = "{} {}".format(
         current['first'], current['last'])
 
@@ -141,6 +148,7 @@ def competitor(competitor_id):
     return flask.render_template('competitor.html',
                                  title=title,
                                  birth=birth,
+                                 medal_table=medal_table,
                                  races=RACES,
                                  competitor=current,
                                  flags=tools.IOC_INDEX)
