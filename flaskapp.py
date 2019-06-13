@@ -7,7 +7,6 @@ from models.results import Results
 import operator
 from utils import tools
 from collections import defaultdict
-from datetime import datetime
 
 mysql = MySQL()
 app = flask.Flask(__name__)
@@ -24,8 +23,7 @@ def home():
     wmtboc = Races(mysql).get_by_event('WMTBOC')
     emtboc = Races(mysql).get_by_event('EMTBOC')
     wcup = Races(mysql).get_by_event('WCUP')
-    c_year = int(datetime.now().year)
-    recent = Races(mysql).get_by_year(c_year)
+    recent = Races(mysql).get_by_year(2019)
     return flask.render_template('index.html', wmtboc=wmtboc, emtboc=emtboc, wcup=wcup, recent=recent)
 
 
