@@ -1,0 +1,46 @@
+{% extends "default.html" %} {% block content %}
+<h1>{{ title }}</h1>
+<p>{{ disclaimer }}</p>
+<div class="row">
+    <table class="table-condensed">
+    <tr>
+        <th>Rank</th>
+        <th>Competitor</th>
+        <th>Age</th>
+        <th>Event</th>
+    </tr>
+        {% for competitor_id, result in table_data %}
+            <tr>
+                <th>
+                    {{ loop.index }}
+                </th>
+                <td>
+                <a href="/competitor/{{ competitor_id }}/">
+                    {{ competitors[competitor_id]["first"] }}
+                    {{ competitors[competitor_id]["last"] }}</a>
+                <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                     class="flag flag-{{ flags[competitors[competitor_id]["nationality"]].lower() }}"
+                     alt="{{ competitors[competitor_id]["nationality"] }}" />
+                {{ competitors[competitor_id]["nationality"] }}
+                </td>
+               
+                <td>
+                    {{ result[0] }}
+                </td>
+                {% if place %}
+                <td>
+                   <a href="/race/{{ result[1][0][0] }}">{{ medal_names[result[1][0][4]] }} {{ result[1][0][3] }} on {{ result[1][0][2] }} distance</a>
+                </td>
+                {% else %}
+                <td>
+                   <a href="/race/{{ result[1][0][0] }}">{{ result[1][0][3] }} on {{ result[1][0][2] }} distance</a>
+                </td>
+                {% endif %}
+                
+            </tr>
+        {% endfor %}
+    </table>
+
+
+</div>
+{% endblock %}

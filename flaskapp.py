@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import flask
+import sys
 from flaskext.mysql import MySQL
 from models.competitors import Competitors
 from models.races import Races
@@ -16,7 +17,13 @@ mysql.init_app(app)
 
 RACES = Races(mysql).get_all()
 COMPETITORS = Competitors(mysql).get_all_present()
-
+WMTBOC_NR = Races(mysql).get_count_by_event('WMTBOC')[0][0]
+EMTBOC_NR = Races(mysql).get_count_by_event('EMTBOC')[0][0]
+MEDAL_NAMES = {
+    1: 'Gold',
+    2: 'Silver',
+    3: 'Bronze'
+}
 
 @app.route('/')
 def home():
@@ -143,6 +150,15 @@ def competitor(competitor_id):
             medal_table[event] = [0,0,0]
 
 
+    my_wmtboc = model.get_event_competitor_participation(competitor_id, 'WMTBOC')
+    my_emtboc = model.get_event_competitor_participation(competitor_id, 'EMTBOC')
+    
+    first_medal_wmtboc = model.get_first_medal(competitor_id, 'WMTBOC')
+    first_medal_emtboc = model.get_first_medal(competitor_id, 'EMTBOC')
+
+    first_title_wmtboc = model.get_first_medal(competitor_id, 'WMTBOC', 1)
+    first_title_emtboc = model.get_first_medal(competitor_id, 'EMTBOC', 1)
+
     title = "{} {}".format(
         current['first'], current['last'])
 
@@ -152,6 +168,17 @@ def competitor(competitor_id):
                                  title=title,
                                  birth=birth,
                                  medal_table=medal_table,
+                                 wmtboc_total=WMTBOC_NR,
+                                 wmtboc_competitor=len(my_wmtboc),
+                                 wmtbo_years=", ".join(my_wmtboc),
+                                 emtboc_total=EMTBOC_NR,
+                                 emtboc_competitor=len(my_emtboc),
+                                 emtbo_years=", ".join(my_emtboc),
+                                 first_title_emtboc=first_title_emtboc,
+                                 first_title_wmtboc=first_title_wmtboc,
+                                 first_medal_emtboc=first_medal_emtboc,
+                                 first_medal_wmtboc=first_medal_wmtboc,
+                                 medal_names=MEDAL_NAMES,
                                  races=RACES,
                                  competitor=current,
                                  flags=tools.IOC_INDEX)
@@ -190,6 +217,138 @@ def medals_table(event='WMTBOC'):
                                  sorting=ranking,
                                  competitors=COMPETITORS,
                                  flags=tools.IOC_INDEX)
+
+
+@app.route('/participation/<event>/')    
+def participation_in_event(event='WMTBOC'):
+
+    model = Results(mysql)
+
+    at_last_one_participation = model.get_participation_years(event)
+
+    result = {}
+
+    for competitor_id, participation_nr in at_last_one_participation:
+        res = model.get_event_competitor_participation(competitor_id, event.upper())
+        if res:
+            result[competitor_id] = res
+    
+    result = sorted(result.items(), key=lambda kv: len(kv[1]), reverse=True)    
+
+    print(result)
+
+    title = tools.EVENT_NAMES[event.upper()]
+    tname = "{}_NR".format(event.upper())
+
+    return flask.render_template('participations.html',
+                                 title=title,
+                                 total=getattr(sys.modules[__name__], tname),
+                                 table_data=result,
+                                 competitors=COMPETITORS,
+                                 flags=tools.IOC_INDEX)
+
+
+@app.route('/young_stars/<event>/')
+@app.route('/young_stars/<event>/<int:place>/')      
+def young_stars(event='WMTBOC', place=None):
+
+    model = Results(mysql)
+
+    at_last_one_participation = model.get_participation_years(event)
+
+    result = {}
+
+    for competitor_id, participation_nr in at_last_one_participation:
+        if place:
+            place = place if place <= 3 else 3
+            res = model.get_first_medal(competitor_id, event.upper(), place)
+        else:
+            res = model.get_first_medal(competitor_id, event.upper(), 1)
+
+        if res:
+            try:
+                born = int(COMPETITORS[competitor_id]['born'].split('-')[0])
+            except ValueError:
+                born = 0
+            except AttributeError:
+                born = 0    
+                
+            if born:    
+                age = res[0][1] - born
+                result[competitor_id] = [age, res]        
+
+    result = sorted(result.items(), key=lambda kv: kv[1][0])
+    result = [res for res in result if res[1][0] <= 23]    
+
+
+
+    title = "Young stars on {}".format(tools.EVENT_NAMES[event.upper()])
+    if place:
+        disclaimer = "Competitors who got a {} medal in age 35 and older.".format(tools.EVENT_NAMES[event.upper()])
+    else:    
+        disclaimer = "Competitors who got their first {} medal before becoming 24.".format(tools.EVENT_NAMES[event.upper()])
+
+    
+    return flask.render_template('youngstars.html',
+                                 title=title,
+                                 disclaimer=disclaimer,
+                                 table_data=result,
+                                 place=place,
+                                 medal_names=MEDAL_NAMES,
+                                 competitors=COMPETITORS,
+                                 flags=tools.IOC_INDEX)
+
+
+@app.route('/great_masters/<event>/')
+@app.route('/great_masters/<event>/<int:place>/')      
+def great_masters(event='WMTBOC', place=None):
+
+    model = Results(mysql)
+
+    at_last_one_participation = model.get_participation_years(event)
+
+    result = {}
+
+    for competitor_id, participation_nr in at_last_one_participation:
+        if place:
+            place = place if place <= 3 else 3
+            res = model.get_last_medal(competitor_id, event.upper(), place)
+        else:    
+            res = model.get_last_medal(competitor_id, event.upper(), 1)
+        
+        if res:
+            try:
+                born = int(COMPETITORS[competitor_id]['born'].split('-')[0])
+            except ValueError:
+                born = 0
+            except AttributeError:
+                born = 0    
+                
+            if born:    
+                age = res[0][1] - born
+                result[competitor_id] = [age, res]        
+
+    result = sorted(result.items(), key=lambda kv: kv[1][0], reverse=True)
+    result = [res for res in result if res[1][0] >= 35]    
+
+
+    title = "Great masters on {}".format(tools.EVENT_NAMES[event.upper()])
+    if place:
+        disclaimer = "Competitors who got a {} medal in age 35 and older.".format(tools.EVENT_NAMES[event.upper()])
+    else:
+        disclaimer = "Competitors who got the {} title in age 35 and older.".format(tools.EVENT_NAMES[event.upper()])
+
+    
+    return flask.render_template('youngstars.html',
+                                 title=title,
+                                 disclaimer=disclaimer,
+                                 table_data=result,
+                                 place=place,
+                                 medal_names=MEDAL_NAMES,
+                                 competitors=COMPETITORS,
+                                 flags=tools.IOC_INDEX)
+
+
 
 
 @app.errorhandler(404)

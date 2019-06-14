@@ -3,6 +3,7 @@
 
 class Races(object):
     """Competitors Model"""
+
     def __init__(self, mysql):
         self.cursor = mysql.connect().cursor()
 
@@ -21,9 +22,9 @@ class Races(object):
             'venue': db_result[5],
             'country': db_result[6],
             'url': db_result[7],
-            'map_m': db_result[8],  
-            'map_w': db_result[9],  
-            'iofurl': db_result[10] 
+            'map_m': db_result[8],
+            'map_w': db_result[9],
+            'iofurl': db_result[10]
         }
 
         return result
@@ -56,7 +57,7 @@ class Races(object):
 
     def get_by_event(self, event):
         """
-        get all races of gifen even type
+        get all races of given event type
         :param event string
         :return list
         """
@@ -67,7 +68,18 @@ class Races(object):
 
         return db_result
 
+    def get_count_by_event(self, event):
+        """
+        get count of events of given event type
+        :param event string
+        :return list
+        """
+        query = "SELECT COUNT(DISTINCT (year)) AS yrcnt FROM races WHERE event = %s;"
+        self.cursor.execute(query, (event,))
 
+        db_result = self.cursor.fetchall()
+
+        return db_result
 
     def get_by_year(self, year):
         """

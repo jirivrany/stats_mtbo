@@ -40,13 +40,13 @@ class Results(object):
         if len(event_list) == 2:
             query += " AND (competitor_race.race_id = %s OR competitor_race.race_id = %s)"
         elif len(event_list) == 3:
-            query += """ AND (competitor_race.race_id = %s 
-                OR competitor_race.race_id = %s 
+            query += """ AND (competitor_race.race_id = %s
+                OR competitor_race.race_id = %s
                 OR competitor_race.race_id = %s)"""
         else:
-            query += """ AND (competitor_race.race_id = %s 
-                OR competitor_race.race_id = %s 
-                OR competitor_race.race_id = %s 
+            query += """ AND (competitor_race.race_id = %s
+                OR competitor_race.race_id = %s
+                OR competitor_race.race_id = %s
                 OR competitor_race.race_id = %s)"""
 
         query += " ORDER BY competitors.nationality"
@@ -54,6 +54,35 @@ class Results(object):
         db_result = self.cursor.fetchall()
 
         return db_result
+
+    def get_event_competitor_participation(self, competitor_id, event):
+        """
+        Counts times has some competitor finished on given place
+        :param place string
+        :param event string
+        :return
+        """
+        query = "SELECT DISTINCT(t2.year) \
+                    FROM competitor_race AS t1\
+                    LEFT JOIN races AS t2\
+                    ON t1.race_id = t2.id\
+                    WHERE t2.event = %s\
+                    AND t1.competitor_id = %s\
+                    ORDER BY t2.year"
+        self.cursor.execute(query, (event, int(competitor_id)))
+        res = self.cursor.fetchall()
+        return [str(x[0]) for x in res]
+
+    def get_participation_years(self, event):
+        """
+        Counts times has some competitor finished on given place
+        :param place string
+        :param event string
+        :return
+        """
+        query = "SELECT competitor_id, COUNT(race_id) FROM competitor_race WHERE race_id IN (SELECT id FROM races WHERE event='WMTBOC') GROUP BY competitor_id"            
+        self.cursor.execute(query)
+        return self.cursor.fetchall()
 
     def get_place_count(self, place, event):
         """
@@ -72,6 +101,7 @@ class Results(object):
         self.cursor.execute(query, (place, event))
         return self.cursor.fetchall()
 
+
     def get_competitor_place_count(self, competitor_id, place, event):
         """
         Counts times has some competitor finished on given place
@@ -87,4 +117,43 @@ class Results(object):
                     AND t2.event = %s\
                     AND t1.competitor_id = %s"
         self.cursor.execute(query, (place, event, int(competitor_id)))
-        return self.cursor.fetchall()    
+        return self.cursor.fetchall()
+
+    def get_first_medal(self, competitor_id, event, place=3, limit=1):
+        """
+        Counts times has some competitor finished on given place
+        :param place string
+        :param event string
+        :return
+        """
+        query = "SELECT t2.id, t2.year, t2.distance, t2.date, t1.place\
+                    FROM competitor_race AS t1\
+                    LEFT JOIN races AS t2\
+                    ON t1.race_id = t2.id\
+                    WHERE t1.place <= %s\
+                    AND t2.event = %s\
+                    AND t1.competitor_id = %s\
+                    ORDER BY t2.year\
+                    LIMIT {}".format(limit)
+        self.cursor.execute(query, (place, event, int(competitor_id)))
+        return self.cursor.fetchall()
+    
+    def get_last_medal(self, competitor_id, event, place=3, limit=1):
+        """
+        Counts times has some competitor finished on given place
+        :param place string
+        :param event string
+        :return
+        """
+        query = "SELECT t2.id, t2.year, t2.distance, t2.date, t1.place\
+                    FROM competitor_race AS t1\
+                    LEFT JOIN races AS t2\
+                    ON t1.race_id = t2.id\
+                    WHERE t1.place <= %s\
+                    AND t2.event = %s\
+                    AND t1.competitor_id = %s\
+                    ORDER BY t2.year DESC\
+                    LIMIT {}".format(limit)
+        self.cursor.execute(query, (place, event, int(competitor_id)))
+        return self.cursor.fetchall()
+    

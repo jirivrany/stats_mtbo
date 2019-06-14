@@ -32,6 +32,47 @@
                 {% endfor %}
             </table>
         </div>
+        <div class="row">
+            {% if first_title_wmtboc %}
+            <p>
+                First World Champion title on <a href="/race/{{ first_title_wmtboc[0][0] }}">{{ first_title_wmtboc[0][2]|lower }} distance in {{ first_title_wmtboc[0][1] }}</a> / age {{ first_title_wmtboc[0][1]|int - birth|int }} 
+            </p>    
+            {% endif %}
+
+            {% if first_medal_wmtboc %}
+            <p>
+                First medal from WMTBOC {{ medal_names[first_medal_wmtboc[0][4]] }} on <a href="/race/{{ first_medal_wmtboc[0][0] }}">{{ first_medal_wmtboc[0][2]|lower }} distance in {{ first_medal_wmtboc[0][1] }}</a> / age {{ first_medal_wmtboc[0][1]|int - birth|int }} 
+            </p>    
+            {% endif %}
+
+            {% if first_title_emtboc %}
+            <p>
+                First European Champion title on <a href="/race/{{ first_title_emtboc[0][0] }}">{{ first_title_emtboc[0][2]|lower }} distance in {{ first_title_emtboc[0][1] }}</a> / age {{ first_title_emtboc[0][1]|int - birth|int }} 
+            </p>    
+            {% endif %}
+
+            {% if first_medal_emtboc %}
+            <p>
+                First medal from EMTBOC {{ medal_names[first_medal_emtboc[0][4]]|lower }} on <a href="/race/{{ first_medal_emtboc[0][0] }}">{{ first_medal_emtboc[0][2] }} distance in {{ first_medal_emtboc[0][1] }}</a> / age {{ first_medal_emtboc[0][1]|int - birth|int }} 
+            </p>    
+            {% endif %}
+
+        </div>
+        <h3>Active years</h3>
+        <div class="row">
+            <p>
+                Number of WMTBOC participations <strong>{{ wmtboc_competitor }}</strong> of {{ wmtboc_total }} (total WMTBOC).
+            </p>
+            <p>
+                WMTBOC participation years : {{ wmtbo_years }}
+            </p>
+            <p>
+                Number of EMTBOC participations <strong>{{ emtboc_competitor }}</strong> of {{ emtboc_total }} (total EMTBOC).
+            </p>
+            <p>
+                EMTBOC participation years : {{ emtbo_years }}
+            </p>
+        </div>
     </div>
     <div class="col-sm-7">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.12.2/react.min.js"></script>

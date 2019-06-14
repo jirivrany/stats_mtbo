@@ -1,0 +1,36 @@
+{% extends "default.html" %} {% block content %}
+<h1>Participation on {{ title }}</h1>
+<p>So far {{ total }} {{ title }}s were held.</p>
+<div class="row">
+    <table class="table-condensed">
+    <tr>
+        <th>Nr. of events</th>
+        <th>Competitor</th>
+        <th>Years</th>
+    </tr>
+        {% for competitor_id, years in table_data %}
+            <tr>
+                <th>
+                    {{ years|length }}
+                </th>
+                <td>
+                <a href="/competitor/{{ competitor_id }}/">
+                    {{ competitors[competitor_id]["first"] }}
+                    {{ competitors[competitor_id]["last"] }}</a>
+                <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                     class="flag flag-{{ flags[competitors[competitor_id]["nationality"]].lower() }}"
+                     alt="{{ competitors[competitor_id]["nationality"] }}" />
+                {{ competitors[competitor_id]["nationality"] }}
+                </td>
+               
+                <td>
+                    {{ years|join(", ") }}
+                </td>
+                
+            </tr>
+        {% endfor %}
+    </table>
+
+
+</div>
+{% endblock %}
