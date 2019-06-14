@@ -6,5 +6,7 @@ setup(name='MTBOStats',
       author='Jiri Vrany',
       author_email='jiri.vrany@gmail.com',
       url='https://github.com/jirivrany/stats_mtbo',
-     install_requires=['Flask==0.12.2', 'PyMySQL==0.7.11', 'Flask-MySQL==1.4.0'],
+     install_requires=['Flask>=1.0.0', 'Flask-MySQL==1.4.0', 'PyMySQL==0.9.3'],
      )
+
+
