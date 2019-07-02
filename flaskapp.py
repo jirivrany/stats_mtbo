@@ -5,6 +5,7 @@ from flaskext.mysql import MySQL
 from models.competitors import Competitors
 from models.races import Races
 from models.results import Results
+from models.relays import Relays
 import operator
 from utils import tools
 from collections import defaultdict
@@ -27,8 +28,19 @@ MEDAL_NAMES = {
 
 @app.route('/')
 def home():
-    wmtboc = Races(mysql).get_by_event('WMTBOC')
-    emtboc = Races(mysql).get_by_event('EMTBOC')
+    wmtboc_solo = Races(mysql).get_by_event('WMTBOC')
+    emtboc_solo = Races(mysql).get_by_event('EMTBOC')
+    wmtboc_relays = Relays(mysql).get_by_event('WMTBOC')
+    emtboc_relays = Relays(mysql).get_by_event('EMTBOC')
+    
+    wmtboc = wmtboc_solo + wmtboc_relays
+    emtboc = emtboc_solo + emtboc_relays
+
+    wmtboc = sorted(wmtboc, key=lambda x: x[1], reverse=True)
+
+    for rr in wmtboc:
+        print(rr)
+
     wcup = Races(mysql).get_by_event('WCUP')
     recent = Races(mysql).get_by_year(2019)
     return flask.render_template('index.html', wmtboc=wmtboc, emtboc=emtboc, wcup=wcup, recent=recent)
@@ -162,7 +174,10 @@ def competitor(competitor_id):
     title = "{} {}".format(
         current['first'], current['last'])
 
-    birth = current['born'].split('-')[0]
+    try:
+        birth = current['born'].split('-')[0]
+    except AttributeError:
+        birth = None    
 
     return flask.render_template('competitor.html',
                                  title=title,
