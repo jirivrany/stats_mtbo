@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import date
 
 IOC_INDEX = {'LIE': 'LI', 'EGY': 'EG', 'LIB': 'LB', 'QAT': 'QA', 'SOM': 'SO', 'BOT': 'BW', 'PAR': 'PY', 'NAM': 'NA',
@@ -31,6 +32,94 @@ EVENT_NAMES = {'WMTBOC': 'World MTBO championship',
                'EMTBOC': 'European MTBO championship',
                'WCUP': 'MTBO World Cup'}
 
+def prepare_relay_output(source_list):
+
+    output = defaultdict(list)
+    for wom in source_list:
+        output[wom[5]].append(wom)
+
+    wmn = { key:sorted(wom, key=lambda x: x[4]) for key, wom in output.items()}
+
+    output = {}
+    for ioc_code, team in wmn.items():
+        country = team[0][5].upper()
+        output[ioc_code] = {
+            'place': team[0][2],
+            'country': country,
+            'flag': IOC_INDEX[country].lower(),
+            'time': team[0][3],
+            'members': [(x[0], x[4]) for x in team]
+        }
+    
+    return output    
+
+def prepare_medal_table(model, competitor_id, table="race"):
+
+    if table=="relay":
+        mkeys = ['WMTBOC', 'EMTBOC']
+    else:
+        mkeys = ['WMTBOC', 'EMTBOC', 'WCUP']
+
+    medal_table = dict.fromkeys(mkeys, [])
+    for event in mkeys:
+        medal_lines = [
+            model.get_competitor_place_count(competitor_id, place, event.upper(), table) for place in range(1, 4)]
+
+        converted = merge_medal_lines(*medal_lines) 
+        try:   
+            medal_table[event] = converted[int(competitor_id)]
+        except KeyError:
+            medal_table[event] = [0,0,0]
+
+    return medal_table        
+
+def merge_medal_dicts(rank_a, rank_b):
+    """
+    rank_a = {270: [2, 2, 2], 313: [2, 1, 1]}
+    rank_b = {270: [1, 1, 0], 230: [1, 1, 1]}
+
+    expected_result = {
+      270: [3, 3, 2],
+      313: [2, 1, 1],
+      230: [1, 1, 1]
+    }
+    """
+    result = {}
+    for key, val in rank_a.items():
+        try:
+            result[key] = [a+b for a, b in zip(val, rank_b[key])]
+        except KeyError:
+            result[key] = val   
+
+    have = set(result.keys())
+    intheb = set(rank_b.keys())
+    needed = intheb.difference(have)
+
+    for key in needed:
+        result[key] = rank_b[key]
+
+    return result        
+
+def sort_medal_table(converted):
+    gold_rank = reversed(
+        [y[1] for y in sorted([(converted[x], x) for x in converted.keys()])])
+
+    rank = -1
+    skip = 1
+    ranking = []
+    prew = (0, 0, 0)
+    for comp_id in gold_rank:
+        curr = converted[comp_id]
+        if curr == prew:
+            skip += 1
+        else:
+            rank += skip
+            skip = 1
+
+        ranking.append((rank, comp_id))
+        prew = curr
+
+    return ranking    
 
 def years():
     """

@@ -35,8 +35,15 @@ class Competitors(object):
         query = "SELECT DISTINCT competitor_id from competitor_race"
         self.cursor.execute(query)
 
-        db_result = self.cursor.fetchall()
+        races = self.cursor.fetchall()
+
+        query = "SELECT DISTINCT competitor_id from competitor_relay"
+        self.cursor.execute(query)
+
+        relays = self.cursor.fetchall()
         result = {}
+
+        db_result = races + relays
 
         for competitor_id in db_result:
             result[competitor_id[0]] = self.get_id(competitor_id)

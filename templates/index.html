@@ -23,10 +23,10 @@
         <ul class="list-unstyled">
             {% for details in wmtboc %}
             <li>
-                <a href="/race/{{ details[0] }}">
+                        <a href="/race/{{ details[0] }}">
                         {{ details[1] }}
                         {{ details[4] }}
-                        {{ details[3] }}
+                        {{ details[3]|capitalize }}
                     </a>
             </li>
             {% endfor %}
@@ -37,11 +37,11 @@
         <ul class="list-unstyled">
             {% for details in emtboc %}
             <li>
-                <a href="/race/{{ details[0] }}">
-                        {{ details[1] }}
-                        {{ details[4] }}
-                        {{ details[3] }}
-                    </a>
+                    <a href="/race/{{ details[0] }}">
+                    {{ details[1] }}
+                    {{ details[4] }}
+                    {{ details[3]|capitalize }}
+                </a>
             </li>
             {% endfor %}
         </ul>

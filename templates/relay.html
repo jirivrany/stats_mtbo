@@ -1,0 +1,56 @@
+{% extends "default.html" %} {% block content %}
+<div class="row">
+
+<h1>{{ title }}</h1>
+<h2>
+{{ race['date'] }}
+{{ race['venue'] }}
+{{ race['country'] }}
+<img src="{{ url_for('static', filename='css/blank.gif') }}"
+                     class="flag flag-{{ flags[race['country']].lower() }}"
+                     alt="{{ race['country'] }}" /> 
+</h2>
+<h4>Basic stats</h4>
+<table class="table-condensed">
+<tr>
+    <td>Men teams on start</td>
+    <td>{{ stats['men'] }}</td>
+</tr>
+<tr>
+    <td>Women teams on start</td>
+    <td>{{ stats['women'] }}</td>
+</tr>
+<tr>
+    <td>Countries with relay</td>
+    <td>{{ stats['country'] }}</td>
+</tr>
+{% if race['url'] %}
+    <tr><td colspan="2"><a href="{{ race['url'] }}">Event website</a></td></tr>
+
+{% endif %}
+{% if race['iofurl'] %}
+    <tr><td colspan="2"> <a href="http://orienteering.org/events/?event_id={{ race['iofurl'] }}">IOF results page</a></td></tr>
+
+{% endif %}
+</table>
+</div>
+<div class="row">
+    <div class="col-md-6">
+        <h2>Women</h2>
+        <table class="table-condensed">
+            {% for code, team in women.items() %}
+                {% include 'relay_table_row.html' %}
+            {% endfor %}
+        </table>
+    </div>
+    <div class="col-md-6">
+        <h2>Men</h2>
+        <table class="table-condensed">
+            {% for code, team in men.items() %}
+                {% include 'relay_table_row.html' %}
+            {% endfor %}
+        </table>
+    </div>
+</div>
+{% include 'relay_disclaimer.html' %}
+{% endblock %}

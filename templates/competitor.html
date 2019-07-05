@@ -7,7 +7,7 @@
         <h3>born {{ birth }}</h3>
         <h3>Individual medals</h3>
         <div class="row">
-            <table class="table-condensed">
+            <table class="table table-bordered table-condensed">
                 <tr>
                     <th>Event</th>
                     <th>Gold</th>
@@ -33,27 +33,80 @@
             </table>
         </div>
         <div class="row">
-            {% if first_title_wmtboc %}
+            {% if first_medals['title_wmtboc'] %}
             <p>
-                First World Champion title on <a href="/race/{{ first_title_wmtboc[0][0] }}">{{ first_title_wmtboc[0][2]|lower }} distance in {{ first_title_wmtboc[0][1] }}</a> / age {{ first_title_wmtboc[0][1]|int - birth|int }} 
+                First individual World Champion title on <a href="/race/{{ first_medals['title_wmtboc'][0][0] }}">{{ first_medals['title_wmtboc'][0][2]|lower }} distance in {{ first_medals['title_wmtboc'][0][1] }}</a> / age {{ first_medals['title_wmtboc'][0][1]|int - birth|int }} 
             </p>    
             {% endif %}
 
-            {% if first_medal_wmtboc %}
+            {% if first_medals['medal_wmtboc'] %}
             <p>
-                First medal from WMTBOC {{ medal_names[first_medal_wmtboc[0][4]] }} on <a href="/race/{{ first_medal_wmtboc[0][0] }}">{{ first_medal_wmtboc[0][2]|lower }} distance in {{ first_medal_wmtboc[0][1] }}</a> / age {{ first_medal_wmtboc[0][1]|int - birth|int }} 
+                First individual medal from WMTBOC {{ medal_names[first_medals['medal_wmtboc'][0][4]] }} on <a href="/race/{{ first_medals['medal_wmtboc'][0][0] }}">{{ first_medals['medal_wmtboc'][0][2]|lower }} distance in {{ first_medals['medal_wmtboc'][0][1] }}</a> / age {{ first_medals['medal_wmtboc'][0][1]|int - birth|int }} 
             </p>    
             {% endif %}
 
-            {% if first_title_emtboc %}
+            {% if first_medals['title_emtboc'] %}
             <p>
-                First European Champion title on <a href="/race/{{ first_title_emtboc[0][0] }}">{{ first_title_emtboc[0][2]|lower }} distance in {{ first_title_emtboc[0][1] }}</a> / age {{ first_title_emtboc[0][1]|int - birth|int }} 
+                First individual European Champion title on <a href="/race/{{ first_medals['title_emtboc'][0][0] }}">{{ first_medals['title_emtboc'][0][2]|lower }} distance in {{ first_medals['title_emtboc'][0][1] }}</a> / age {{ first_medals['title_emtboc'][0][1]|int - birth|int }} 
             </p>    
             {% endif %}
 
-            {% if first_medal_emtboc %}
+            {% if first_medals['medal_emtboc'] %}
             <p>
-                First medal from EMTBOC {{ medal_names[first_medal_emtboc[0][4]]|lower }} on <a href="/race/{{ first_medal_emtboc[0][0] }}">{{ first_medal_emtboc[0][2] }} distance in {{ first_medal_emtboc[0][1] }}</a> / age {{ first_medal_emtboc[0][1]|int - birth|int }} 
+                First individual medal from EMTBOC {{ medal_names[first_medals['medal_emtboc'][0][4]]|lower }} on <a href="/race/{{ first_medals['medal_emtboc'][0][0] }}">{{ first_medals['medal_emtboc'][0][2] }} distance in {{ first_medals['medal_emtboc'][0][1] }}</a> / age {{ first_medals['medal_emtboc'][0][1]|int - birth|int }} 
+            </p>    
+            {% endif %}
+
+        </div>
+        <h3>Relay medals</h3>
+        <div class="row">
+            <table class="table table-bordered table-condensed">
+                <tr>
+                    <th>Event</th>
+                    <th>Gold</th>
+                    <th>Silver</th>
+                    <th>Bronze</th>
+                </tr>
+                {% for event, medals in relay_medal_table.items() %}
+                <tr>
+                    <td>
+                        {{ event }}
+                    </td>
+                    <td>
+                        {{ medals[0] }}
+                    </td>
+                    <td>
+                        {{ medals[1] }}
+                    </td>
+                    <td>
+                        {{ medals[2] }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        <div class="row">
+            {% if first_medals['relay_title_wmtboc'] %}
+            <p>
+                First relay World Champion title <a href="/race/{{ first_medals['relay_title_wmtboc'][0][0] }}">in {{ first_medals['relay_title_wmtboc'][0][1] }}</a> / age {{ first_medals['relay_title_wmtboc'][0][1]|int - birth|int }} 
+            </p>    
+            {% endif %}
+
+            {% if first_medals['relay_medal_wmtboc'] %}
+            <p>
+                First relay medal from WMTBOC {{ medal_names[first_medals['relay_medal_wmtboc'][0][4]] }} <a href="/race/{{ first_medals['relay_medal_wmtboc'][0][0] }}">in {{ first_medals['relay_medal_wmtboc'][0][1] }}</a> / age {{ first_medals['relay_medal_wmtboc'][0][1]|int - birth|int }} 
+            </p>    
+            {% endif %}
+
+            {% if first_medals['relay_title_emtboc'] %}
+            <p>
+                First relay European Champion title <a href="/race/{{ first_medals['relay_title_emtboc'][0][0] }}">in {{ first_medals['relay_title_emtboc'][0][1] }}</a> / age {{ first_medals['relay_title_emtboc'][0][1]|int - birth|int }} 
+            </p>    
+            {% endif %}
+
+            {% if first_medals['relay_medal_emtboc'] %}
+            <p>
+                First relay medal from EMTBOC {{ medal_names[first_medals['relay_medal_emtboc'][0][4]]|lower }} <a href="/race/{{ first_medals['relay_medal_emtboc'][0][0] }}">in {{ first_medals['relay_medal_emtboc'][0][1] }}</a> / age {{ first_medals['relay_medal_emtboc'][0][1]|int - birth|int }} 
             </p>    
             {% endif %}
 

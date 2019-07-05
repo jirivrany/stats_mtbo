@@ -1,41 +1,48 @@
 {% extends "default.html" %} {% block content %}
 <h1>{{ title }}</h1>
+<p>
+    We have {{ table_content['individual'][0]|length}} competitors with at last one individual medal in the list.
+</p>    
 <div class="row">
-    <table class="table-condensed">
-    <tr>
-        <th>Rank</th>
-        <th>Competitor</th>
-        <th>Gold</th>
-        <th>Silver</th>
-        <th>Bronze</th>
-    </tr>
-        {% for nr, competitor_id in sorting %}
-            <tr>
-                <td>
-                    {{ nr + 1 }}
-                </td>
-                <td>
-                <a href="/competitor/{{ competitor_id }}/">
-                    {{ competitors[competitor_id]["first"] }}
-                    {{ competitors[competitor_id]["last"] }}</a>
-                <img src="{{ url_for('static', filename='css/blank.gif') }}"
-                     class="flag flag-{{ flags[competitors[competitor_id]["nationality"]].lower() }}"
-                     alt="{{ competitors[competitor_id]["nationality"] }}" />
-                {{ competitors[competitor_id]["nationality"] }}
-                </td>
-                <td>
-                    {{ table_data[competitor_id][0] }}
-                </td>
-                <td>
-                    {{ table_data[competitor_id][1] }}
-                </td>
-                <td>
-                    {{ table_data[competitor_id][2] }}
-                </td>
-            </tr>
-        {% endfor %}
-    </table>
+    {% for col, content in table_content.items() %}
+    <div class="col-sm-4">
+        <h3>{{col|capitalize}}</h3>
+        <table class="table-condensed">
+        <tr>
+            <th>Rank</th>
+            <th>Competitor</th>
+            <th>Gold</th>
+            <th>Silver</th>
+            <th>Bronze</th>
+        </tr>
+            {% for nr, competitor_id in content[1] %}
+                <tr>
+                    <td>
+                        {{ nr + 1 }}
+                    </td>
+                    <td>
+                    <a href="/competitor/{{ competitor_id }}/">
+                        {{ competitors[competitor_id]["first"] }}
+                        {{ competitors[competitor_id]["last"] }}</a>
+                    <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                         class="flag flag-{{ flags[competitors[competitor_id]["nationality"]].lower() }}"
+                         alt="{{ competitors[competitor_id]["nationality"] }}" />
+                    {{ competitors[competitor_id]["nationality"] }}
+                    </td>
+                    <td>
+                        {{ content[0][competitor_id][0] }}
+                    </td>
+                    <td>
+                        {{ content[0][competitor_id][1] }}
+                    </td>
+                    <td>
+                        {{ content[0][competitor_id][2] }}
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
 
-
+    </div>    
+    {% endfor %}
 </div>
 {% endblock %}

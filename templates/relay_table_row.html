@@ -1,0 +1,22 @@
+{% block relay_table_row %}
+<tr>
+    <th>
+    {{ team['place'] }}
+    </th>
+    <td>
+    <img src="{{ url_for('static', filename='css/blank.gif') }}"
+         class="flag flag-{{ team['flag'] }}"
+         alt="{{ team['country'] }}" />
+         <br/>
+    {{ team['country'] }}
+    </td>
+    <th>
+        {% for row in team['members'] %}
+            <a href="/competitor/{{ row[0] }}/">{{ competitors[row[0]]["first"] }} {{ competitors[row[0]]["last"] }}</a>{% if not loop.last%},{% endif %} 
+        {% endfor %}    
+    </th>
+    <td>
+    {{ team['time'] }}
+    </td>
+</tr>
+{% endblock %}            

@@ -1,7 +1,7 @@
 __author__ = 'albert'
 # -*- coding: utf-8 -*-
 
-import tools
+from utils import tools
 
 
 def test_base_dict():
@@ -40,3 +40,15 @@ def test_merge_tuples():
 
     assert expected_result == tools.merge_medal_lines(line_a, line_b, line_c)
 
+
+def test_merge_medal_dicts():
+    rank_a = {270: [2, 2, 2], 313: [2, 1, 1]}
+    rank_b = {270: [1, 1, 0], 230: [1, 1, 1]}
+
+    expected_result = {
+      270: [3, 3, 2],
+      313: [2, 1, 1],
+      230: [1, 1, 1]
+    }
+
+    assert expected_result == tools.merge_medal_dicts(rank_a, rank_b)
