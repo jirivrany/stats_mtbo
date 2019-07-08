@@ -1,7 +1,7 @@
 {% extends "default.html" %} {% block content %}
 <h1>{{ title }}</h1>
 <p>
-    We have {{ table_content['individual'][0]|length}} competitors with at last one individual medal in the list.
+    We have <strong>{{ stats['individual'] }} individual medalists</strong> from <strong>{{ stats['indiv_countries'] }} countries</strong>. In the relay competitions <strong>{{ stats['relay'] }} competitors</strong> from <strong>{{ stats['rel_countries'] }} countries</strong> won the medal so far. 
 </p>    
 <div class="row">
     {% for col, content in table_content.items() %}

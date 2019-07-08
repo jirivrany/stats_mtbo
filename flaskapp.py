@@ -237,6 +237,17 @@ def medals_table(event='WMTBOC'):
     ranking_together = tools.sort_medal_table(together)
 
 
+    countries = {COMPETITORS[com_id]["nationality"] for com_id in converted.keys()}
+    rel_countries = {COMPETITORS[com_id]["nationality"] for com_id in converted_relay.keys()}
+
+    stats = {
+        'individual': len(converted),
+        'indiv_countries': len(countries),
+        'relay': len(converted_relay),
+        'rel_countries': len(rel_countries)
+    }
+
+    
     table_content = {
         'all': (together, ranking_together),
         'individual': (converted, ranking),
@@ -248,6 +259,7 @@ def medals_table(event='WMTBOC'):
 
     return flask.render_template('medals.html',
                                  title=title,
+                                 stats=stats,
                                  table_content=table_content,
                                  competitors=COMPETITORS,
                                  flags=tools.IOC_INDEX)
