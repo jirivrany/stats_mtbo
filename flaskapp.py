@@ -8,6 +8,8 @@ from models.results import Results
 import operator
 from utils import tools
 from collections import defaultdict
+from functools import lru_cache
+
 
 mysql = MySQL()
 app = flask.Flask(__name__)
@@ -25,7 +27,7 @@ MEDAL_NAMES = {
     3: 'Bronze'
 }
 
-
+@lru_cache()
 @app.route('/')
 def home():
     wmtboc = Races(mysql).get_by_event('WMTBOC')
@@ -43,7 +45,7 @@ def home():
 def about():
     return flask.render_template('about.html')
 
-
+@lru_cache()
 @app.route('/all_time_participation/<event>/')
 def count(event='WMTBOC'):
     wmtboc = Races(mysql).get_by_event(event.upper())
@@ -108,21 +110,15 @@ def api_search():
     return flask.jsonify(result=data)
 
 
-@app.route('/api/competitor/<competitor_id>/')
-def api_competitor(competitor_id):
-    model = Results(mysql)
-    data = model.get_competitor_results(competitor_id)
-    data.sort(key=operator.itemgetter(2))
-
-    data = [tools.format_competitor_row(row, RACES) for row in data]
-
-    return flask.jsonify(result=data)
-
-
+@lru_cache()
 @app.route('/race/<int:race_id>/')
 def race(race_id):
     model = Results(mysql)
-    race = RACES[int(race_id)]
+    try:
+        race = RACES[int(race_id)]
+    except KeyError:
+        flask.abort(404)
+
     data = model.get_race_results(race_id)
     title = "{} {} {}".format(race['event'], race['year'], race['distance'])
 
@@ -169,11 +165,22 @@ def race(race_id):
                                      flags=tools.IOC_INDEX,
                                      race=race)
 
-
+@lru_cache()
 @app.route('/competitor/<competitor_id>/')
 def competitor(competitor_id):
     model = Results(mysql)
-    current = COMPETITORS[int(competitor_id)]
+    try:
+        current = COMPETITORS[int(competitor_id)]
+    except KeyError:
+        flask.abort(404)    
+
+    data = model.get_competitor_results(competitor_id)
+    data.sort(key=operator.itemgetter(2))
+
+    data = [tools.format_competitor_row(row, RACES) for row in data]
+
+    distances = list({row['dist'] for row in data})
+
     medal_table = tools.prepare_medal_table(model, competitor_id)
     relay_medal_table = tools.prepare_medal_table(
         model, competitor_id, "relay")
@@ -217,9 +224,11 @@ def competitor(competitor_id):
                                  medal_names=MEDAL_NAMES,
                                  races=RACES,
                                  competitor=current,
+                                 data=data,
+                                 distances=distances,
                                  flags=tools.IOC_INDEX)
 
-
+@lru_cache()
 @app.route('/medals_table/<event>/')
 def medals_table(event='WMTBOC'):
     model = Results(mysql)
@@ -264,7 +273,7 @@ def medals_table(event='WMTBOC'):
                                  competitors=COMPETITORS,
                                  flags=tools.IOC_INDEX)
 
-
+@lru_cache()
 @app.route('/participation/<event>/')
 def participation_in_event(event='WMTBOC'):
 
@@ -282,8 +291,6 @@ def participation_in_event(event='WMTBOC'):
 
     result = sorted(result.items(), key=lambda kv: len(kv[1]), reverse=True)
 
-    print(result)
-
     title = tools.EVENT_NAMES[event.upper()]
     tname = "{}_NR".format(event.upper())
 
@@ -294,7 +301,7 @@ def participation_in_event(event='WMTBOC'):
                                  competitors=COMPETITORS,
                                  flags=tools.IOC_INDEX)
 
-
+@lru_cache()
 @app.route('/young_stars/<event>/')
 @app.route('/young_stars/<event>/<int:place>/')
 def young_stars(event='WMTBOC', place=None):
@@ -344,7 +351,7 @@ def young_stars(event='WMTBOC', place=None):
                                  competitors=COMPETITORS,
                                  flags=tools.IOC_INDEX)
 
-
+@lru_cache()
 @app.route('/great_masters/<event>/')
 @app.route('/great_masters/<event>/<int:place>/')
 def great_masters(event='WMTBOC', place=None):

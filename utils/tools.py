@@ -163,12 +163,13 @@ def format_competitor_row(row, races):
     :param races: races info
     :return: list of formated values
     """
-
+    daystr = races[row[1]]['date'].strftime("%a %b %d %Y")
+    
     return {
             'race_id': row[1],
-            'date': races[row[1]]['date'],
+            'date': daystr,
             'result': row[2],
-            'dist': races[row[1]]['distance'],
+            'dist': races[row[1]]['distance'].lower().replace("-","_"),
             'event': races[row[1]]['event'],
             'rtime': row[3]
             }

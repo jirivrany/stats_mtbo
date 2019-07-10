@@ -1,20 +1,32 @@
 {% extends "default.html" %} {% block content %}
 <h1>MTBO stats</h1>
-<h2>Recent results</h2>
-<div class="row">
-    <ul class="list-unstyled">
-        {% for details in recent %}
-        <li>
-            <a href="/race/{{ details[0] }}">
-                {{ details[2] }}&nbsp;
-                {{ details[4] }} 
-                {{ details[3] }} - 
-                {{ details[5] }}
-                {{ details[6] }} 
-            </a>
-        </li>
-        {% endfor %}
-    </ul>
+<div class="container-fluid">
+    <div class="col-md-5">
+        <h2>Recent results</h2>
+        <ul class="list-unstyled">
+            {% for details in recent %}
+            <li>
+                <a href="/race/{{ details[0] }}">
+                    {{ details[2] }}&nbsp;
+                    {{ details[4] }} 
+                    {{ details[3] }} - 
+                    {{ details[5] }}
+                    {{ details[6] }} 
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="col-md-7">
+        <h2>Whats new?</h2>
+        <div class="well">
+            <ul>
+                <li>The Relay results are finally here. Check out the new medal tables for <a href="/medals_table/wmtboc/">WMTBOC</a> and <a href="/medals_table/wmtboc/">EMTBOC</a>.</li>
+                <li>New filtering and sorting options in the athlete detail. Just click and filter out the distances or events to see the desired results more clearly.</li>
+                <li>Ever wondered who is the <a href="/young_stars/wmtboc/">youngest world champion</a> of all time? Or who got the elite world medal from in master age? Then check out the <a href="/young_stars/wmtboc/">young stars</a> and <a href="/great_masters/wmtboc/3/">great masters</a> lists. See the list under medals menu for all the options.</li>
+            </ul>
+        </div>
+    </div>    
 </div>
 <h2>All races history</h2>
 <div class="row">
