@@ -336,7 +336,7 @@ def young_stars(event='WMTBOC', place=None):
 
     title = "Young stars on {}".format(tools.EVENT_NAMES[event.upper()])
     if place:
-        disclaimer = "Competitors who got a {} medal in age 35 and older.".format(
+        disclaimer = "Competitors who got a {} medal in age 24 or younger.".format(
             tools.EVENT_NAMES[event.upper()])
     else:
         disclaimer = "Competitors who got their first {} medal before becoming 24.".format(
