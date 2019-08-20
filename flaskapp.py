@@ -27,6 +27,17 @@ MEDAL_NAMES = {
     3: 'Bronze'
 }
 
+DISTANCE_NAMES = {
+    'long' : 'Long',
+    'mass-start' : 'Mass Start',
+    'mass_start' : 'Mass Start',
+    'middle' : 'Middle',
+    'mix-relay' : 'Mix Relay',
+    'relay' : 'Relay',
+    'sprint' : 'Sprint',
+    'sprint-relay' : 'Sprint Relay'
+}
+
 @lru_cache()
 @app.route('/')
 def home():
@@ -48,12 +59,13 @@ def about():
 @lru_cache()
 @app.route('/all_time_participation/<event>/')
 def count(event='WMTBOC'):
-    wmtboc = Races(mysql).get_by_event(event.upper())
+    wmtboc = Races(mysql).get_by_event(event.upper(), True)
     per_year = defaultdict(list)
     for mrace in wmtboc:
         per_year[mrace[1]].append(mrace[0])
 
     title = event.upper()
+
 
     wmtboc_table = {year: Results(mysql).get_by_events_id(
         id_list) for year, id_list in per_year.items()}
@@ -120,7 +132,7 @@ def race(race_id):
         flask.abort(404)
 
     data = model.get_race_results(race_id)
-    title = "{} {} {}".format(race['event'], race['year'], race['distance'])
+    title = "{} {} {}".format(race['event'], race['year'], DISTANCE_NAMES[race['distance']])
 
     if race['distance'] == 'relay':
         women_list = model.get_relay_results(race_id, 'W')
@@ -128,13 +140,14 @@ def race(race_id):
 
         women = tools.prepare_relay_output(women_list)
         men = tools.prepare_relay_output(men_list)
+        country = set(men.keys()).union(set(women.keys()))
 
         return flask.render_template('relay.html',
                                      title=title,
                                      women=women,
                                      men=men,
                                      stats={'men': len(men.keys()), 'women': len(
-                                         women.keys()), 'country': 'TBD'},
+                                         women.keys()), 'country': len(country)},
                                      competitors=COMPETITORS,
                                      flags=tools.IOC_INDEX,
                                      race=race)

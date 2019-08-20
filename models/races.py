@@ -55,13 +55,16 @@ class Races(object):
 
         return result
 
-    def get_by_event(self, event):
+    def get_by_event(self, event, individual_only=False):
         """
         get all races of given event type
         :param event string
         :return list
         """
-        query = "SELECT * FROM races WHERE event = %s ORDER BY year DESC"
+        if individual_only:
+            query = "SELECT * FROM races WHERE event = %s AND team = 0 ORDER BY year DESC"
+        else:    
+            query = "SELECT * FROM races WHERE event = %s ORDER BY year DESC"
         self.cursor.execute(query, (event,))
 
         db_result = self.cursor.fetchall()

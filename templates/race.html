@@ -3,7 +3,7 @@
 
 <h1>{{ title }}</h1>
 <h2>
-{{ race['date'] }}
+On {{ race['date'].strftime("%B %-d, %Y") }} in
 {{ race['venue'] }}
 {{ race['country'] }}
 <img src="{{ url_for('static', filename='css/blank.gif') }}"

@@ -25,7 +25,6 @@ class Results(object):
         :param int relay race id
         :return {values}
         """
-        print(race_id, klasa)
         query = "SELECT * from competitor_relay WHERE race_id = %s AND class = %s ORDER BY place"
         self.cursor.execute(query, (race_id, klasa))
         res = self.cursor.fetchall()
@@ -33,8 +32,8 @@ class Results(object):
 
     def get_competitor_results(self, competitor_id):
         """
-        get all women with at last one result present
-        :return {id : {values}}
+        get all results of competitor
+        :return list
         """
         query = "SELECT competitor_id, race_id, place, time from competitor_race WHERE competitor_id = %s"
         self.cursor.execute(query, (competitor_id, ))
@@ -50,6 +49,7 @@ class Results(object):
         :param event_list
         :return list
         """
+
         query = """SELECT DISTINCT competitors.nationality
                 FROM competitor_race, competitors
                 WHERE competitor_race.competitor_id = competitors.id"""
