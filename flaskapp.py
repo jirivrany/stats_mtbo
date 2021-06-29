@@ -48,8 +48,16 @@ def home():
     emtboc = sorted(emtboc, key=lambda x: x[1], reverse=True)
 
     wcup = Races(mysql).get_by_event('WCUP')
-    recent = Races(mysql).get_by_year(2019)
-    return flask.render_template('index.html', wmtboc=wmtboc, emtboc=emtboc, wcup=wcup, recent=recent)
+    recent = Races(mysql).get_by_year(2021)
+
+    res = Results(mysql)
+    first = res.first_medal_year(2021)
+    for comp in first:
+        tmp = COMPETITORS[comp['competitor_id']]
+        comp['name'] = "{} {}".format(tmp['first'], tmp['last'])
+        comp['team'] = tmp['nationality']
+
+    return flask.render_template('index.html', wmtboc=wmtboc, emtboc=emtboc, wcup=wcup, recent=recent, flags=tools.IOC_INDEX, first=first)
 
 
 @app.route('/about/')
@@ -296,7 +304,7 @@ def participation_in_event(event='WMTBOC'):
 
     result = {}
 
-    for competitor_id, participation_nr in at_last_one_participation:
+    for competitor_id in at_last_one_participation:
         res = model.get_event_competitor_participation(
             competitor_id, event.upper())
         if res:

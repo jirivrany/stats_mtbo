@@ -88,7 +88,21 @@ class Results(object):
                     ORDER BY t2.year"
         self.cursor.execute(query, (event, int(competitor_id)))
         res = self.cursor.fetchall()
-        return [str(x[0]) for x in res]
+        res = {str(x[0]) for x in res}
+        
+        query2 = "SELECT DISTINCT(t2.year) \
+                    FROM competitor_relay AS t1\
+                    LEFT JOIN races AS t2\
+                    ON t1.race_id = t2.id\
+                    WHERE t2.event = %s\
+                    AND t1.competitor_id = %s\
+                    ORDER BY t2.year"
+        self.cursor.execute(query2, (event, int(competitor_id)))
+        res2 = self.cursor.fetchall()
+        res2 = {str(x[0]) for x in res2}
+        res = list(res.union(res2))
+
+        return sorted(res)
 
     def get_participation_years(self, event):
         """
@@ -97,9 +111,18 @@ class Results(object):
         :param event string
         :return
         """
-        query = "SELECT competitor_id, COUNT(race_id) FROM competitor_race WHERE race_id IN (SELECT id FROM races WHERE event='WMTBOC') GROUP BY competitor_id"            
+        
+        query = "SELECT competitor_id, COUNT(race_id) FROM competitor_race WHERE race_id IN (SELECT id FROM races WHERE event='{}') GROUP BY competitor_id".format(event.upper())
+        query2 = "SELECT competitor_id, COUNT(race_id) FROM competitor_relay WHERE race_id IN (SELECT id FROM races WHERE event='{}') GROUP BY competitor_id".format(event.upper())
+
         self.cursor.execute(query)
-        return self.cursor.fetchall()
+        res = self.cursor.fetchall()
+        res = {key for key, count in res}
+        self.cursor.execute(query2)
+        res2 = self.cursor.fetchall()
+        res2 = {key for key, count in res2}
+
+        return res.union(res2)
 
     def get_place_count(self, place, event, table="race"):
         """
@@ -158,6 +181,7 @@ class Results(object):
         self.cursor.execute(query, (place, event, int(competitor_id)))
         return self.cursor.fetchall()
     
+    
     def get_last_medal(self, competitor_id, event, place=3, limit=1, table="race"):
         """
         Counts times has some competitor finished on given place
@@ -177,3 +201,26 @@ class Results(object):
         self.cursor.execute(query, (place, event, int(competitor_id)))
         return self.cursor.fetchall()
     
+    def first_medal_year(self, year, event='WMTBOC', table='race'):
+        query = "SELECT t1.competitor_id, t1.place\
+                    FROM competitor_{} AS t1\
+                    LEFT JOIN races AS t2\
+                    ON t1.race_id = t2.id\
+                    WHERE t1.place <= 3\
+                    AND t2.event = %s\
+                    AND t2.year = %s".format(table)
+        self.cursor.execute(query, (event, year))
+
+        result = []
+        for comp_id, place in self.cursor.fetchall():
+            med = self.get_first_medal(comp_id, event)
+            if med[0][3].year == year:
+                row = {
+                    'competitor_id': comp_id,
+                    'race_id': med[0][0],
+                    'event': event,
+                    'race_format': med[0][2],
+                    'place': place
+                }
+                result.append(row)
+        return result        

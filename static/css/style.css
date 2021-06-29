@@ -23,3 +23,9 @@
 .footer {
     margin-top: 20px;
 }
+
+.event-list {
+    font-size: 15px;
+    list-style: none;
+    text-anchor: middle;
+}

@@ -10,22 +10,28 @@
             <table class="table table-bordered table-condensed">
                 <tr>
                     <th>Event</th>
-                    <th>Gold</th>
-                    <th>Silver</th>
-                    <th>Bronze</th>
+                    <th class="text-center">
+                        <img src="{{ url_for('static', filename='img/m1.png') }}" alt="gold" title="gold" />
+                    </th>
+                    <th class="text-center">
+                        <img src="{{ url_for('static', filename='img/m2.png') }}" alt="silver" title="silver" />
+                    </th>
+                    <th class="text-center">
+                        <img src="{{ url_for('static', filename='img/m3.png') }}" alt="bronze" title="bronze" />
+                    </th>
                 </tr>
                 {% for event, medals in medal_table.items() %}
                 <tr>
                     <td>
                         {{ event }}
                     </td>
-                    <td>
+                    <td class="text-center">
                         {{ medals[0] }}
                     </td>
-                    <td>
+                    <td class="text-center">
                         {{ medals[1] }}
                     </td>
-                    <td>
+                    <td class="text-center">
                         {{ medals[2] }}
                     </td>
                 </tr>
@@ -63,22 +69,28 @@
             <table class="table table-bordered table-condensed">
                 <tr>
                     <th>Event</th>
-                    <th>Gold</th>
-                    <th>Silver</th>
-                    <th>Bronze</th>
+                    <th class="text-center">
+                        <img src="{{ url_for('static', filename='img/m1.png') }}" alt="gold" title="gold" />
+                    </th>
+                    <th class="text-center">
+                        <img src="{{ url_for('static', filename='img/m2.png') }}" alt="silver" title="silver" />
+                    </th>
+                    <th class="text-center">
+                        <img src="{{ url_for('static', filename='img/m3.png') }}" alt="bronze" title="bronze" />
+                    </th>
                 </tr>
                 {% for event, medals in relay_medal_table.items() %}
                 <tr>
                     <td>
                         {{ event }}
                     </td>
-                    <td>
+                    <td class="text-center">
                         {{ medals[0] }}
                     </td>
-                    <td>
+                    <td class="text-center">
                         {{ medals[1] }}
                     </td>
-                    <td>
+                    <td class="text-center">
                         {{ medals[2] }}
                     </td>
                 </tr>
