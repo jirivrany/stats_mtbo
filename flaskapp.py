@@ -51,7 +51,9 @@ def home():
     recent = Races(mysql).get_by_year(2021)
 
     res = Results(mysql)
-    first = res.first_medal_year(2021)
+    first_ms = res.first_medal_year(2021)
+    first_me = res.first_medal_year(2021, event='EMTBOC')
+    first = first_ms + first_me
     for comp in first:
         tmp = COMPETITORS[comp['competitor_id']]
         comp['name'] = "{} {}".format(tmp['first'], tmp['last'])

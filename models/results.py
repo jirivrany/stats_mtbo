@@ -176,7 +176,7 @@ class Results(object):
                     WHERE t1.place <= %s\
                     AND t2.event = %s\
                     AND t1.competitor_id = %s\
-                    ORDER BY t2.year\
+                    ORDER BY t2.date\
                     LIMIT {}".format(table, limit)
         self.cursor.execute(query, (place, event, int(competitor_id)))
         return self.cursor.fetchall()
@@ -196,13 +196,13 @@ class Results(object):
                     WHERE t1.place <= %s\
                     AND t2.event = %s\
                     AND t1.competitor_id = %s\
-                    ORDER BY t2.year DESC\
+                    ORDER BY t2.date DESC\
                     LIMIT {}".format(table, limit)
         self.cursor.execute(query, (place, event, int(competitor_id)))
         return self.cursor.fetchall()
     
     def first_medal_year(self, year, event='WMTBOC', table='race'):
-        query = "SELECT t1.competitor_id, t1.place\
+        query = "SELECT t1.competitor_id, t1.place, t2.date\
                     FROM competitor_{} AS t1\
                     LEFT JOIN races AS t2\
                     ON t1.race_id = t2.id\
@@ -212,9 +212,9 @@ class Results(object):
         self.cursor.execute(query, (event, year))
 
         result = []
-        for comp_id, place in self.cursor.fetchall():
+        for comp_id, place, race_date in self.cursor.fetchall():
             med = self.get_first_medal(comp_id, event)
-            if med[0][3].year == year:
+            if med[0][3] == race_date:
                 row = {
                     'competitor_id': comp_id,
                     'race_id': med[0][0],
