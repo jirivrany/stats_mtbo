@@ -332,10 +332,9 @@ def young_stars(event='WMTBOC', place=None):
     model = Results(mysql)
 
     at_last_one_participation = model.get_participation_years(event)
-
     result = {}
 
-    for competitor_id, participation_nr in at_last_one_participation:
+    for competitor_id in at_last_one_participation:
         if place:
             place = place if place <= 3 else 3
             res = model.get_first_medal(competitor_id, event.upper(), place)
@@ -385,7 +384,7 @@ def great_masters(event='WMTBOC', place=None):
 
     result = {}
 
-    for competitor_id, participation_nr in at_last_one_participation:
+    for competitor_id in at_last_one_participation:
         if place:
             place = place if place <= 3 else 3
             res = model.get_last_medal(competitor_id, event.upper(), place)
