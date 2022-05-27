@@ -26,6 +26,7 @@ MEDAL_NAMES = {
     2: 'Silver',
     3: 'Bronze'
 }
+YEAR = 2022
 
 DISTANCE_NAMES = {
     'long' : 'Long',
@@ -48,11 +49,11 @@ def home():
     emtboc = sorted(emtboc, key=lambda x: x[1], reverse=True)
 
     wcup = Races(mysql).get_by_event('WCUP')
-    recent = Races(mysql).get_by_year(2021)
+    recent = Races(mysql).get_by_year(YEAR)
 
     res = Results(mysql)
-    first_ms = res.first_medal_year(2021)
-    first_me = res.first_medal_year(2021, event='EMTBOC')
+    first_ms = res.first_medal_year(YEAR)
+    first_me = res.first_medal_year(YEAR, event='EMTBOC')
     first = first_ms + first_me
     for comp in first:
         tmp = COMPETITORS[comp['competitor_id']]
@@ -128,7 +129,6 @@ def nation(code, year):
 def api_search():
     data = [{"name": u"{} {}".format(
         val['first'], val['last']), "id": key} for key, val in COMPETITORS.items()]
-
     return flask.jsonify(result=data)
 
 
