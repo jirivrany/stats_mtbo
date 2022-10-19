@@ -9,7 +9,7 @@ import operator
 from utils import tools
 from collections import defaultdict
 from functools import lru_cache
-
+from operator import itemgetter
 
 mysql = MySQL()
 app = flask.Flask(__name__)
@@ -130,6 +130,34 @@ def api_search():
     data = [{"name": u"{} {}".format(
         val['first'], val['last']), "id": key} for key, val in COMPETITORS.items()]
     return flask.jsonify(result=data)
+
+@app.route('/worldcup/<int:year>/')
+def wcup(year):
+    model = Results(mysql)
+    races_model = Races(mysql)
+    title = "World Cup {} individual overall standings".format(year)
+
+    season_race = races_model.get_individual_ids_by_year(year)
+    print(season_race)
+    totals_f = model.get_worldcup_points(year, gender='F')
+    totals_m = model.get_worldcup_points(year, gender='M')
+
+    totals_f = tools.make_worldup_results(season_race, totals_f)
+    totals_m = tools.make_worldup_results(season_race, totals_m) 
+
+    country = {COMPETITORS[row["comp_id"]]["nationality"] for row in totals_m + totals_f}
+
+    
+    return flask.render_template('wcup.html',
+                                    title=title,
+                                    women=totals_f,
+                                    men=totals_m,
+                                    year=year,
+                                    stats={'men': len(totals_m), 'women': len(
+                                        totals_f), 'country': len(country)},
+                                    competitors=COMPETITORS,
+                                    flags=tools.IOC_INDEX)
+    
 
 
 @lru_cache()

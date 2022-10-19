@@ -6,14 +6,17 @@
     <title>MTBO Stats {{ title }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+
+
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/typeahead.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/flags.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/about.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
 
-    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-OERcA2EqjJCMA+/3y+gxIOqMEjwtxJY7qPCqsdltbNJuaOe923+mo//f6V8Qbsw3" crossorigin="anonymous"></script>
 
 
 </head>
@@ -25,65 +28,87 @@
             <img src="{{ url_for('static', filename=['img/1.jpg', 'img/2.jpg', 'img/martina.jpg']|random ) }}" class="img-responsive">
            </div>
         </div>
-        <nav class="navbar navbar-default" role="navigation">
-            <div class="navbar-header">
-                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
-                    <span class="sr-only">Toggle navigation</span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                </button>
+        <nav class="navbar navbar-expand-lg bg-light">
+            <div class="container-fluid">
                 <a class="navbar-brand" href="/">MTBO statistics</a>
-            </div>
-            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-                <ul class="nav navbar-nav">
-                    <li><a href="/teams/">Teams</a>
-                    </li>
-                    <li class="dropdown">
-                        <a href="/medals_table/wmtboc/" class="dropdown-toggle" data-toggle="dropdown">Medals <b class="caret"></b></a>
-                        <ul class="dropdown-menu">
-                            <li><a href="/medals_table/wmtboc/">WMTBOC</a>
-                            </li>
-                            <li><a href="/medals_table/emtboc/">EMTBOC</a>
-                            </li>
-                            <li><a href="/medals_table/wcup/">World Cup</a>
-                            </li>
-                            <li><a href="/young_stars/wmtboc/">Young Stars - champions WMTBOC</a>
-                            </li>
-                            <li><a href="/young_stars/emtboc/">Young Stars - champions EMTBOC</a>
-                            </li>
-                            <li><a href="/great_masters/wmtboc/">Great Masters - champions WMTBOC</a>
-                            </li>
-                            <li><a href="/great_masters/emtboc/">Great Masters - champions EMTBOC</a>
-                            </li>
-                            <li><a href="/young_stars/wmtboc/3/">Young Medalists WMTBOC</a>
-                            </li>
-                            <li><a href="/young_stars/emtboc/3/">Young Medalists EMTBOC</a>
-                            </li>
-                            <li><a href="/great_masters/wmtboc/3/">Masters Medalists WMTBOC</a>
-                            </li>
-                            <li><a href="/great_masters/emtboc/3/">Masters Medalists EMTBOC</a>
-                            </li>
-                        </ul>
-                    </li>
-                    <li class="dropdown">
-                        <a href="/all_time_participation/wmtboc/" class="dropdown-toggle" data-toggle="dropdown">Participations <b class="caret"></b></a>
-                        <ul class="dropdown-menu">
-                            <li><a href="/participation/wmtboc/">Competitors at WMTBOC</a>
-                            </li>
-                            <li><a href="/participation/emtboc/">Competitors at EMTBOC</a>
-                            </li>
-                            <li><a href="/all_time_participation/wmtboc/">Countries at WMTBOC</a>
-                            </li>
-                            <li><a href="/all_time_participation/emtboc/">Countries at EMTBOC</a>
-                            </li>
-                        </ul>
-                    </li>
-                    <li><a href="http://orienteering.org/mtb-orienteering/">What is MTBO?</a></li>
-                    <li><a href="/about/">About</a>
-                    </li>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                  </button>
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/teams/">
+                                Teams
+                            </a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="/medals_table/wmtboc/" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Medals
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="/medals_table/wmtboc/">WMTBOC</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/medals_table/emtboc/">EMTBOC</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/medals_table/wcup/">World Cup</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/young_stars/wmtboc/">Young Stars - champions WMTBOC</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/young_stars/emtboc/">Young Stars - champions EMTBOC</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/great_masters/wmtboc/">Great Masters - champions WMTBOC</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/great_masters/emtboc/">Great Masters - champions EMTBOC</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/young_stars/wmtboc/3/">Young Medalists WMTBOC</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/young_stars/emtboc/3/">Young Medalists EMTBOC</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/great_masters/wmtboc/3/">Masters Medalists WMTBOC</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/great_masters/emtboc/3/">Masters Medalists EMTBOC</a>
+                                </li>
+                            </ul>
+                        </li>                                       
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="/all_time_participation/wmtboc/" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Participations
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="/participation/wmtboc/">Competitors at WMTBOC</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/participation/emtboc/">Competitors at EMTBOC</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/all_time_participation/wmtboc/">Countries at WMTBOC</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/all_time_participation/emtboc/">Countries at EMTBOC</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="http://orienteering.org/mtb-orienteering/">What is MTBO?</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/about/">About</a>
+                        </li>
 
-                </ul>
+                    </ul>
+                </div>    
                 <div class="col-sm-3 col-md-3 pull-right">
                     <form class="navbar-form" role="search" id="search_form">
                         <div class="input-group">

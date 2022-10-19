@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import date
+from operator import itemgetter
 
 IOC_INDEX = {'LIE': 'LI', 'EGY': 'EG', 'LIB': 'LB', 'QAT': 'QA', 'SOM': 'SO', 'BOT': 'BW', 'PAR': 'PY', 'NAM': 'NA',
              'FIJ': 'FJ', 'BOL': 'BO', 'GHA': 'GH', 'PAK': 'PK', 'SIN': 'SG', 'CPV': 'CV', 'JOR': 'JO', 'LBR': 'LR',
@@ -173,3 +174,33 @@ def format_competitor_row(row, races):
             'event': races[row[1]]['event'],
             'rtime': row[3]
             }
+
+def make_worldup_results(races, results):
+    """
+    create sorted worlcup results list
+    :param races: list of races in year
+    :param results: tuple of (comp_id, race_id, place) from db
+    """
+
+    results_basic = defaultdict(dict)
+    for comp_id, race_id, place in results:
+        results_basic[comp_id][race_id] = place
+    
+    results_full = []
+    for comp_id, comp_races in results_basic.items():
+        scores = sorted(comp_races.values(), reverse=True)
+        results_full.append({
+            "comp_id": comp_id,
+            "results": [comp_races.get(race_id, "-") for race_id in races],
+            "points": sum(scores[:6]),
+            "b1": max(scores),
+            "b2": scores[1] if len(scores) > 1 else 0,
+            "b3": scores[2] if len(scores) > 2 else 0
+        })
+
+    results_full.sort(key=itemgetter('points', 'b1', 'b2', 'b3'), reverse=True)
+    for i in range(len(results_full)):
+        results_full[i]['place'] = i + 1 if results_full[i]['points'] > 0 else ""
+
+    return results_full
+    

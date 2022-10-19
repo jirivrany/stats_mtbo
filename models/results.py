@@ -9,6 +9,30 @@ class Results(object):
     def __init__(self, mysql):
         self.cursor = mysql.connect().cursor()
 
+    def get_worldcup_points(self, year, gender="M"):
+        """
+        get results for inidividual wcup and year and category
+        """
+        oldquery = "SELECT competitor_id, group_concat(wcup ORDER BY wcup DESC) AS `GROUP`\
+            FROM competitor_race\
+            WHERE race_id IN (SELECT id FROM races WHERE year=%s AND team=0)\
+            AND competitor_id IN (SELECT id FROM competitors WHERE gender = %s)\
+            GROUP BY competitor_id\
+            ORDER BY competitor_id;"
+
+        query = "SELECT competitor_id, race_id, wcup\
+                FROM competitor_race\
+                WHERE race_id IN (SELECT id FROM races WHERE year=%s AND team=0 ORDER BY date)\
+                AND competitor_id IN (SELECT id FROM competitors WHERE gender = %s)\
+                ORDER BY competitor_id;"   
+
+        self.cursor.execute(query, (year, gender))
+        res = self.cursor.fetchall()
+        for row in res[:4]:
+            print(row)
+        
+        return res
+
     def get_race_results(self, race_id):
         """
         get results of race
@@ -36,12 +60,12 @@ class Results(object):
         :return list
         """
         query = "SELECT competitor_id, race_id, place, time from competitor_race WHERE competitor_id = %s"
-        self.cursor.execute(query, (competitor_id, ))
+        self.cursor.execute(query, (competitor_id,))
         races = list(self.cursor.fetchall())
         query = "SELECT competitor_id, race_id, place, time from competitor_relay WHERE competitor_id = %s"
-        self.cursor.execute(query, (competitor_id, ))
+        self.cursor.execute(query, (competitor_id,))
         relays = list(self.cursor.fetchall())
-        return races+relays
+        return races + relays
 
     def get_by_events_id(self, event_list):
         """
@@ -55,7 +79,9 @@ class Results(object):
                 WHERE competitor_race.competitor_id = competitors.id"""
 
         if len(event_list) == 2:
-            query += " AND (competitor_race.race_id = %s OR competitor_race.race_id = %s)"
+            query += (
+                " AND (competitor_race.race_id = %s OR competitor_race.race_id = %s)"
+            )
         elif len(event_list) == 3:
             query += """ AND (competitor_race.race_id = %s
                 OR competitor_race.race_id = %s
@@ -89,7 +115,7 @@ class Results(object):
         self.cursor.execute(query, (event, int(competitor_id)))
         res = self.cursor.fetchall()
         res = {str(x[0]) for x in res}
-        
+
         query2 = "SELECT DISTINCT(t2.year) \
                     FROM competitor_relay AS t1\
                     LEFT JOIN races AS t2\
@@ -111,9 +137,13 @@ class Results(object):
         :param event string
         :return
         """
-        
-        query = "SELECT competitor_id, COUNT(race_id) FROM competitor_race WHERE race_id IN (SELECT id FROM races WHERE event='{}') GROUP BY competitor_id".format(event.upper())
-        query2 = "SELECT competitor_id, COUNT(race_id) FROM competitor_relay WHERE race_id IN (SELECT id FROM races WHERE event='{}') GROUP BY competitor_id".format(event.upper())
+
+        query = "SELECT competitor_id, COUNT(race_id) FROM competitor_race WHERE race_id IN (SELECT id FROM races WHERE event='{}') GROUP BY competitor_id".format(
+            event.upper()
+        )
+        query2 = "SELECT competitor_id, COUNT(race_id) FROM competitor_relay WHERE race_id IN (SELECT id FROM races WHERE event='{}') GROUP BY competitor_id".format(
+            event.upper()
+        )
 
         self.cursor.execute(query)
         res = self.cursor.fetchall()
@@ -137,10 +167,11 @@ class Results(object):
                     ON t1.race_id = t2.id\
                     WHERE t1.place = %s\
                     AND t2.event = %s\
-                    GROUP BY t1.competitor_id".format(table)
+                    GROUP BY t1.competitor_id".format(
+            table
+        )
         self.cursor.execute(query, (place, event))
         return self.cursor.fetchall()
-
 
     def get_competitor_place_count(self, competitor_id, place, event, table="race"):
         """
@@ -155,12 +186,11 @@ class Results(object):
                     ON t1.race_id = t2.id\
                     WHERE t1.place = %s\
                     AND t2.event = %s\
-                    AND t1.competitor_id = %s".format(table)
+                    AND t1.competitor_id = %s".format(
+            table
+        )
         self.cursor.execute(query, (place, event, int(competitor_id)))
         return self.cursor.fetchall()
-
-   
-        
 
     def get_first_medal(self, competitor_id, event, place=3, limit=1, table="race"):
         """
@@ -177,11 +207,12 @@ class Results(object):
                     AND t2.event = %s\
                     AND t1.competitor_id = %s\
                     ORDER BY t2.date\
-                    LIMIT {}".format(table, limit)
+                    LIMIT {}".format(
+            table, limit
+        )
         self.cursor.execute(query, (place, event, int(competitor_id)))
         return self.cursor.fetchall()
-    
-    
+
     def get_last_medal(self, competitor_id, event, place=3, limit=1, table="race"):
         """
         Counts times has some competitor finished on given place
@@ -197,18 +228,22 @@ class Results(object):
                     AND t2.event = %s\
                     AND t1.competitor_id = %s\
                     ORDER BY t2.date DESC\
-                    LIMIT {}".format(table, limit)
+                    LIMIT {}".format(
+            table, limit
+        )
         self.cursor.execute(query, (place, event, int(competitor_id)))
         return self.cursor.fetchall()
-    
-    def first_medal_year(self, year, event='WMTBOC', table='race'):
+
+    def first_medal_year(self, year, event="WMTBOC", table="race"):
         query = "SELECT t1.competitor_id, t1.place, t2.date\
                     FROM competitor_{} AS t1\
                     LEFT JOIN races AS t2\
                     ON t1.race_id = t2.id\
                     WHERE t1.place <= 3\
                     AND t2.event = %s\
-                    AND t2.year = %s".format(table)
+                    AND t2.year = %s".format(
+            table
+        )
         self.cursor.execute(query, (event, year))
 
         result = []
@@ -216,11 +251,11 @@ class Results(object):
             med = self.get_first_medal(comp_id, event)
             if med[0][3] == race_date:
                 row = {
-                    'competitor_id': comp_id,
-                    'race_id': med[0][0],
-                    'event': event,
-                    'race_format': med[0][2],
-                    'place': place
+                    "competitor_id": comp_id,
+                    "race_id": med[0][0],
+                    "event": event,
+                    "race_format": med[0][2],
+                    "place": place,
                 }
                 result.append(row)
-        return result        
+        return result

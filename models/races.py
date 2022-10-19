@@ -96,3 +96,19 @@ class Races(object):
         db_result = self.cursor.fetchall()
 
         return db_result
+
+    def get_individual_ids_by_year(self, year):
+        """
+        get individual races held in given year
+        :param year string
+        :return list
+        """
+        query = "SELECT id FROM races WHERE year = %s AND team=0 ORDER BY date"
+        self.cursor.execute(query, (year,))
+
+        db_result = self.cursor.fetchall()
+        res = [x[0] for x in db_result]
+
+        return res
+
+    
