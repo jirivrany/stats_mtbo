@@ -53,7 +53,10 @@
                                     <a class="dropdown-item" href="/medals_table/emtboc/">EMTBOC</a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="/medals_table/wcup/">World Cup</a>
+                                    <a class="dropdown-item" href="/medals_table/wcup/">WCUP - medal table</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('wcup_overall') }}">WCUP - overall winners</a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="/young_stars/wmtboc/">Young Stars - champions WMTBOC</a>
@@ -99,6 +102,19 @@
                                     <a class="dropdown-item" href="/all_time_participation/emtboc/">Countries at EMTBOC</a>
                                 </li>
                             </ul>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="/all_time_participation/wmtboc/" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                World Cup
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="/worldcup/">Individual</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('team_wcup') }}">Team</a>
+                                </li>
+                            </ul>        
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="http://orienteering.org/mtb-orienteering/">What is MTBO?</a>

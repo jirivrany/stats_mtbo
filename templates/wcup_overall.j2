@@ -1,0 +1,16 @@
+{% extends "default.j2" %} {% block content %}
+{% from 'macros.j2' import wcup_overall_table %}
+<div class="container-fluid">
+    <div class="row">
+        <h2>World Cup overall winners</h2>
+    </div>    
+    <div class="row">
+        <div class="col-md-6">
+            {{ wcup_overall_table('Women', women, flags, competitors) }}
+        </div>
+        <div class="col-md-6">
+            {{ wcup_overall_table('Men', men, flags, competitors) }}
+        </div>
+    </div>
+</div>
+{% endblock %}

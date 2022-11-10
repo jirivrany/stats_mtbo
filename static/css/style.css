@@ -30,3 +30,11 @@
     text-anchor: middle;
 }
 
+td.marked {
+    background-color: lightgreen;
+}
+
+.points {
+    border: 0.1px solid black;
+    text-align: center;
+}

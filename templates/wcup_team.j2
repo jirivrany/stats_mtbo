@@ -1,0 +1,72 @@
+{% extends "default.j2" %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <h2>{{ title }}</h2>
+        <h6>Season coutries: {{ stats['country'] }}. {{ counted_text }}</h6>
+        <h6>Races: 
+            {% for race_id, category in race_links %}
+                <a href="{{ url_for('race', race_id=race_id) }}">{{ races[race_id]['event'] }}-{{category}}</a>
+                {{ ", " if not loop.last else "" }}
+            {% endfor %}
+        </h6>
+        <ul class="nav nav-pills">
+            {% for yrp in range(2010, current_year) %}
+            <li class="nav-item">
+                <a class="nav-link {{'active' if yrp==year else yrp}}" href="{{ url_for('team_wcup', year=yrp) }}">
+                    {{ yrp }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>    
+    <div class="row">
+        <div class="col-md-12">
+            {% if year==2020 %}
+                <hr/>
+                <h3 class="text-center">In 2020 Covid-19 took all the points...</h3>
+                <hr/>
+            {% else %}
+            <table class="table table-sm">
+            <thead class="table-info">
+                <th>#</th>
+                <th>team</th>
+                <th>points</th>
+                <th>team members</th>
+                <th colspan="{{ table_colspan }}">races</th>
+            </thead>
+            <tbody>
+                {% for team in totals %}
+                    <tr>
+                        <td>{{ team['place'] }}</td>
+                        <td>
+                            <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                                class="flag flag-{{ flags[team['team']].lower() }}"
+                                alt="{{ team['team'] }}" />
+                            {{ team['team'] }}
+                            </td>
+                        <td>{{ team['points'] }}</td>
+                        <td>
+                            {% for comp_id in team['members'] %}
+                            <a href="{{ url_for('competitor', competitor_id=comp_id) }}">
+                                {{ competitors[comp_id]['first'] }}
+                                {{ competitors[comp_id]['last'] }}
+                            </a>
+                            {{ ", " if not loop.last else " " }}
+                            {% endfor %}
+                        </td>
+                        {% for score in team['races'] %}
+                        <td class="points">
+                            {{ score }}
+                        </td>
+                        {% endfor %}
+                        
+                    </tr>
+                {% endfor %}
+            </tbody>
+            </table>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,106 @@
+{% macro wcup_overall_table(table_title, table_data, flags, competitors) %}
+    <h2>{{ table_title }}</h2>
+            <table class="table table-sm">
+                <thead class="table-info">
+                    <tr>
+                        <th>Year</th>
+                        <th>1st place <img src="{{ url_for('static', filename='img/m1.png') }}" alt="gold" title="gold" /></th>
+                        <th>2nd place <img src="{{ url_for('static', filename='img/m2.png') }}" alt="silver" title="silver" /></th>
+                        <th>3rd place <img src="{{ url_for('static', filename='img/m3.png') }}" alt="bronze" title="bronze" /></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for year, row in table_data.items() %}
+                        <tr>
+                            <th><a href="{{ url_for('wcup', year=year) }}">{{year}}</a></th>
+                            {% for comp_id, place in row %}
+                                <td>
+                                    <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                                    class="flag flag-{{ flags[competitors[comp_id]['nationality']].lower() }}"
+                                    alt="{{ competitors[comp_id]['nationality'] }}" />
+                                    <a href="{{ url_for('competitor', competitor_id=comp_id) }}">
+                                        {{ competitors[comp_id]['first'] }}
+                                        {{ competitors[comp_id]['last'] }}
+                                    </a>
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>    
+    </table>
+{% endmacro %}
+
+{% macro wcup_table(table_title, table_data, competitors, flags, table_colspan) %}
+    <h2>{{ table_title }}</h2>
+    <table class="table table-sm">
+        <thead class="table-info">
+            <th>#</th>
+            <th>competitor</th>
+            <th>team</th>
+            <th>points</th>
+            <th></th>
+            <th colspan="{{ table_colspan }}">race/point</th>
+        </thead>
+        <tbody>
+        {% for row in table_data %}
+            <tr>
+                <th>
+                    {{ row['place'] }}    
+                </th>
+                <th>
+                <a href="/competitor/{{ row['comp_id'] }}/">
+
+                    {{ competitors[row['comp_id']]['first'] }}
+                    {{ competitors[row['comp_id']]['last'] }}
+                </a>
+                </th>
+                <td>
+                <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                    class="flag flag-{{ flags[competitors[row['comp_id']]['nationality']].lower() }}"
+                    alt="{{ competitors[row['comp_id']]['nationality'] }}"
+                    title="{{ competitors[row['comp_id']]['nationality'] }}" />
+                </td>
+                <td>
+                <strong>{{ row['points'] }}</strong>
+                </td>
+                <td>
+                    &nbsp;
+                </td>
+                {% for cell in row['results'] %}
+                    {% set marked='' %}
+                    {% if cell in row['mark_results'] %}
+                        {% set marked='marked' %}
+                        {% set temp = row['mark_results'].remove(cell) %}
+                    {% endif %}
+                    <td class="points {{ marked }}">
+                    {{ cell }}    
+                    </td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endmacro %}
+
+{% macro relay_table_row(team, competitors, flags) %}
+<tr>
+    <th>
+    {{ team['place'] }}
+    </th>
+    <td>
+    <img src="{{ url_for('static', filename='css/blank.gif') }}"
+         class="flag flag-{{ team['flag'] }}"
+         alt="{{ team['country'] }}" />
+         <br/>
+    {{ team['country'] }}
+    </td>
+    <th>
+        {% for row in team['members'] %}
+            <a href="/competitor/{{ row[0] }}/">{{ competitors[row[0]]["first"] }} {{ competitors[row[0]]["last"] }}</a>{% if not loop.last%},{% endif %} 
+        {% endfor %}    
+    </th>
+    <td>
+    {{ team['time'] }}
+    </td>
+</tr>
+{% endmacro %}            

@@ -1,0 +1,18 @@
+{% extends "default.j2" %} {% block content %}
+<div class="container-fluid">
+    <div class="row">
+    {% include 'races_infobox.html' %}
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <h2>Mixed Teams</h2>
+            <table class="table-condensed">
+                {% for code, team in results.items() %}
+                    {% include 'relay_table_row.html' %}
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+</div>    
+{% include 'relay_disclaimer.html' %}
+{% endblock %}

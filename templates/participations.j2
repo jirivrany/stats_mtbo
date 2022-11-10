@@ -1,4 +1,5 @@
-{% extends "default.html" %} {% block content %}
+{% extends "default.j2" %}
+{% block content %}
 <h1>Participation on {{ title }}</h1>
 <p>So far <strong>{{ total }} {{ title }}s</strong> were held.</p>
 <div class="container-fluid">
@@ -18,8 +19,8 @@
                     {{ competitors[competitor_id]["first"] }}
                     {{ competitors[competitor_id]["last"] }}</a>
                 <img src="{{ url_for('static', filename='css/blank.gif') }}"
-                     class="flag flag-{{ flags[competitors[competitor_id]["nationality"]].lower() }}"
-                     alt="{{ competitors[competitor_id]["nationality"] }}" />
+                     class="flag flag-{{ flags[competitors[competitor_id]['nationality']].lower() }}"
+                     alt="{{ competitors[competitor_id]['nationality'] }}" />
                 {{ competitors[competitor_id]["nationality"] }}
                 </td>
                

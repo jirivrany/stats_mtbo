@@ -1,0 +1,34 @@
+{% block races_infobox %}
+<div class="row">
+    <div class="col">
+        <h2>
+            {{ title }}
+            - {{ race['date'].strftime("%B %-d, %Y") }} in
+            {{ race['venue'] }}
+            {{ race['country'] }}
+            <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                                class="flag flag-{{ flags[race['country']].lower() }}"
+                                alt="{{ race['country'] }}" /> 
+        </h2>
+    </div>
+</div>
+<div class="row">
+    <div class="col-3">
+        {% if stats['teams'] %}
+            <h6>teams in final classification: {{ stats['teams'] }}</h6>
+        {% else %}
+            <h6>men{{stats['suffix']}}: {{ stats['men'] }}</h6>
+            <h6>women{{stats['suffix']}}: {{ stats['women'] }}</h6>
+            <h6>coutries: {{ stats['country'] }}</h6>
+        {% endif %}    
+    </div>
+    <div class="col-2">
+        {% if race['url'] %}
+            <h6><a href="{{ race['url'] }}">Event website</a></h6>
+        {% endif %}
+        {% if race['iofurl'] %}
+            <h6><a href="http://orienteering.org/events/?event_id={{ race['iofurl'] }}">IOF results page</a></h6>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

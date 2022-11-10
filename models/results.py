@@ -13,13 +13,7 @@ class Results(object):
         """
         get results for inidividual wcup and year and category
         """
-        oldquery = "SELECT competitor_id, group_concat(wcup ORDER BY wcup DESC) AS `GROUP`\
-            FROM competitor_race\
-            WHERE race_id IN (SELECT id FROM races WHERE year=%s AND team=0)\
-            AND competitor_id IN (SELECT id FROM competitors WHERE gender = %s)\
-            GROUP BY competitor_id\
-            ORDER BY competitor_id;"
-
+      
         query = "SELECT competitor_id, race_id, wcup\
                 FROM competitor_race\
                 WHERE race_id IN (SELECT id FROM races WHERE year=%s AND team=0 ORDER BY date)\
@@ -27,11 +21,22 @@ class Results(object):
                 ORDER BY competitor_id;"   
 
         self.cursor.execute(query, (year, gender))
-        res = self.cursor.fetchall()
-        for row in res[:4]:
-            print(row)
+        return self.cursor.fetchall()
         
-        return res
+    def get_teamworldcup_points(self, year, category='M'):
+        """
+        get results for team wcup and year
+        """
+      
+        query = "SELECT competitor_id, race_id, team, wcup\
+                FROM competitor_relay\
+                WHERE race_id IN (SELECT id FROM races WHERE year=%s AND team=1 ORDER BY date)\
+                AND class=%s\
+                ORDER BY competitor_id;"   
+
+        self.cursor.execute(query, (year, category))
+        return self.cursor.fetchall()
+        
 
     def get_race_results(self, race_id):
         """

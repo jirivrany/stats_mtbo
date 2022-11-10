@@ -1,0 +1,113 @@
+{% extends "default.j2" %} {% block content %}
+<h1>MTBO stats</h1>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-5">    
+            <h2>Recent results</h2>
+            <ul class="list-unstyled">
+                {% for details in recent %}
+                <li>
+                    <a href="/race/{{ details[0] }}">
+                        {{ details[2] }}&nbsp;
+                        {{ details[4] }} 
+                        {{ details[3] }} - 
+                        {{ details[5] }}
+                        <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                            class="flag flag-{{ flags[details[6]].lower() }}"
+                            alt="{{ details[6] }}" />
+                        
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            <h2>First medal in {{ year }}</h2>
+            <p>Competitors who get their first medal from WMTBOC or EMTBOC in this season.</p>
+            <ul class="list-unstyled">
+                {% for details in first %}
+                <li>
+                    <a href="/competitor/{{ details['competitor_id'] }}">
+                        <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                            class="flag flag-{{ flags[details['team']].lower() }}"
+                            alt="{{ details['team'] }}" />
+                        {{ details['name'] }}&nbsp;- 
+                        {{ details['event'] }}&nbsp;
+                        {{ details['race_format'] }} -
+                        <img src="{{ url_for('static', filename='img/m' + details['place']|string + '.png') }}"
+                            alt="{{ details['place'] }}" />
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <h2>Menu of the day</h2>
+            <div class="well">
+                <ul>
+                    <li>Medal tables for <a href="/medals_table/wmtboc/">WMTBOC</a>, <a href="/medals_table/wmtboc/">EMTBOC</a> or <a href="/medals_table/wcup/">World Cup</a> </li>
+                    <li>World Cup overall <a href="{{ url_for('wcup_overall') }}">TOP-3 for all years</a> or World Cup <a href="{{ url_for('wcup') }}">overall standings year by year</a>.</li>
+                    <li>Ever wondered who is the <a href="/young_stars/wmtboc/">youngest world champion</a> of all time?</li>
+                    <li>Or who got the <a href="/great_masters/wmtboc/3/">elite world medal in master age</a>?</li>
+                    <li>We had 19th World MTBO championship in 2022. And we still have <a href="/participation/wmtboc/">two great athletes who took part in all of the world championships</a> so far.
+                    Congratulations to <a href="/competitor/1742/">Michaela Gigon</a> and <a href="/competitor/5619/">Ingrid Stengard</a>.</li>
+                    <li>Need a quick recap of your team results in certain year? All teams, all results, all years <a href="/teams/">in one place</a>.</li>
+                    <li>You can find more links in the top-level menu. Or <a href="{{ url_for('about') }}">send me a message</a>, if you looking for some information that you could not find.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <h2>All races history</h2>
+        <div class="col-md-4">
+            <h3>WMTBOC</h3>
+            <ul class="event-list">
+                    {% for details in wmtboc %}
+                    <li>
+                                <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                                class="flag flag-{{ flags[details[6]].lower() }}"
+                                alt="{{ details[6] }}" />
+                                <a href="/race/{{ details[0] }}">
+                                {{ details[1] }}
+                                {{ details[4] }}
+                                {{ details[3]|capitalize }}
+                            </a>
+                    </li>
+                    {% endfor %}
+            </ul>
+        </div>
+        <div class="col-md-4">
+            <h3>EMTBOC</h3>
+            <ul class="event-list">
+                {% for details in emtboc %}
+                <li>
+                    <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                            class="flag flag-{{ flags[details[6]].lower() }}"
+                            alt="{{ details[6] }}" />
+                        <a href="/race/{{ details[0] }}">
+                        {{ details[1] }}
+                        {{ details[4] }}
+                        {{ details[3]|capitalize }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="col-md-4">
+            <h3>World Cup races</h3>
+            <ul class="event-list">
+                {% for details in wcup %}
+                <li>
+                    <a href="/race/{{ details[0] }}">
+                        <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                            class="flag flag-{{ flags[details[6]].lower() }}"
+                            alt="{{ details[6] }}" />
+                            {{ details[1] }}
+                            {{ details[4] }}
+                            {{ details[3] }}
+                        </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

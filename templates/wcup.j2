@@ -1,0 +1,37 @@
+{% from 'macros.j2' import  wcup_table %}
+{% extends "default.j2" %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <h2>{{ title }}</h2>
+        <h6>Season participants - men: {{ stats['men'] }}, women: {{ stats['women'] }}, coutries: {{ stats['country'] }}. {{ counted_text }}</h6>
+        <ul class="nav nav-pills">
+            {% for yrp in range(2010, current_year) %}
+            <li class="nav-item">
+                <a class="nav-link {{'active' if yrp==year else yrp}}" href="/worldcup/{{ yrp }}/">
+                    {{ yrp }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>    
+    <div class="row">
+        {% if year==2020 %}
+         <div class="col-md-12">
+            <hr/>
+            <h3 class="text-center">In 2020 Covid-19 took all the points...</h3>
+            <hr/>
+        </div>
+        {% else %}
+        <div class="col-md-6">
+            <hr />
+            {{ wcup_table('Women', women, competitors, flags, table_colspan) }}
+        </div>
+        <div class="col-md-6">
+            <hr />
+            {{ wcup_table('Men', men, competitors, flags, table_colspan) }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

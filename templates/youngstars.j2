@@ -1,14 +1,17 @@
-{% extends "default.html" %} {% block content %}
+{% extends "default.j2" %} {% block content %}
 <h1>{{ title }}</h1>
 <p>{{ disclaimer }}</p>
 <div class="container-fluid">
-    <table class="table-condensed">
+    <table class="table table-sm">
+    <thead class="table-info">
     <tr>
-        <th>Rank</th>
+        <th>#</th>
         <th>Competitor</th>
         <th>Age</th>
         <th>Event</th>
     </tr>
+    </thead>
+    <tbody>
         {% for competitor_id, result in table_data %}
             <tr>
                 <th>
@@ -19,8 +22,8 @@
                     {{ competitors[competitor_id]["first"] }}
                     {{ competitors[competitor_id]["last"] }}</a>
                 <img src="{{ url_for('static', filename='css/blank.gif') }}"
-                     class="flag flag-{{ flags[competitors[competitor_id]["nationality"]].lower() }}"
-                     alt="{{ competitors[competitor_id]["nationality"] }}" />
+                     class="flag flag-{{ flags[competitors[competitor_id]['nationality']].lower() }}"
+                     alt="{{ competitors[competitor_id]['nationality'] }}" />
                 {{ competitors[competitor_id]["nationality"] }}
                 </td>
                
@@ -39,8 +42,7 @@
                 
             </tr>
         {% endfor %}
+        </tbody>
     </table>
-
-
 </div>
 {% endblock %}

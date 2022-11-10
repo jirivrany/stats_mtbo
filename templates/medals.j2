@@ -1,20 +1,28 @@
-{% extends "default.html" %} {% block content %}
+{% extends "default.j2" %}
+{% block content %}
 <h1>{{ title }}</h1>
 <p>
     We have <strong>{{ stats['individual'] }} individual medalists</strong> from <strong>{{ stats['indiv_countries'] }} countries</strong>. In the relay competitions <strong>{{ stats['relay'] }} competitors</strong> from <strong>{{ stats['rel_countries'] }} countries</strong> won the medal so far. 
-</p>    
+</p>
+{% if disclaimer %}
+   <p>{{ disclaimer }}</p>
+{% endif %}
+
 <div class="row">
     {% for col, content in table_content.items() %}
     <div class="col-sm-4">
         <h3>{{col|capitalize}}</h3>
-        <table class="table-condensed">
-        <tr>
-            <th>Rank</th>
+        <table class="table table-sm">
+        <thead>
+        <tr class="table-info">
+            <th>#</th>
             <th>Competitor</th>
             <th>Gold</th>
             <th>Silver</th>
             <th>Bronze</th>
         </tr>
+        </thead>
+        <tbody>
             {% for nr, competitor_id in content[1] %}
                 <tr>
                     <td>
@@ -41,7 +49,7 @@
                 </tr>
             {% endfor %}
         </table>
-
+        </tbody>
     </div>    
     {% endfor %}
 </div>

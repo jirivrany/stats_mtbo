@@ -1,0 +1,31 @@
+{% extends "default.j2" %}
+{% from 'macros.j2' import  relay_table_row %}
+
+{% block content %}
+<div class="container-fluid">
+    {% include 'races_infobox.j2' %}
+    <div class="row">
+        <div class="col-md-6">
+            <h2>Women</h2>
+            <table class="table table-sm">
+                <tbody>
+                {% for code, team in women.items() %}
+                    {{ relay_table_row(team, competitors, flags) }}
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <h2>Men</h2>
+            <table class="table table-sm">
+                <tbody>
+                {% for code, team in men.items() %}
+                    {{ relay_table_row(team, competitors, flags) }}
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>    
+{% include 'relay_disclaimer.j2' %}
+{% endblock %}

@@ -57,7 +57,7 @@ def prepare_relay_output(source_list):
 def prepare_medal_table(model, competitor_id, table="race"):
 
     if table=="relay":
-        mkeys = ['WMTBOC', 'EMTBOC']
+        mkeys = ['WMTBOC', 'EMTBOC', 'WCUP']
     else:
         mkeys = ['WMTBOC', 'EMTBOC', 'WCUP']
 
@@ -175,7 +175,7 @@ def format_competitor_row(row, races):
             'rtime': row[3]
             }
 
-def make_worldup_results(races, results):
+def make_worldup_results(races, results, counted=6):
     """
     create sorted worlcup results list
     :param races: list of races in year
@@ -192,15 +192,83 @@ def make_worldup_results(races, results):
         results_full.append({
             "comp_id": comp_id,
             "results": [comp_races.get(race_id, "-") for race_id in races],
-            "points": sum(scores[:6]),
+            "mark_results": scores[:counted],
+            "points": sum(scores[:counted]),
             "b1": max(scores),
             "b2": scores[1] if len(scores) > 1 else 0,
             "b3": scores[2] if len(scores) > 2 else 0
         })
 
-    results_full.sort(key=itemgetter('points', 'b1', 'b2', 'b3'), reverse=True)
-    for i in range(len(results_full)):
-        results_full[i]['place'] = i + 1 if results_full[i]['points'] > 0 else ""
+    return sort_full_results(results_full)
 
-    return results_full
+def sort_full_results(results):
+    results.sort(key=itemgetter('points', 'b1', 'b2', 'b3'), reverse=True)
+    for i in range(len(results)):
+        results[i]['place'] = i + 1 if results[i]['points'] > 0 else ""
     
+    return results    
+
+def make_team_worldup_results_base(results, category='M'):
+    """
+    create sorted team worlcup results list
+    :param races: list of races in year
+    :param results: tuple of (comp_id, race_id, place) from db
+    :param competitors: dictionary with competitors
+    """
+    results_basic = defaultdict(dict)
+    all_races = set()
+    for comp_id, race_id, team, score in results:
+        key = f"{race_id}-{category}"
+        results_basic[team][key] = {
+            'members': [],
+            'points': 0
+        }
+        all_races.add(key)
+
+    for comp_id, race_id, team, score in results:
+        key = f"{race_id}-{category}"
+        results_basic[team][key]['points'] = score
+        results_basic[team][key]['members'].append(comp_id)
+        
+
+    return results_basic, all_races
+
+def make_team_worldup_results(season_race, men={}, women={}, mix={}):
+    res = merge_res_dicts(men, women, mix)
+    
+    resu = {}
+    for key, vals in res.items():
+        resu[key] = {
+            'members': [vvv['members'] for vvv in vals.values()],
+            'races': {k:v['points'] for k, v in vals.items()},
+            'points': sum(www['points'] for www in vals.values())
+        }
+
+    for key in resu.keys():
+        resu[key]['members'] = list(set(flatten(resu[key]['members'])))
+        temp = {k:v for k, v in sorted(resu[key]['races'].items())} 
+        scores = sorted((int(i) for i in temp.values()))
+        resu[key]["team"] = key
+        resu[key]["b1"] = max(scores)
+        resu[key]["b2"] = scores[1] if len(scores) > 1 else 0
+        resu[key]["b3"] = scores[2] if len(scores) > 2 else 0
+        resu[key]['races'] = [temp.get(race_id, "-") for race_id in sorted(season_race)]
+
+    return sort_full_results(list(resu.values()))
+
+
+def merge_res_dicts(dict1, dict2, dict3):
+    keyset = set(dict1.keys()) | set(dict2.keys()) | set(dict3.keys())
+    result = {key: {} for key in keyset}
+    for key in keyset:
+        if key in dict1:
+            result[key].update(dict1[key])
+        if key in dict2:
+            result[key].update(dict2[key])
+        if key in dict3:
+            result[key].update(dict3[key])
+
+    return result
+
+def flatten(l):
+    return [item for sublist in l for item in sublist]
