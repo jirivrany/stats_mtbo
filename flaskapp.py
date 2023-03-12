@@ -54,6 +54,7 @@ WCUP_COUNTED = {
     2020: 0,
     2021: 4,
     2022: 6,
+    2023: 7
 }
 
 
@@ -197,10 +198,17 @@ def wcup(year):
     season_race = races_model.get_individual_ids_by_year(year)
     totals_f = model.get_worldcup_points(year, gender="F")
     totals_m = model.get_worldcup_points(year, gender="M")
-    counted = WCUP_COUNTED[year]
-    counted_text = (
-        f"Best {counted} of {len(season_race)} results counted in overall standings."
-    )
+    try:
+        counted = WCUP_COUNTED[year]
+    except KeyError:
+        flask.abort(404)
+
+    if len(season_race) > 0:
+        counted_text = (
+            f"Best {counted} of {len(season_race)} results counted in overall standings."
+        )
+    else:
+        counted_text = f"No results in {year} so far."    
 
     totals_f = tools.make_worldup_results(season_race, totals_f, counted)
     totals_m = tools.make_worldup_results(season_race, totals_m, counted)
