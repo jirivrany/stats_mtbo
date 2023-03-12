@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
-import flask
+"""
+Flask app for the www.mtbo.info website.
+"""
 import sys
-from flaskext.mysql import MySQL
 import operator
 from collections import defaultdict
 from functools import lru_cache
 from datetime import datetime
+
+import flask
+from flaskext.mysql import MySQL
 
 from utils import tools
 from models.competitors import Competitors
@@ -54,20 +58,23 @@ WCUP_COUNTED = {
     2020: 0,
     2021: 4,
     2022: 6,
-    2023: 7
+    2023: 7,
 }
 
 
 @lru_cache()
 @app.route("/")
 def home():
+    """
+    Main page
+    """
     wmtboc = Races(mysql).get_by_event("WMTBOC")
     emtboc = Races(mysql).get_by_event("EMTBOC")
 
     wmtboc = sorted(wmtboc, key=lambda x: x[1], reverse=True)
     emtboc = sorted(emtboc, key=lambda x: x[1], reverse=True)
 
-    wcup = Races(mysql).get_by_event("WCUP")
+    wcup_races = Races(mysql).get_by_event("WCUP")
     recent = Races(mysql).get_by_year(YEAR)
 
     res = Results(mysql)
@@ -76,14 +83,14 @@ def home():
     first = first_ms + first_me
     for comp in first:
         tmp = COMPETITORS[comp["competitor_id"]]
-        comp["name"] = "{} {}".format(tmp["first"], tmp["last"])
+        comp["name"] = f"{tmp['first']} {tmp['last']}"
         comp["team"] = tmp["nationality"]
 
     return flask.render_template(
         "index.j2",
         wmtboc=wmtboc,
         emtboc=emtboc,
-        wcup=wcup,
+        wcup=wcup_races,
         recent=recent,
         flags=tools.IOC_INDEX,
         first=first,
@@ -93,12 +100,20 @@ def home():
 
 @app.route("/about/")
 def about():
+    """
+    about the site
+    """
     return flask.render_template("about.j2")
 
 
 @lru_cache()
 @app.route("/all_time_participation/<event>/")
 def count(event="WMTBOC"):
+    """
+    endpoint to show all time participation on a given event
+    params:
+        event: WMTBOC, EMTBOC or WCUP
+    """
     wmtboc = Races(mysql).get_by_event(event.upper(), True)
     per_year = defaultdict(list)
     for mrace in wmtboc:
@@ -111,7 +126,8 @@ def count(event="WMTBOC"):
         for year, id_list in per_year.items()
     }
 
-    wmtboc_table = {year: (len(flags), flags) for year, flags in wmtboc_table.items()}
+    wmtboc_table = {year: (len(flags), flags)
+                    for year, flags in wmtboc_table.items()}
 
     return flask.render_template(
         "count.j2", wmtboc=wmtboc_table, flags=tools.IOC_INDEX, title=title
@@ -120,6 +136,9 @@ def count(event="WMTBOC"):
 
 @app.route("/teams/")
 def teams():
+    """
+    National teams results per year
+    """
     title = "National teams results per year"
     nations = {com["nationality"] for com in COMPETITORS.values()}
 
@@ -136,6 +155,12 @@ def teams():
 
 @app.route("/nation/<code>/<year>/")
 def nation(code, year):
+    """
+    reults for a given nation in a given year
+    params:
+        code: country code
+        year: year
+    """
     code = code.upper()
     sel_competitors = {
         cid: comp for cid, comp in COMPETITORS.items() if comp["nationality"] == code
@@ -151,7 +176,7 @@ def nation(code, year):
     filtered_results = [result for result in filtered_results if result]
 
     if filtered_results:
-        title = "Team {} results for {}".format(code, year)
+        title = f"Team {code} results for {year}"
         return flask.render_template(
             "races_team.j2",
             title=title,
@@ -162,37 +187,52 @@ def nation(code, year):
             team=code,
         )
     else:
-        title = "No results for team {} in {}".format(code, year)
+        title = f"No results for team {code} in {year}"
         return flask.render_template("races_team_nores.j2", title=title)
 
 
 @app.route("/api/prefetch/competitor/")
 def api_search():
+    """
+    internal enpoint for autocomplete
+    """
     data = [
-        {"name": "{} {}".format(val["first"], val["last"]), "id": key}
+        {"name": f'{val["first"]} {val["last"]}',"id": key}
         for key, val in COMPETITORS.items()
     ]
     return flask.jsonify(result=data)
 
+
 @app.route("/worldcup_overall/")
 def wcup_overall():
+    """
+        World cup overall standings
+    """
     model = Wcup(mysql)
-    men = model.get_overall_summary(category='M')
-    women = model.get_overall_summary(category='F')
+    men = model.get_overall_summary(category="M")
+    women = model.get_overall_summary(category="F")
 
-    return flask.render_template("wcup_overall.j2", 
+    return flask.render_template(
+        "wcup_overall.j2",
         competitors=COMPETITORS,
         flags=tools.IOC_INDEX,
         men=men,
-        women=women)
+        women=women,
+    )
+
 
 @lru_cache()
 @app.route("/worldcup/", defaults={"year": YEAR})
 @app.route("/worldcup/<int:year>/")
 def wcup(year):
+    """
+    world cup results for a given year
+    params:
+        year: year
+    """
     model = Results(mysql)
     races_model = Races(mysql)
-    title = "World Cup {} individual overall standings".format(year)
+    title = f"World Cup {year} individual overall standings"
 
     current_year = datetime.now().year + 1
     season_race = races_model.get_individual_ids_by_year(year)
@@ -204,15 +244,13 @@ def wcup(year):
         flask.abort(404)
 
     if len(season_race) > 0:
-        counted_text = (
-            f"Best {counted} of {len(season_race)} results counted in overall standings."
-        )
+        counted_text = f"Best {counted} of {len(season_race)} results counted in overall standings."
     else:
-        counted_text = f"No results in {year} so far."    
+        counted_text = f"No results in {year} so far."
 
     totals_f = tools.make_worldup_results(season_race, totals_f, counted)
     totals_m = tools.make_worldup_results(season_race, totals_m, counted)
-    
+
     country = {
         COMPETITORS[row["comp_id"]]["nationality"] for row in totals_m + totals_f
     }
@@ -225,7 +263,8 @@ def wcup(year):
         women=totals_f,
         men=totals_m,
         year=year,
-        stats={"men": len(totals_m), "women": len(totals_f), "country": len(country)},
+        stats={"men": len(totals_m), "women": len(
+            totals_f), "country": len(country)},
         competitors=COMPETITORS,
         current_year=current_year,
         flags=tools.IOC_INDEX,
@@ -236,22 +275,27 @@ def wcup(year):
 @app.route("/teamworldcup/", defaults={"year": YEAR})
 @app.route("/teamworldcup/<int:year>/")
 def team_wcup(year):
+    """
+    team results for world cup
+    params:
+        year: year to show
+    """
     model = Results(mysql)
-    races_model = Races(mysql)
-    title = "Team World Cup {} overall standings".format(year)
+    title = f"Team World Cup {year} overall standings"
 
     current_year = datetime.now().year + 1
     totals_m = model.get_teamworldcup_points(year, "M")
     totals_f = model.get_teamworldcup_points(year, "W")
     totals_x = model.get_teamworldcup_points(year, "X")
-    counted_text = f"All team races are counted in overall standings each year."
+    counted_text = "All team races are counted in overall standings each year."
 
     totals_m, races_m = tools.make_team_worldup_results_base(totals_m, "M")
     totals_f, races_f = tools.make_team_worldup_results_base(totals_f, "W")
     totals_x, races_x = tools.make_team_worldup_results_base(totals_x, "X")
     season_race = races_m | races_f | races_x
 
-    totals = tools.make_team_worldup_results(season_race, totals_m, totals_f, totals_x)
+    totals = tools.make_team_worldup_results(
+        season_race, totals_m, totals_f, totals_x)
     race_links = [race.split("-") for race in season_race]
     race_links = [(int(i), RELAY_FORMATS[cat]) for i, cat in race_links]
     race_links.sort(key=lambda x: x[0])
@@ -277,18 +321,21 @@ def team_wcup(year):
 @lru_cache()
 @app.route("/race/<int:race_id>/")
 def race(race_id):
+    """
+    display info about given race
+    params:
+        race_id: race id
+    """
     model = Results(mysql)
     try:
-        race = RACES[int(race_id)]
+        cur_race = RACES[int(race_id)]
     except KeyError:
         flask.abort(404)
 
     data = model.get_race_results(race_id)
-    title = "{} {} {}".format(
-        race["event"], race["year"], DISTANCE_NAMES[race["distance"]]
-    )
+    title = f'{cur_race["event"]} {cur_race["year"]} {DISTANCE_NAMES[cur_race["distance"]]}'
 
-    if race["distance"] == "relay":
+    if cur_race["distance"] == "relay":
         women_list = model.get_relay_results(race_id, "W")
         men_list = model.get_relay_results(race_id, "M")
 
@@ -309,10 +356,10 @@ def race(race_id):
             },
             competitors=COMPETITORS,
             flags=tools.IOC_INDEX,
-            race=race,
+            race=cur_race,
         )
 
-    elif race["distance"] in ("sprint-relay", "mix-relay"):
+    elif cur_race["distance"] in ("sprint-relay", "mix-relay"):
         result_list = model.get_relay_results(race_id, "X")
         results = tools.prepare_relay_output(result_list)
 
@@ -323,7 +370,7 @@ def race(race_id):
             stats={"teams": len(results.keys())},
             competitors=COMPETITORS,
             flags=tools.IOC_INDEX,
-            race=race,
+            race=cur_race,
         )
     else:
         women = [row for row in data if COMPETITORS[row[0]]["gender"] == "F"]
@@ -343,13 +390,18 @@ def race(race_id):
             },
             competitors=COMPETITORS,
             flags=tools.IOC_INDEX,
-            race=race,
+            race=cur_race,
         )
 
 
 @lru_cache()
 @app.route("/competitor/<competitor_id>/")
 def competitor(competitor_id):
+    """
+    display info about given competitor
+    params:
+        competitor_id: competitor id
+    """
     model = Results(mysql)
     try:
         current = COMPETITORS[int(competitor_id)]
@@ -364,10 +416,13 @@ def competitor(competitor_id):
     distances = list({row["dist"] for row in data})
 
     medal_table = tools.prepare_medal_table(model, competitor_id)
-    relay_medal_table = tools.prepare_medal_table(model, competitor_id, "relay")
+    relay_medal_table = tools.prepare_medal_table(
+        model, competitor_id, "relay")
 
-    my_wmtboc = model.get_event_competitor_participation(competitor_id, "WMTBOC")
-    my_emtboc = model.get_event_competitor_participation(competitor_id, "EMTBOC")
+    my_wmtboc = model.get_event_competitor_participation(
+        competitor_id, "WMTBOC")
+    my_emtboc = model.get_event_competitor_participation(
+        competitor_id, "EMTBOC")
 
     first_medals = {
         "medal_wmtboc": model.get_first_medal(competitor_id, "WMTBOC"),
@@ -388,7 +443,7 @@ def competitor(competitor_id):
         ),
     }
 
-    title = "{} {}".format(current["first"], current["last"])
+    title = " ".join([current["first"], current["last"]])
 
     try:
         birth = current["born"].split("-")[0]
@@ -420,8 +475,14 @@ def competitor(competitor_id):
 @lru_cache()
 @app.route("/medals_table/<event>/")
 def medals_table(event="WMTBOC"):
+    """
+    display medal table for given event type
+    params:
+        event: event type
+    """
     model = Results(mysql)
-    medal_lines = [model.get_place_count(place, event.upper()) for place in range(1, 4)]
+    medal_lines = [model.get_place_count(
+        place, event.upper()) for place in range(1, 4)]
     relay_lines = [
         model.get_place_count(place, event.upper(), "relay") for place in range(1, 4)
     ]
@@ -434,15 +495,16 @@ def medals_table(event="WMTBOC"):
     ranking_relay = tools.sort_medal_table(converted_relay)
     ranking_together = tools.sort_medal_table(together)
 
-    countries = {COMPETITORS[com_id]["nationality"] for com_id in converted.keys()}
+    countries = {COMPETITORS[com_id]["nationality"]
+                 for com_id in converted.keys()}
     rel_countries = {
         COMPETITORS[com_id]["nationality"] for com_id in converted_relay.keys()
     }
 
-    disclaimer = ''
-    if event=='wcup':
-        disclaimer = "WMTBOC and EMTBOC are World Cup races too. This table contains only the medals from World Cup races other than the championships."
-
+    disclaimer = ""
+    if event == "wcup":
+        disclaimer = "WMTBOC and EMTBOC are World Cup races too. This table contains only \
+            the medals from World Cup races other than the championships."
 
     stats = {
         "individual": len(converted),
@@ -457,7 +519,7 @@ def medals_table(event="WMTBOC"):
         "relay": (converted_relay, ranking_relay),
     }
 
-    title = "Medals from {}".format(tools.EVENT_NAMES[event.upper()])
+    title = f"Medals from {tools.EVENT_NAMES[event.upper()]}"
 
     return flask.render_template(
         "medals.j2",
@@ -473,7 +535,11 @@ def medals_table(event="WMTBOC"):
 @lru_cache()
 @app.route("/participation/<event>/")
 def participation_in_event(event="WMTBOC"):
-
+    """
+    display participation table for given event type
+    params:
+        event: event type
+    """
     model = Results(mysql)
 
     at_last_one_participation = model.get_participation_years(event)
@@ -481,14 +547,15 @@ def participation_in_event(event="WMTBOC"):
     result = {}
 
     for competitor_id in at_last_one_participation:
-        res = model.get_event_competitor_participation(competitor_id, event.upper())
+        res = model.get_event_competitor_participation(
+            competitor_id, event.upper())
         if res:
             result[competitor_id] = res
 
     result = sorted(result.items(), key=lambda kv: len(kv[1]), reverse=True)
 
     title = tools.EVENT_NAMES[event.upper()]
-    tname = "{}_NR".format(event.upper())
+    tname = f"{event.upper()}_NR"
 
     return flask.render_template(
         "participations.j2",
@@ -504,7 +571,12 @@ def participation_in_event(event="WMTBOC"):
 @app.route("/young_stars/<event>/")
 @app.route("/young_stars/<event>/<int:place>/")
 def young_stars(event="WMTBOC", place=None):
-
+    """
+    display youngest medalists for given event type
+    params:
+        event: event type
+        place: medal place
+    """
     model = Results(mysql)
 
     at_last_one_participation = model.get_participation_years(event)
@@ -532,17 +604,13 @@ def young_stars(event="WMTBOC", place=None):
     result = sorted(result.items(), key=lambda kv: kv[1][0])
     result = [res for res in result if res[1][0] <= 23]
 
-    title = "Young stars on {}".format(tools.EVENT_NAMES[event.upper()])
+    title = f"Young stars on {tools.EVENT_NAMES[event.upper()]}"
     if place:
-        disclaimer = "Competitors who got a {} medal in age 24 or younger.".format(
-            tools.EVENT_NAMES[event.upper()]
-        )
+        disclaimer = f"Competitors who got a \
+            {tools.EVENT_NAMES[event.upper()]} medal in age 24 or younger."
     else:
-        disclaimer = (
-            "Competitors who got their first {} medal before becoming 24.".format(
-                tools.EVENT_NAMES[event.upper()]
-            )
-        )
+        disclaimer = f"Competitors who got their first \
+            {tools.EVENT_NAMES[event.upper()]} medal before becoming 24."
 
     return flask.render_template(
         "youngstars.j2",
@@ -560,7 +628,12 @@ def young_stars(event="WMTBOC", place=None):
 @app.route("/great_masters/<event>/")
 @app.route("/great_masters/<event>/<int:place>/")
 def great_masters(event="WMTBOC", place=None):
-
+    """
+    display oldest medalists for given event type
+    params:
+        event: event type
+        place: medal type place
+    """
     model = Results(mysql)
 
     at_last_one_participation = model.get_participation_years(event)
@@ -589,15 +662,13 @@ def great_masters(event="WMTBOC", place=None):
     result = sorted(result.items(), key=lambda kv: kv[1][0], reverse=True)
     result = [res for res in result if res[1][0] >= 35]
 
-    title = "Great masters on {}".format(tools.EVENT_NAMES[event.upper()])
+    title = f"Great masters on {tools.EVENT_NAMES[event.upper()]}"
     if place:
-        disclaimer = "Competitors who got a {} medal in age 35 and older.".format(
-            tools.EVENT_NAMES[event.upper()]
-        )
+        disclaimer = f"Competitors who got a \
+            {tools.EVENT_NAMES[event.upper()]} medal in age 35 and older."
     else:
-        disclaimer = "Competitors who got the {} title in age 35 and older.".format(
-            tools.EVENT_NAMES[event.upper()]
-        )
+        disclaimer = f"Competitors who got the \
+            {tools.EVENT_NAMES[event.upper()]} title in age 35 and older."
 
     return flask.render_template(
         "youngstars.j2",
@@ -613,6 +684,10 @@ def great_masters(event="WMTBOC", place=None):
 
 @app.errorhandler(404)
 def page_not_found(error):
+    """
+    404 error handler
+    """
+    print("404", error)
     return flask.render_template("error_404.j2"), 404
 
 
@@ -622,7 +697,6 @@ def insert_wcup(year, totals):
     """
     model = Wcup(mysql)
     model.insert_results(year, totals)
-
 
 
 if __name__ == "__main__":

@@ -1,4 +1,6 @@
 {% extends "default.j2" %} {% block content %}
+{% from 'macros.j2' import  relay_table_row %}
+
 <div class="container-fluid">
     <div class="row">
     {% include 'races_infobox.j2' %}
@@ -8,11 +10,11 @@
             <h2>Mixed Teams</h2>
             <table class="table-condensed">
                 {% for code, team in results.items() %}
-                    {% include 'relay_table_row.j2' %}
+                    {{ relay_table_row(team, competitors, flags) }}
                 {% endfor %}
             </table>
         </div>
     </div>
 </div>    
-{% include 'relay_disclaimer.html' %}
+{% include 'relay_disclaimer.j2' %}
 {% endblock %}
