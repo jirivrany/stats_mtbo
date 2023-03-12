@@ -92,7 +92,7 @@
         margin-top: 25px;
         text-align: center;
     }
-    .info-card .info-card-details .info-card-detail .social a {
+    .card-social a {
         position: relative;
         display: inline-block;
         min-width: 40px;
