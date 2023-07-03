@@ -29,7 +29,7 @@ COMPETITORS = Competitors(mysql).get_all_present()
 WMTBOC_NR = Races(mysql).get_count_by_event("WMTBOC")[0][0]
 EMTBOC_NR = Races(mysql).get_count_by_event("EMTBOC")[0][0]
 MEDAL_NAMES = {1: "Gold", 2: "Silver", 3: "Bronze"}
-YEAR = 2022
+YEAR = 2023
 
 DISTANCE_NAMES = {
     "long": "Long",
@@ -197,7 +197,7 @@ def api_search():
     internal enpoint for autocomplete
     """
     data = [
-        {"name": f'{val["first"]} {val["last"]}',"id": key}
+        {"name": f'{val["first"]} {val["last"]}', "id": key}
         for key, val in COMPETITORS.items()
     ]
     return flask.jsonify(result=data)
