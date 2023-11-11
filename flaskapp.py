@@ -87,7 +87,7 @@ def home():
         comp["team"] = tmp["nationality"]
 
     return flask.render_template(
-        "index.j2",
+        "index.html",
         wmtboc=wmtboc,
         emtboc=emtboc,
         wcup=wcup_races,
@@ -103,7 +103,7 @@ def about():
     """
     about the site
     """
-    return flask.render_template("about.j2")
+    return flask.render_template("about.html")
 
 
 @lru_cache()
@@ -130,7 +130,7 @@ def count(event="WMTBOC"):
                     for year, flags in wmtboc_table.items()}
 
     return flask.render_template(
-        "count.j2", wmtboc=wmtboc_table, flags=tools.IOC_INDEX, title=title
+        "count.html", wmtboc=wmtboc_table, flags=tools.IOC_INDEX, title=title
     )
 
 
@@ -145,7 +145,7 @@ def teams():
     nations = sorted(list(nations))
 
     return flask.render_template(
-        "teams.j2",
+        "teams.html",
         title=title,
         nations=nations,
         years=tools.years(),
@@ -178,7 +178,7 @@ def nation(code, year):
     if filtered_results:
         title = f"Team {code} results for {year}"
         return flask.render_template(
-            "races_team.j2",
+            "races_team.html",
             title=title,
             results=filtered_results,
             competitors=sel_competitors,
@@ -188,7 +188,7 @@ def nation(code, year):
         )
     else:
         title = f"No results for team {code} in {year}"
-        return flask.render_template("races_team_nores.j2", title=title)
+        return flask.render_template("races_team_nores.html", title=title)
 
 
 @app.route("/api/prefetch/competitor/")
@@ -213,7 +213,7 @@ def wcup_overall():
     women = model.get_overall_summary(category="F")
 
     return flask.render_template(
-        "wcup_overall.j2",
+        "wcup_overall.html",
         competitors=COMPETITORS,
         flags=tools.IOC_INDEX,
         men=men,
@@ -256,7 +256,7 @@ def wcup(year):
     }
 
     return flask.render_template(
-        "wcup.j2",
+        "wcup.html",
         title=title,
         counted_text=counted_text,
         table_colspan=len(season_race),
@@ -303,7 +303,7 @@ def team_wcup(year):
     country = set((team["team"] for team in totals))
 
     return flask.render_template(
-        "wcup_team.j2",
+        "wcup_team.html",
         title=title,
         counted_text=counted_text,
         totals=totals,
@@ -344,7 +344,7 @@ def race(race_id):
         country = set(men.keys()).union(set(women.keys()))
 
         return flask.render_template(
-            "relay.j2",
+            "relay.html",
             title=title,
             women=women,
             men=men,
@@ -364,7 +364,7 @@ def race(race_id):
         results = tools.prepare_relay_output(result_list)
 
         return flask.render_template(
-            "mix_relay.j2",
+            "mix_relay.html",
             title=title,
             results=results,
             stats={"teams": len(results.keys())},
@@ -378,7 +378,7 @@ def race(race_id):
         country = {COMPETITORS[row[0]]["nationality"] for row in data}
 
         return flask.render_template(
-            "race.j2",
+            "race.html",
             title=title,
             women=women,
             men=men,
@@ -451,7 +451,7 @@ def competitor(competitor_id):
         birth = None
 
     return flask.render_template(
-        "competitor.j2",
+        "competitor.html",
         title=title,
         birth=birth,
         medal_table=medal_table,
@@ -522,7 +522,7 @@ def medals_table(event="WMTBOC"):
     title = f"Medals from {tools.EVENT_NAMES[event.upper()]}"
 
     return flask.render_template(
-        "medals.j2",
+        "medals.html",
         title=title,
         stats=stats,
         disclaimer=disclaimer,
@@ -558,7 +558,7 @@ def participation_in_event(event="WMTBOC"):
     tname = f"{event.upper()}_NR"
 
     return flask.render_template(
-        "participations.j2",
+        "participations.html",
         title=title,
         total=getattr(sys.modules[__name__], tname),
         table_data=result,
@@ -613,7 +613,7 @@ def young_stars(event="WMTBOC", place=None):
             {tools.EVENT_NAMES[event.upper()]} medal before becoming 24."
 
     return flask.render_template(
-        "youngstars.j2",
+        "youngstars.html",
         title=title,
         disclaimer=disclaimer,
         table_data=result,
@@ -671,7 +671,7 @@ def great_masters(event="WMTBOC", place=None):
             {tools.EVENT_NAMES[event.upper()]} title in age 35 and older."
 
     return flask.render_template(
-        "youngstars.j2",
+        "youngstars.html",
         title=title,
         disclaimer=disclaimer,
         table_data=result,
@@ -688,7 +688,7 @@ def page_not_found(error):
     404 error handler
     """
     print("404", error)
-    return flask.render_template("error_404.j2"), 404
+    return flask.render_template("error_404.html"), 404
 
 
 def insert_wcup(year, totals):

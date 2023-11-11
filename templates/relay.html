@@ -1,9 +1,9 @@
-{% extends "default.j2" %}
-{% from 'macros.j2' import  relay_table_row %}
+{% extends "default.html" %}
+{% from 'macros.html' import  relay_table_row %}
 
 {% block content %}
 <div class="container-fluid">
-    {% include 'races_infobox.j2' %}
+    {% include 'races_infobox.html' %}
     <div class="row">
         <div class="col-md-6">
             <h2>Women</h2>
@@ -27,5 +27,5 @@
         </div>
     </div>
 </div>    
-{% include 'relay_disclaimer.j2' %}
+{% include 'relay_disclaimer.html' %}
 {% endblock %}

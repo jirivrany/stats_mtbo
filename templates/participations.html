@@ -1,21 +1,18 @@
-{% extends "default.j2" %} {% block content %}
-<h1>{{ title }}</h1>
-<p>{{ disclaimer }}</p>
+{% extends "default.html" %}
+{% block content %}
+<h1>Participation on {{ title }}</h1>
+<p>So far <strong>{{ total }} {{ title }}s</strong> were held.</p>
 <div class="container-fluid">
-    <table class="table table-sm">
-    <thead class="table-info">
+    <table class="table-condensed">
     <tr>
-        <th>#</th>
+        <th>Nr. of events</th>
         <th>Competitor</th>
-        <th>Age</th>
-        <th>Event</th>
+        <th>Years</th>
     </tr>
-    </thead>
-    <tbody>
-        {% for competitor_id, result in table_data %}
+        {% for competitor_id, years in table_data %}
             <tr>
                 <th>
-                    {{ loop.index }}
+                    {{ years|length }}
                 </th>
                 <td>
                 <a href="/competitor/{{ competitor_id }}/">
@@ -28,21 +25,13 @@
                 </td>
                
                 <td>
-                    {{ result[0] }}
+                    {{ years|join(", ") }}
                 </td>
-                {% if place %}
-                <td>
-                   <a href="/race/{{ result[1][0][0] }}">{{ medal_names[result[1][0][4]] }} {{ result[1][0][3] }} on {{ result[1][0][2] }} distance</a>
-                </td>
-                {% else %}
-                <td>
-                   <a href="/race/{{ result[1][0][0] }}">{{ result[1][0][3] }} on {{ result[1][0][2] }} distance</a>
-                </td>
-                {% endif %}
                 
             </tr>
         {% endfor %}
-        </tbody>
     </table>
+
+
 </div>
 {% endblock %}
