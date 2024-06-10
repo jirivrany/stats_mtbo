@@ -9,34 +9,144 @@ class Results(object):
     def __init__(self, mysql):
         self.cursor = mysql.connect().cursor()
 
+    def get_summary_medals(self, year, event, gender="M", organizer=""):
+        """
+        get summary of results for given year and event
+        """
+        query = "SELECT cr.competitor_id, cr.race_id, cr.place, r.distance \
+                FROM competitor_race cr \
+                JOIN races r ON cr.race_id = r.id \
+                JOIN competitors c ON cr.competitor_id = c.id "
+        
+        if not organizer:
+            query += "WHERE r.year = %s AND r.event = %s "
+        else:
+            query += "WHERE r.year = %s AND r.event = %s AND r.country = %s "
+        
+        query += "AND cr.place IN (1, 2, 3) \
+                AND c.gender = %s \
+                ORDER BY r.date ASC, cr.place ASC;"
+        if not organizer:
+            self.cursor.execute(query, (year, event, gender))
+        else:    
+            self.cursor.execute(query, (year, event, organizer, gender))
+        query_result = self.cursor.fetchall()
+
+        # Initialize an empty dictionary to store the result
+        result_dict = {}
+        ids_dict = {}
+        # Process the query result and organize it into the dictionary
+        for item in query_result:
+            competitor_id, race_id, place, event_type = item
+            # Create a tuple (competitor_id, place)
+            result_tuple = (competitor_id, place)
+            ids_dict[event_type] = race_id
+            # Append the tuple to the corresponding event type in the dictionary
+            result_dict.setdefault(event_type, []).append(result_tuple)
+
+        return result_dict, ids_dict
+
+    def get_participating_countries(self, year, event, organizer=""):
+        """
+        get list of countries participating in given year and event
+        """
+        query = "SELECT DISTINCT c.nationality \
+                FROM competitor_race cr \
+                JOIN races r ON cr.race_id = r.id \
+                JOIN competitors c ON cr.competitor_id = c.id "
+        if not organizer:
+            query += "WHERE r.year = %s AND r.event = %s "
+        else:
+            query += "WHERE r.year = %s AND r.event = %s AND r.country = %s "
+
+        query += "ORDER BY c.nationality;"
+        if not organizer:
+            self.cursor.execute(query, (year, event))
+        else:
+            self.cursor.execute(query, (year, event, organizer))    
+        return [item[0] for item in self.cursor.fetchall()]
+
+    def count_event_competitors(self, year, event, gender="M", organizer=""):
+        """
+        count competitors participating in given year and event
+        """
+        query = "SELECT COUNT(DISTINCT c.id) \
+                FROM competitor_race cr \
+                JOIN races r ON cr.race_id = r.id \
+                JOIN competitors c ON cr.competitor_id = c.id "
+        if not organizer:            
+            query += "WHERE r.year = %s AND r.event = %s "
+        else:
+            query += "WHERE r.year = %s AND r.event = %s AND r.country = %s "    
+        query += "AND c.gender = %s;"
+
+        if not organizer:
+            self.cursor.execute(query, (year, event, gender))
+        else:
+            self.cursor.execute(query, (year, event, organizer, gender))
+                                
+        return self.cursor.fetchone()[0]
+
+    def get_summary_venues(self, year, event, organizer=""):
+        """
+        get summary of results for given year and event
+        """
+        query = "SELECT r.date, r.venue \
+                FROM races r "
+        if not organizer:
+            query += "WHERE r.year = %s AND r.event = %s "
+        else:
+            query += "WHERE r.year = %s AND r.event = %s AND r.country = %s "
+
+        query += "ORDER BY r.date ASC;"
+
+        if not organizer:
+            self.cursor.execute(query, (year, event))
+        else:
+            self.cursor.execute(query, (year, event, organizer))
+        return self.cursor.fetchall()
+    
+    def get_summary_relay_medals(self, year, event, organizer=""):
+        """
+        get summary of results for given year and event
+        """
+        if not organizer:
+            query = "SELECT id, distance from races WHERE year = %s AND event = %s AND team = 1"
+            self.cursor.execute(query, (year, event))
+        else:
+            query = "SELECT id, distance from races WHERE year = %s AND event = %s AND country = %s AND team = 1"
+            self.cursor.execute(query, (year, event, organizer))
+
+        return self.cursor.fetchall()            
+
+
     def get_worldcup_points(self, year, gender="M"):
         """
         get results for inidividual wcup and year and category
         """
-      
+
         query = "SELECT competitor_id, race_id, wcup\
                 FROM competitor_race\
                 WHERE race_id IN (SELECT id FROM races WHERE year=%s AND team=0 ORDER BY date)\
                 AND competitor_id IN (SELECT id FROM competitors WHERE gender = %s)\
-                ORDER BY competitor_id;"   
+                ORDER BY competitor_id;"
 
         self.cursor.execute(query, (year, gender))
         return self.cursor.fetchall()
-        
-    def get_teamworldcup_points(self, year, category='M'):
+
+    def get_teamworldcup_points(self, year, category="M"):
         """
         get results for team wcup and year
         """
-      
+
         query = "SELECT competitor_id, race_id, team, wcup\
                 FROM competitor_relay\
                 WHERE race_id IN (SELECT id FROM races WHERE year=%s AND team=1 ORDER BY date)\
                 AND class=%s\
-                ORDER BY competitor_id;"   
+                ORDER BY competitor_id;"
 
         self.cursor.execute(query, (year, category))
         return self.cursor.fetchall()
-        
 
     def get_race_results(self, race_id):
         """
@@ -143,12 +253,17 @@ class Results(object):
         :return
         """
 
-        query = "SELECT competitor_id, COUNT(race_id) FROM competitor_race WHERE race_id IN (SELECT id FROM races WHERE event='{}') GROUP BY competitor_id".format(
-            event.upper()
-        )
-        query2 = "SELECT competitor_id, COUNT(race_id) FROM competitor_relay WHERE race_id IN (SELECT id FROM races WHERE event='{}') GROUP BY competitor_id".format(
-            event.upper()
-        )
+        query = (
+            "SELECT competitor_id, COUNT(race_id) FROM competitor_race "
+            "WHERE race_id IN (SELECT id FROM races WHERE event='{}') "
+            "GROUP BY competitor_id"
+        ).format(event.upper())
+
+        query2 = (
+            "SELECT competitor_id, COUNT(race_id) FROM competitor_relay "
+            "WHERE race_id IN (SELECT id FROM races WHERE event='{}') "
+            "GROUP BY competitor_id"
+        ).format(event.upper())
 
         self.cursor.execute(query)
         res = self.cursor.fetchall()

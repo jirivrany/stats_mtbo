@@ -14,17 +14,17 @@ class Races(object):
         :param db_result:
         """
         result = {
-            'race_id': db_result[0],
-            'year': db_result[1],
-            'date': db_result[2],
-            'distance': db_result[3],
-            'event': db_result[4],
-            'venue': db_result[5],
-            'country': db_result[6],
-            'url': db_result[7],
-            'map_m': db_result[8],
-            'map_w': db_result[9],
-            'iofurl': db_result[10]
+            "race_id": db_result[0],
+            "year": db_result[1],
+            "date": db_result[2],
+            "distance": db_result[3],
+            "event": db_result[4],
+            "venue": db_result[5],
+            "country": db_result[6],
+            "url": db_result[7],
+            "map_m": db_result[8],
+            "map_w": db_result[9],
+            "iofurl": db_result[10],
         }
 
         return result
@@ -62,8 +62,10 @@ class Races(object):
         :return list
         """
         if individual_only:
-            query = "SELECT * FROM races WHERE event = %s AND team = 0 ORDER BY year DESC"
-        else:    
+            query = (
+                "SELECT * FROM races WHERE event = %s AND team = 0 ORDER BY year DESC"
+            )
+        else:
             query = "SELECT * FROM races WHERE event = %s ORDER BY year DESC"
         self.cursor.execute(query, (event,))
 
@@ -99,7 +101,7 @@ class Races(object):
 
     def get_individual_ids_by_year(self, year, team=False):
         """
-        get team or individual races id held in given year 
+        get team or individual races id held in given year
         :param year string
         :return list
         """
@@ -114,5 +116,16 @@ class Races(object):
         res = [x[0] for x in db_result]
 
         return res
-
     
+    def get_event_years(self, event):
+        """
+        get count of events of given event type
+        :param event string
+        :return list
+        """
+        query = "SELECT DISTINCT (year), country FROM races WHERE event = %s ORDER BY year DESC;"
+        self.cursor.execute(query, (event,))
+
+        db_result = self.cursor.fetchall()
+
+        return db_result

@@ -1,0 +1,79 @@
+{% extends "default.html" %}
+{% from 'macros.html' import  event_summary_table,  relay_table_row %}
+
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% if disclaimer %}
+   <p>{{ disclaimer }}</p>
+{% endif %}
+<p>Races were held from {{ from_date}} to {{ to_date }}.</p>
+<p><strong>Venues:</strong>
+    {% for venue in venues %}
+    {{ venue }}{% if not loop.last %}, {% endif %}
+    {% endfor %}
+</p>
+<p>
+    <strong>{{ nr_teams }}</strong> teams participated: 
+    {% for code in teams %}
+    <img src="{{ url_for('static', filename='css/blank.gif') }}"
+             class="flag flag-{{ flags[code].lower() }}"
+             alt="{{ code }}"
+            title="{{ code }}"/>
+    {% endfor %}
+</p>
+<p><strong>{{nr_women}}</strong> women and <strong>{{nr_men}}</strong> men started in one or more races.</p>
+
+<div class="row">
+    <h2>Individual races</h2>
+    <div class="col-sm-6">
+        <h3>Women</h3>
+        <table class="table table-sm">
+        <thead>
+        <tr class="table-info">
+            <th>race</th>
+            <th>Gold</th>
+            <th>Silver</th>
+            <th>Bronze</th>
+        </tr>
+        </thead>
+        <tbody>
+            {{ event_summary_table(data_women, race_ids, competitors, flags) }}
+        </table>
+        </tbody>
+    </div>    
+    <div class="col-sm-6">
+        <h3>Men</h3>
+        <table class="table table-sm">
+        <thead>
+        <tr class="table-info">
+            <th>race</th>
+            <th>Gold</th>
+            <th>Silver</th>
+            <th>Bronze</th>
+        </tr>
+        </thead>
+        <tbody>
+            {{ event_summary_table(data_men, race_ids, competitors, flags) }}
+        </table>
+        </tbody>
+    </div>    
+</div>
+<div class="row">
+    <h2>Team races</h2>
+    {% if team_results %}
+        {% for one_race in team_results %}
+            {% for klasa, single in one_race.items() %}
+                {% if single %}
+                    <h3>{{ klasa|capitalize }}</h3>
+                    <table class="table-condensed">
+                        {% for code, team in single.items() %}
+                            {{ relay_table_row(team, competitors, flags) }}
+                        {% endfor %}
+                    </table>
+                {% endif %}
+            {% endfor %}    
+        {% endfor %}
+    {% endif %}
+</div>    
+{% endblock %}

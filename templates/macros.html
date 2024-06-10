@@ -103,4 +103,28 @@
     {{ team['time'] }}
     </td>
 </tr>
-{% endmacro %}            
+{% endmacro %}
+
+{% macro event_summary_table(table_data, race_ids, competitors, flags) %}
+    {% for race_type, results in table_data.items() %}
+        {% set race_id = race_ids.get(race_type) %}
+        <tr>
+            <td>
+                <a href="{{ url_for('race', race_id=race_id) }}">
+                    {{ race_type}}
+                </a>
+            </td>
+            {% for competitor_id, place in results %}
+                <td>
+                <a href="/competitor/{{ competitor_id }}/">
+                    {{ competitors[competitor_id]["first"] }}
+                    {{ competitors[competitor_id]["last"] }}</a>
+                <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                    class="flag flag-{{ flags[competitors[competitor_id]['nationality']].lower() }}"
+                    alt="{{ competitors[competitor_id]['nationality'] }}" />
+                {{ competitors[competitor_id]["nationality"] }}
+                </td>
+            {% endfor %}
+        </tr>
+    {% endfor %}
+{% endmacro %}

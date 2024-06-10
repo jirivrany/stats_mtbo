@@ -3,6 +3,7 @@
 
 class Competitors(object):
     """Competitors Model"""
+
     def __init__(self, mysql):
         self.cursor = mysql.connect().cursor()
 
@@ -17,12 +18,12 @@ class Competitors(object):
         db_result = self.cursor.fetchone()
 
         result = {
-            'competitor_id': db_result[0],
-            'first': db_result[1],
-            'last': db_result[2],
-            'nationality': db_result[3],
-            'born': db_result[4],
-            'gender': db_result[5]
+            "competitor_id": db_result[0],
+            "first": db_result[1],
+            "last": db_result[2],
+            "nationality": db_result[3],
+            "born": db_result[4],
+            "gender": db_result[5],
         }
 
         return result

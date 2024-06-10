@@ -29,7 +29,7 @@ COMPETITORS = Competitors(mysql).get_all_present()
 WMTBOC_NR = Races(mysql).get_count_by_event("WMTBOC")[0][0]
 EMTBOC_NR = Races(mysql).get_count_by_event("EMTBOC")[0][0]
 MEDAL_NAMES = {1: "Gold", 2: "Silver", 3: "Bronze"}
-YEAR = 2023
+YEAR = 2024
 
 DISTANCE_NAMES = {
     "long": "Long",
@@ -59,6 +59,7 @@ WCUP_COUNTED = {
     2021: 4,
     2022: 6,
     2023: 7,
+    2024: 7,
 }
 
 
@@ -70,7 +71,10 @@ def home():
     """
     wmtboc = Races(mysql).get_by_event("WMTBOC")
     emtboc = Races(mysql).get_by_event("EMTBOC")
-
+    wmtboc_years = Races(mysql).get_event_years("WMTBOC")
+    emtboc_years = Races(mysql).get_event_years("EMTBOC")
+    wcup_years = Races(mysql).get_event_years("WCUP")
+    
     wmtboc = sorted(wmtboc, key=lambda x: x[1], reverse=True)
     emtboc = sorted(emtboc, key=lambda x: x[1], reverse=True)
 
@@ -90,6 +94,9 @@ def home():
         "index.html",
         wmtboc=wmtboc,
         emtboc=emtboc,
+        wmtboc_years=wmtboc_years,
+        emtboc_years=emtboc_years,
+        wcup_years=wcup_years,
         wcup=wcup_races,
         recent=recent,
         flags=tools.IOC_INDEX,
@@ -679,6 +686,96 @@ def great_masters(event="WMTBOC", place=None):
         medal_names=MEDAL_NAMES,
         competitors=COMPETITORS,
         flags=tools.IOC_INDEX,
+    )
+
+
+@app.route("/events/<event>/<int:year>/")
+@app.route("/events/<event>/<int:year>/<organizer>/")
+def event_summary(event: str = "WMTBOC", year: int = 2023, organizer: str = ""):
+    """
+    display summary of given event type for given year
+    params:
+        year: year
+        event: event type
+    """
+    model = Results(mysql)
+    if event.upper() in ("WMTBOC", "EMTBOC"):
+        
+        data_men, mrace_ids = model.get_summary_medals(year, event.upper())
+        data_women, wrace_ids = model.get_summary_medals(year, event.upper(), "F")
+        title = f"{tools.EVENT_NAMES[event.upper()]} {year} summary"
+        data_relays = model.get_summary_relay_medals(year, event.upper())
+        countries = model.get_participating_countries(year, event.upper())
+        nr_men = model.count_event_competitors(year, event.upper(), "M")
+        nr_women = model.count_event_competitors(year, event.upper(), "F")
+        races_info = model.get_summary_venues(year, event.upper())
+    elif event.upper() == "WCUP" and organizer:
+        data_men, mrace_ids = model.get_summary_medals(year, event.upper(), "M", organizer.upper())
+        data_women, wrace_ids = model.get_summary_medals(year, event.upper(), "F", organizer.upper())
+        title = f"{tools.EVENT_NAMES[event.upper()]} {organizer.upper()} {year} summary"
+        data_relays = model.get_summary_relay_medals(year, event.upper(), organizer.upper())
+        countries = model.get_participating_countries(year, event.upper(), organizer.upper())
+        nr_men = model.count_event_competitors(year, event.upper(), "M", organizer.upper())
+        nr_women = model.count_event_competitors(year, event.upper(), "F", organizer.upper())
+        races_info = model.get_summary_venues(year, event.upper(), organizer.upper())
+    else:
+        flask.abort(404)        
+
+    team_results = []
+    for relay in data_relays:
+        race_id, race_distance = relay
+        print(race_id, race_distance)
+        team_men = []
+        team_women = []
+        team_mix = []
+        if race_distance == "relay":
+            women_list = model.get_relay_results(race_id, "W")
+            men_list = model.get_relay_results(race_id, "M")
+            women_list = women_list[:9]
+            men_list = men_list[:9]
+
+            team_women = tools.prepare_relay_output(women_list)
+            team_men = tools.prepare_relay_output(men_list)
+        
+        if race_distance == "sprint-relay":
+            result_list = model.get_relay_results(race_id, "X")
+            result_list = result_list[:6]
+            team_mix = tools.prepare_relay_output(result_list)
+
+        if race_distance == "mix-relay":
+            result_list = model.get_relay_results(race_id, "X")
+            result_list = result_list[:9]
+            team_mix = tools.prepare_relay_output(result_list)
+            
+            
+        team_results.append({
+            "men": team_men,
+            "women": team_women,
+            "mix": team_mix
+        })
+
+
+
+    race_ids = mrace_ids | wrace_ids        
+    venues = [item[1] for item in races_info]
+    dates = [item[0] for item in races_info]
+    return flask.render_template(
+        "summary.html",
+        from_date=min(dates),
+        to_date=max(dates),
+        title=title,
+        teams=countries,
+        venues=venues,
+        race_ids=race_ids,
+        nr_teams=len(countries),
+        nr_men=nr_men,
+        nr_women=nr_women,
+        data_men=data_men,
+        team_results=team_results,
+        data_women=data_women,
+        medal_names=MEDAL_NAMES,
+        competitors=COMPETITORS,
+        flags=tools.IOC_INDEX
     )
 
 
