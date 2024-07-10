@@ -74,7 +74,7 @@ def home():
     wmtboc_years = Races(mysql).get_event_years("WMTBOC")
     emtboc_years = Races(mysql).get_event_years("EMTBOC")
     wcup_years = Races(mysql).get_event_years("WCUP")
-    
+
     wmtboc = sorted(wmtboc, key=lambda x: x[1], reverse=True)
     emtboc = sorted(emtboc, key=lambda x: x[1], reverse=True)
 
@@ -133,8 +133,7 @@ def count(event="WMTBOC"):
         for year, id_list in per_year.items()
     }
 
-    wmtboc_table = {year: (len(flags), flags)
-                    for year, flags in wmtboc_table.items()}
+    wmtboc_table = {year: (len(flags), flags) for year, flags in wmtboc_table.items()}
 
     return flask.render_template(
         "count.html", wmtboc=wmtboc_table, flags=tools.IOC_INDEX, title=title
@@ -213,7 +212,7 @@ def api_search():
 @app.route("/worldcup_overall/")
 def wcup_overall():
     """
-        World cup overall standings
+    World cup overall standings
     """
     model = Wcup(mysql)
     men = model.get_overall_summary(category="M")
@@ -270,8 +269,7 @@ def wcup(year):
         women=totals_f,
         men=totals_m,
         year=year,
-        stats={"men": len(totals_m), "women": len(
-            totals_f), "country": len(country)},
+        stats={"men": len(totals_m), "women": len(totals_f), "country": len(country)},
         competitors=COMPETITORS,
         current_year=current_year,
         flags=tools.IOC_INDEX,
@@ -301,8 +299,7 @@ def team_wcup(year):
     totals_x, races_x = tools.make_team_worldup_results_base(totals_x, "X")
     season_race = races_m | races_f | races_x
 
-    totals = tools.make_team_worldup_results(
-        season_race, totals_m, totals_f, totals_x)
+    totals = tools.make_team_worldup_results(season_race, totals_m, totals_f, totals_x)
     race_links = [race.split("-") for race in season_race]
     race_links = [(int(i), RELAY_FORMATS[cat]) for i, cat in race_links]
     race_links.sort(key=lambda x: x[0])
@@ -340,7 +337,9 @@ def race(race_id):
         flask.abort(404)
 
     data = model.get_race_results(race_id)
-    title = f'{cur_race["event"]} {cur_race["year"]} {DISTANCE_NAMES[cur_race["distance"]]}'
+    title = (
+        f'{cur_race["event"]} {cur_race["year"]} {DISTANCE_NAMES[cur_race["distance"]]}'
+    )
 
     if cur_race["distance"] == "relay":
         women_list = model.get_relay_results(race_id, "W")
@@ -423,13 +422,10 @@ def competitor(competitor_id):
     distances = list({row["dist"] for row in data})
 
     medal_table = tools.prepare_medal_table(model, competitor_id)
-    relay_medal_table = tools.prepare_medal_table(
-        model, competitor_id, "relay")
+    relay_medal_table = tools.prepare_medal_table(model, competitor_id, "relay")
 
-    my_wmtboc = model.get_event_competitor_participation(
-        competitor_id, "WMTBOC")
-    my_emtboc = model.get_event_competitor_participation(
-        competitor_id, "EMTBOC")
+    my_wmtboc = model.get_event_competitor_participation(competitor_id, "WMTBOC")
+    my_emtboc = model.get_event_competitor_participation(competitor_id, "EMTBOC")
 
     first_medals = {
         "medal_wmtboc": model.get_first_medal(competitor_id, "WMTBOC"),
@@ -488,8 +484,7 @@ def medals_table(event="WMTBOC"):
         event: event type
     """
     model = Results(mysql)
-    medal_lines = [model.get_place_count(
-        place, event.upper()) for place in range(1, 4)]
+    medal_lines = [model.get_place_count(place, event.upper()) for place in range(1, 4)]
     relay_lines = [
         model.get_place_count(place, event.upper(), "relay") for place in range(1, 4)
     ]
@@ -502,8 +497,7 @@ def medals_table(event="WMTBOC"):
     ranking_relay = tools.sort_medal_table(converted_relay)
     ranking_together = tools.sort_medal_table(together)
 
-    countries = {COMPETITORS[com_id]["nationality"]
-                 for com_id in converted.keys()}
+    countries = {COMPETITORS[com_id]["nationality"] for com_id in converted.keys()}
     rel_countries = {
         COMPETITORS[com_id]["nationality"] for com_id in converted_relay.keys()
     }
@@ -554,8 +548,7 @@ def participation_in_event(event="WMTBOC"):
     result = {}
 
     for competitor_id in at_last_one_participation:
-        res = model.get_event_competitor_participation(
-            competitor_id, event.upper())
+        res = model.get_event_competitor_participation(competitor_id, event.upper())
         if res:
             result[competitor_id] = res
 
@@ -700,7 +693,6 @@ def event_summary(event: str = "WMTBOC", year: int = 2023, organizer: str = ""):
     """
     model = Results(mysql)
     if event.upper() in ("WMTBOC", "EMTBOC"):
-        
         data_men, mrace_ids = model.get_summary_medals(year, event.upper())
         data_women, wrace_ids = model.get_summary_medals(year, event.upper(), "F")
         title = f"{tools.EVENT_NAMES[event.upper()]} {year} summary"
@@ -710,16 +702,28 @@ def event_summary(event: str = "WMTBOC", year: int = 2023, organizer: str = ""):
         nr_women = model.count_event_competitors(year, event.upper(), "F")
         races_info = model.get_summary_venues(year, event.upper())
     elif event.upper() == "WCUP" and organizer:
-        data_men, mrace_ids = model.get_summary_medals(year, event.upper(), "M", organizer.upper())
-        data_women, wrace_ids = model.get_summary_medals(year, event.upper(), "F", organizer.upper())
+        data_men, mrace_ids = model.get_summary_medals(
+            year, event.upper(), "M", organizer.upper()
+        )
+        data_women, wrace_ids = model.get_summary_medals(
+            year, event.upper(), "F", organizer.upper()
+        )
         title = f"{tools.EVENT_NAMES[event.upper()]} {organizer.upper()} {year} summary"
-        data_relays = model.get_summary_relay_medals(year, event.upper(), organizer.upper())
-        countries = model.get_participating_countries(year, event.upper(), organizer.upper())
-        nr_men = model.count_event_competitors(year, event.upper(), "M", organizer.upper())
-        nr_women = model.count_event_competitors(year, event.upper(), "F", organizer.upper())
+        data_relays = model.get_summary_relay_medals(
+            year, event.upper(), organizer.upper()
+        )
+        countries = model.get_participating_countries(
+            year, event.upper(), organizer.upper()
+        )
+        nr_men = model.count_event_competitors(
+            year, event.upper(), "M", organizer.upper()
+        )
+        nr_women = model.count_event_competitors(
+            year, event.upper(), "F", organizer.upper()
+        )
         races_info = model.get_summary_venues(year, event.upper(), organizer.upper())
     else:
-        flask.abort(404)        
+        flask.abort(404)
 
     team_results = []
     for relay in data_relays:
@@ -736,7 +740,7 @@ def event_summary(event: str = "WMTBOC", year: int = 2023, organizer: str = ""):
 
             team_women = tools.prepare_relay_output(women_list)
             team_men = tools.prepare_relay_output(men_list)
-        
+
         if race_distance == "sprint-relay":
             result_list = model.get_relay_results(race_id, "X")
             result_list = result_list[:6]
@@ -746,17 +750,10 @@ def event_summary(event: str = "WMTBOC", year: int = 2023, organizer: str = ""):
             result_list = model.get_relay_results(race_id, "X")
             result_list = result_list[:9]
             team_mix = tools.prepare_relay_output(result_list)
-            
-            
-        team_results.append({
-            "men": team_men,
-            "women": team_women,
-            "mix": team_mix
-        })
 
+        team_results.append({"men": team_men, "women": team_women, "mix": team_mix})
 
-
-    race_ids = mrace_ids | wrace_ids        
+    race_ids = mrace_ids | wrace_ids
     venues = [item[1] for item in races_info]
     dates = [item[0] for item in races_info]
     return flask.render_template(
@@ -775,7 +772,7 @@ def event_summary(event: str = "WMTBOC", year: int = 2023, organizer: str = ""):
         data_women=data_women,
         medal_names=MEDAL_NAMES,
         competitors=COMPETITORS,
-        flags=tools.IOC_INDEX
+        flags=tools.IOC_INDEX,
     )
 
 

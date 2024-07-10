@@ -17,18 +17,18 @@ class Results(object):
                 FROM competitor_race cr \
                 JOIN races r ON cr.race_id = r.id \
                 JOIN competitors c ON cr.competitor_id = c.id "
-        
+
         if not organizer:
             query += "WHERE r.year = %s AND r.event = %s "
         else:
             query += "WHERE r.year = %s AND r.event = %s AND r.country = %s "
-        
+
         query += "AND cr.place IN (1, 2, 3) \
                 AND c.gender = %s \
                 ORDER BY r.date ASC, cr.place ASC;"
         if not organizer:
             self.cursor.execute(query, (year, event, gender))
-        else:    
+        else:
             self.cursor.execute(query, (year, event, organizer, gender))
         query_result = self.cursor.fetchall()
 
@@ -63,7 +63,7 @@ class Results(object):
         if not organizer:
             self.cursor.execute(query, (year, event))
         else:
-            self.cursor.execute(query, (year, event, organizer))    
+            self.cursor.execute(query, (year, event, organizer))
         return [item[0] for item in self.cursor.fetchall()]
 
     def count_event_competitors(self, year, event, gender="M", organizer=""):
@@ -74,17 +74,17 @@ class Results(object):
                 FROM competitor_race cr \
                 JOIN races r ON cr.race_id = r.id \
                 JOIN competitors c ON cr.competitor_id = c.id "
-        if not organizer:            
+        if not organizer:
             query += "WHERE r.year = %s AND r.event = %s "
         else:
-            query += "WHERE r.year = %s AND r.event = %s AND r.country = %s "    
+            query += "WHERE r.year = %s AND r.event = %s AND r.country = %s "
         query += "AND c.gender = %s;"
 
         if not organizer:
             self.cursor.execute(query, (year, event, gender))
         else:
             self.cursor.execute(query, (year, event, organizer, gender))
-                                
+
         return self.cursor.fetchone()[0]
 
     def get_summary_venues(self, year, event, organizer=""):
@@ -105,7 +105,7 @@ class Results(object):
         else:
             self.cursor.execute(query, (year, event, organizer))
         return self.cursor.fetchall()
-    
+
     def get_summary_relay_medals(self, year, event, organizer=""):
         """
         get summary of results for given year and event
@@ -117,8 +117,7 @@ class Results(object):
             query = "SELECT id, distance from races WHERE year = %s AND event = %s AND country = %s AND team = 1"
             self.cursor.execute(query, (year, event, organizer))
 
-        return self.cursor.fetchall()            
-
+        return self.cursor.fetchall()
 
     def get_worldcup_points(self, year, gender="M"):
         """

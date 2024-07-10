@@ -116,7 +116,7 @@ class Races(object):
         res = [x[0] for x in db_result]
 
         return res
-    
+
     def get_event_years(self, event):
         """
         get count of events of given event type
