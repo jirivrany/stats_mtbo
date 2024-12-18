@@ -15,14 +15,13 @@ class Wcup(object):
         insert results
         :param results list of {'comp_id': 5812,  'points': 340, 'place': 1}
         :return list
+
         """
         query = "INSERT IGNORE INTO wcup(competitor_id, year, place, points) VALUES(%s, %s, %s, %s)"
 
         for res in results:
             try:
-                self.cursor.execute(
-                    query, (res["comp_id"], year, res["place"], res["points"])
-                )
+                self.cursor.execute(query, (res["comp_id"], year, res["place"], res["points"]))
             except mdb.Error as e:
                 print("Error %d: %s" % (e.args[0], e.args[1]))
                 print("DB Query error {}".format(query))

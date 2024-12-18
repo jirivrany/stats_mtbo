@@ -128,16 +128,11 @@ def count(event="WMTBOC"):
 
     title = event.upper()
 
-    wmtboc_table = {
-        year: Results(mysql).get_by_events_id(id_list)
-        for year, id_list in per_year.items()
-    }
+    wmtboc_table = {year: Results(mysql).get_by_events_id(id_list) for year, id_list in per_year.items()}
 
     wmtboc_table = {year: (len(flags), flags) for year, flags in wmtboc_table.items()}
 
-    return flask.render_template(
-        "count.html", wmtboc=wmtboc_table, flags=tools.IOC_INDEX, title=title
-    )
+    return flask.render_template("count.html", wmtboc=wmtboc_table, flags=tools.IOC_INDEX, title=title)
 
 
 @app.route("/teams/")
@@ -168,17 +163,13 @@ def nation(code, year):
         year: year
     """
     code = code.upper()
-    sel_competitors = {
-        cid: comp for cid, comp in COMPETITORS.items() if comp["nationality"] == code
-    }
+    sel_competitors = {cid: comp for cid, comp in COMPETITORS.items() if comp["nationality"] == code}
     id_comp = {val["competitor_id"] for val in sel_competitors.values()}
 
     races_year = Races(mysql).get_by_year(year)
     model = Results(mysql)
     all_results = [model.get_race_results(myrace[0]) for myrace in races_year]
-    filtered_results = [
-        [row for row in result if row[0] in id_comp] for result in all_results
-    ]
+    filtered_results = [[row for row in result if row[0] in id_comp] for result in all_results]
     filtered_results = [result for result in filtered_results if result]
 
     if filtered_results:
@@ -202,10 +193,7 @@ def api_search():
     """
     internal enpoint for autocomplete
     """
-    data = [
-        {"name": f'{val["first"]} {val["last"]}', "id": key}
-        for key, val in COMPETITORS.items()
-    ]
+    data = [{"name": f'{val["first"]} {val["last"]}', "id": key} for key, val in COMPETITORS.items()]
     return flask.jsonify(result=data)
 
 
@@ -257,9 +245,7 @@ def wcup(year):
     totals_f = tools.make_worldup_results(season_race, totals_f, counted)
     totals_m = tools.make_worldup_results(season_race, totals_m, counted)
 
-    country = {
-        COMPETITORS[row["comp_id"]]["nationality"] for row in totals_m + totals_f
-    }
+    country = {COMPETITORS[row["comp_id"]]["nationality"] for row in totals_m + totals_f}
 
     return flask.render_template(
         "wcup.html",
@@ -337,9 +323,7 @@ def race(race_id):
         flask.abort(404)
 
     data = model.get_race_results(race_id)
-    title = (
-        f'{cur_race["event"]} {cur_race["year"]} {DISTANCE_NAMES[cur_race["distance"]]}'
-    )
+    title = f'{cur_race["event"]} {cur_race["year"]} {DISTANCE_NAMES[cur_race["distance"]]}'
 
     if cur_race["distance"] == "relay":
         women_list = model.get_relay_results(race_id, "W")
@@ -432,18 +416,10 @@ def competitor(competitor_id):
         "medal_emtboc": model.get_first_medal(competitor_id, "EMTBOC"),
         "title_wmtboc": model.get_first_medal(competitor_id, "WMTBOC", 1),
         "title_emtboc": model.get_first_medal(competitor_id, "EMTBOC", 1),
-        "relay_medal_wmtboc": model.get_first_medal(
-            competitor_id, "WMTBOC", table="relay"
-        ),
-        "relay_medal_emtboc": model.get_first_medal(
-            competitor_id, "EMTBOC", table="relay"
-        ),
-        "relay_title_wmtboc": model.get_first_medal(
-            competitor_id, "WMTBOC", 1, table="relay"
-        ),
-        "relay_title_emtboc": model.get_first_medal(
-            competitor_id, "EMTBOC", 1, table="relay"
-        ),
+        "relay_medal_wmtboc": model.get_first_medal(competitor_id, "WMTBOC", table="relay"),
+        "relay_medal_emtboc": model.get_first_medal(competitor_id, "EMTBOC", table="relay"),
+        "relay_title_wmtboc": model.get_first_medal(competitor_id, "WMTBOC", 1, table="relay"),
+        "relay_title_emtboc": model.get_first_medal(competitor_id, "EMTBOC", 1, table="relay"),
     }
 
     title = " ".join([current["first"], current["last"]])
@@ -485,9 +461,7 @@ def medals_table(event="WMTBOC"):
     """
     model = Results(mysql)
     medal_lines = [model.get_place_count(place, event.upper()) for place in range(1, 4)]
-    relay_lines = [
-        model.get_place_count(place, event.upper(), "relay") for place in range(1, 4)
-    ]
+    relay_lines = [model.get_place_count(place, event.upper(), "relay") for place in range(1, 4)]
 
     converted = tools.merge_medal_lines(*medal_lines)
     converted_relay = tools.merge_medal_lines(*relay_lines)
@@ -498,9 +472,7 @@ def medals_table(event="WMTBOC"):
     ranking_together = tools.sort_medal_table(together)
 
     countries = {COMPETITORS[com_id]["nationality"] for com_id in converted.keys()}
-    rel_countries = {
-        COMPETITORS[com_id]["nationality"] for com_id in converted_relay.keys()
-    }
+    rel_countries = {COMPETITORS[com_id]["nationality"] for com_id in converted_relay.keys()}
 
     disclaimer = ""
     if event == "wcup":
@@ -702,25 +674,13 @@ def event_summary(event: str = "WMTBOC", year: int = 2023, organizer: str = ""):
         nr_women = model.count_event_competitors(year, event.upper(), "F")
         races_info = model.get_summary_venues(year, event.upper())
     elif event.upper() == "WCUP" and organizer:
-        data_men, mrace_ids = model.get_summary_medals(
-            year, event.upper(), "M", organizer.upper()
-        )
-        data_women, wrace_ids = model.get_summary_medals(
-            year, event.upper(), "F", organizer.upper()
-        )
+        data_men, mrace_ids = model.get_summary_medals(year, event.upper(), "M", organizer.upper())
+        data_women, wrace_ids = model.get_summary_medals(year, event.upper(), "F", organizer.upper())
         title = f"{tools.EVENT_NAMES[event.upper()]} {organizer.upper()} {year} summary"
-        data_relays = model.get_summary_relay_medals(
-            year, event.upper(), organizer.upper()
-        )
-        countries = model.get_participating_countries(
-            year, event.upper(), organizer.upper()
-        )
-        nr_men = model.count_event_competitors(
-            year, event.upper(), "M", organizer.upper()
-        )
-        nr_women = model.count_event_competitors(
-            year, event.upper(), "F", organizer.upper()
-        )
+        data_relays = model.get_summary_relay_medals(year, event.upper(), organizer.upper())
+        countries = model.get_participating_countries(year, event.upper(), organizer.upper())
+        nr_men = model.count_event_competitors(year, event.upper(), "M", organizer.upper())
+        nr_women = model.count_event_competitors(year, event.upper(), "F", organizer.upper())
         races_info = model.get_summary_venues(year, event.upper(), organizer.upper())
     else:
         flask.abort(404)
@@ -787,7 +747,8 @@ def page_not_found(error):
 
 def insert_wcup(year, totals):
     """
-    for local use only
+    for local use only, should be called from wordlcup endpoint
+    where the totals are calculated for each year
     """
     model = Wcup(mysql)
     model.insert_results(year, totals)
