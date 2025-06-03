@@ -29,7 +29,7 @@ COMPETITORS = Competitors(mysql).get_all_present()
 WMTBOC_NR = Races(mysql).get_count_by_event("WMTBOC")[0][0]
 EMTBOC_NR = Races(mysql).get_count_by_event("EMTBOC")[0][0]
 MEDAL_NAMES = {1: "Gold", 2: "Silver", 3: "Bronze"}
-YEAR = 2024
+YEAR = 2025
 
 DISTANCE_NAMES = {
     "long": "Long",
@@ -60,6 +60,7 @@ WCUP_COUNTED = {
     2022: 6,
     2023: 7,
     2024: 7,
+    2025: 7,
 }
 
 
