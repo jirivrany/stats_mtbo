@@ -193,9 +193,7 @@ class Results(object):
                 WHERE competitor_race.competitor_id = competitors.id"""
 
         if len(event_list) == 2:
-            query += (
-                " AND (competitor_race.race_id = %s OR competitor_race.race_id = %s)"
-            )
+            query += " AND (competitor_race.race_id = %s OR competitor_race.race_id = %s)"
         elif len(event_list) == 3:
             query += """ AND (competitor_race.race_id = %s
                 OR competitor_race.race_id = %s
@@ -292,6 +290,33 @@ class Results(object):
         self.cursor.execute(query, (place, event))
         return self.cursor.fetchall()
 
+    def get_relay_country_place_count(self, place, event):
+        """
+        Counts how many times each country finished at a given place in relay events.
+        Since relay teams are always from a single country, we can get the nationality
+        from any team member.
+
+        :param place: int - the place to count (1 for gold, 2 for silver, 3 for bronze)
+        :param event: string - the event name
+        :return: list of tuples (country, count)
+        """
+
+        query = """
+            SELECT 
+                c.nationality,
+                COUNT(DISTINCT cr.race_id, cr.team) as medal_count
+            FROM competitor_relay cr
+            JOIN races r ON cr.race_id = r.id
+            JOIN competitors c ON cr.competitor_id = c.id
+            WHERE cr.place = %s 
+                AND r.event = %s
+            GROUP BY c.nationality
+            ORDER BY medal_count DESC
+        """
+
+        self.cursor.execute(query, (place, event))
+        return self.cursor.fetchall()
+
     def get_competitor_place_count(self, competitor_id, place, event, table="race"):
         """
         Counts times has some competitor finished on given place
@@ -378,3 +403,13 @@ class Results(object):
                 }
                 result.append(row)
         return result
+
+    def get_event_years(self, event):
+        """
+        Get list of years when a specific event was held
+        :param event: string - the event name
+        :return: list of years
+        """
+        query = "SELECT DISTINCT year FROM races WHERE event = %s ORDER BY year DESC"
+        self.cursor.execute(query, (event,))
+        return [row[0] for row in self.cursor.fetchall()]

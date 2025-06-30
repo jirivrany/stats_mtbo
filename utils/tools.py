@@ -249,8 +249,7 @@ def prepare_medal_table(model, competitor_id, table="race"):
     medal_table = dict.fromkeys(mkeys, [])
     for event in mkeys:
         medal_lines = [
-            model.get_competitor_place_count(competitor_id, place, event.upper(), table)
-            for place in range(1, 4)
+            model.get_competitor_place_count(competitor_id, place, event.upper(), table) for place in range(1, 4)
         ]
 
         converted = merge_medal_lines(*medal_lines)
@@ -291,9 +290,7 @@ def merge_medal_dicts(rank_a, rank_b):
 
 
 def sort_medal_table(converted):
-    gold_rank = reversed(
-        [y[1] for y in sorted([(converted[x], x) for x in converted.keys()])]
-    )
+    gold_rank = reversed([y[1] for y in sorted([(converted[x], x) for x in converted.keys()])])
 
     rank = -1
     skip = 1
@@ -468,3 +465,17 @@ def merge_res_dicts(dict1, dict2, dict3):
 
 def flatten(data: list):
     return [item for sublist in data for item in sublist]
+
+
+def aggregate_medals_by_country(converted, competitors):
+    converted_by_country = defaultdict(list)
+    for com_id, medals in converted.items():
+        country = competitors[com_id]["nationality"]
+        # list have exactly 3 items, one for each medal place, we need to sum position 1 with postiton 1 in list, etc.
+        current = converted_by_country[country]
+        if not current:
+            converted_by_country[country] = medals
+        else:
+            converted_by_country[country] = [sum(x) for x in zip(current, medals)]
+
+    return converted_by_country

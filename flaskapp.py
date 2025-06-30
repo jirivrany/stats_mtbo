@@ -507,6 +507,64 @@ def medals_table(event="WMTBOC"):
 
 
 @lru_cache()
+@app.route("/team_medals_table/<event>/")
+def team_medals_table(event="WMTBOC"):
+    """
+    display medal table for given event type grouped by country
+    params:
+        event: event type
+    """
+    model = Results(mysql)
+    medal_lines = [model.get_place_count(place, event.upper()) for place in range(1, 4)]
+    relay_lines = [model.get_relay_country_place_count(place, event.upper()) for place in range(1, 4)]
+
+    converted = tools.merge_medal_lines(*medal_lines)
+    converted_relay_by_country = tools.merge_medal_lines(*relay_lines)
+
+    countries = {COMPETITORS[com_id]["nationality"] for com_id in converted.keys()}
+    rel_countries = {com_id for com_id in converted_relay_by_country.keys()}
+
+    # converted grouped by country
+    converted_by_country = tools.aggregate_medals_by_country(converted, COMPETITORS)
+
+    ranking_by_country = tools.sort_medal_table(converted_by_country)
+    ranking_relay_by_country = tools.sort_medal_table(converted_relay_by_country)
+
+    together_by_country = tools.merge_medal_dicts(converted_by_country, converted_relay_by_country)
+    ranking_together_by_country = tools.sort_medal_table(together_by_country)
+
+    disclaimer = ""
+    if event == "wcup":
+        disclaimer = "WMTBOC and EMTBOC are World Cup races too. This table contains only \
+            the medals from World Cup races other than the championships."
+
+    stats = {
+        "individual": len(converted_by_country),
+        "indiv_countries": len(countries),
+        "relay": len(converted_relay_by_country),
+        "rel_countries": len(rel_countries),
+    }
+
+    table_content = {
+        "all": (together_by_country, ranking_together_by_country),
+        "individual": (converted_by_country, ranking_by_country),
+        "relay": (converted_relay_by_country, ranking_relay_by_country),
+    }
+
+    title = f"Medals from {tools.EVENT_NAMES[event.upper()]}"
+
+    return flask.render_template(
+        "team_medals.html",
+        title=title,
+        stats=stats,
+        disclaimer=disclaimer,
+        table_content=table_content,
+        competitors=COMPETITORS,
+        flags=tools.IOC_INDEX,
+    )
+
+
+@lru_cache()
 @app.route("/participation/<event>/")
 def participation_in_event(event="WMTBOC"):
     """
@@ -655,9 +713,11 @@ def great_masters(event="WMTBOC", place=None):
     )
 
 
+@app.route("/events/")
+@app.route("/events/<event>/")
 @app.route("/events/<event>/<int:year>/")
 @app.route("/events/<event>/<int:year>/<organizer>/")
-def event_summary(event: str = "WMTBOC", year: int = 2023, organizer: str = ""):
+def event_summary(event: str = "WMTBOC", year: int = YEAR, organizer: str = ""):
     """
     display summary of given event type for given year
     params:
@@ -665,6 +725,25 @@ def event_summary(event: str = "WMTBOC", year: int = 2023, organizer: str = ""):
         event: event type
     """
     model = Results(mysql)
+
+    # Check if the event has results for the requested year
+    available_years = model.get_event_years(event.upper())
+
+    # If no results for requested year, show message with available years
+    if year not in available_years:
+        if available_years:
+            latest_year = max(available_years)
+            return flask.render_template(
+                "no_results.html",
+                event=event.upper(),
+                requested_year=year,
+                available_years=sorted(available_years, reverse=True),
+                latest_year=latest_year,
+                event_name=tools.EVENT_NAMES.get(event.upper(), event.upper()),
+            )
+        else:
+            flask.abort(404)
+
     if event.upper() in ("WMTBOC", "EMTBOC"):
         data_men, mrace_ids = model.get_summary_medals(year, event.upper())
         data_women, wrace_ids = model.get_summary_medals(year, event.upper(), "F")
@@ -734,6 +813,9 @@ def event_summary(event: str = "WMTBOC", year: int = 2023, organizer: str = ""):
         medal_names=MEDAL_NAMES,
         competitors=COMPETITORS,
         flags=tools.IOC_INDEX,
+        years=model.get_event_years(event.upper()),
+        event=event.upper(),
+        year=year,
     )
 
 

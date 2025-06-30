@@ -1,0 +1,53 @@
+{% extends "default.html" %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p>
+    We have <strong>{{ stats['individual'] }} countries with at last one individual medalists</strong> In the relay competitions <strong>{{ stats['relay'] }} nations</strong> won the medal so far. 
+</p>
+{% if disclaimer %}
+   <p>{{ disclaimer }}</p>
+{% endif %}
+
+<div class="row">
+    {% for col, content in table_content.items() %}
+    <div class="col-sm-4">
+        <h3>{{col|capitalize}}</h3>
+        <table class="table table-sm">
+        <thead>
+        <tr class="table-info">
+            <th>#</th>
+            <th>Team</th>
+            <th>Gold</th>
+            <th>Silver</th>
+            <th>Bronze</th>
+        </tr>
+        </thead>
+        <tbody>
+            {% for nr, team in content[1] %}
+                <tr>
+                    <td>
+                        {{ nr + 1 }}
+                    </td>
+                    <td>
+                    <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                         class="flag flag-{{ flags[team].lower() }}"
+                         alt="{{ team }}" />
+                    {{ team }}
+                    </td>
+                    <td>
+                        {{ content[0][team][0] }}
+                    </td>
+                    <td>
+                        {{ content[0][team][1] }}
+                    </td>
+                    <td>
+                        {{ content[0][team][2] }}
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+        </tbody>
+    </div>    
+    {% endfor %}
+</div>
+{% endblock %}
