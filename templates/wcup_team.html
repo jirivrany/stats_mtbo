@@ -3,22 +3,24 @@
 <div class="container-fluid">
     <div class="row">
         <h2>{{ title }}</h2>
-        <h6>Season coutries: {{ stats['country'] }}. {{ counted_text }}</h6>
-        <h6>Races: 
+        <h6>Season countries: {{ stats['country'] }}. {{ counted_text }}</h6>
+        <h6>Races:
             {% for race_id, category in race_links %}
                 <a href="{{ url_for('race', race_id=race_id) }}">{{ races[race_id]['event'] }}-{{category}}</a>
                 {{ ", " if not loop.last else "" }}
             {% endfor %}
         </h6>
-        <ul class="nav nav-pills">
-            {% for yrp in range(2010, current_year) %}
-            <li class="nav-item">
-                <a class="nav-link {{'active' if yrp==year else yrp}}" href="{{ url_for('team_wcup', year=yrp) }}">
-                    {{ yrp }}
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
+        {% if years %}
+        <nav aria-label="Year navigation">
+            <ul class="pagination pagination-sm flex-wrap mb-3">
+                {% for yr in years %}
+                <li class="page-item{% if yr == year %} active{% endif %}">
+                    <a class="page-link" href="/teamworldcup/{{ yr }}/">{{ yr }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
+        {% endif %}
     </div>    
     <div class="row">
         <div class="col-md-12">

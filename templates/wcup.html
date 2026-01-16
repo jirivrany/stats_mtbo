@@ -3,17 +3,19 @@
 {% block content %}
 <div class="container-fluid">
     <div class="row">
+        {% if years %}
+        <nav aria-label="Year navigation">
+            <ul class="pagination pagination-sm flex-wrap mb-3">
+                {% for yr in years %}
+                <li class="page-item{% if yr == year %} active{% endif %}">
+                    <a class="page-link" href="/worldcup/{{ yr }}/">{{ yr }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
+        {% endif %}
         <h2>{{ title }}</h2>
-        <h6>Season participants - men: {{ stats['men'] }}, women: {{ stats['women'] }}, coutries: {{ stats['country'] }}. {{ counted_text }}</h6>
-        <ul class="nav nav-pills">
-            {% for yrp in range(2010, current_year) %}
-            <li class="nav-item">
-                <a class="nav-link {{'active' if yrp==year else yrp}}" href="/worldcup/{{ yrp }}/">
-                    {{ yrp }}
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
+        <h6>Season participants - men: {{ stats['men'] }}, women: {{ stats['women'] }}, countries: {{ stats['country'] }}. {{ counted_text }}</h6>
     </div>    
     <div class="row">
         {% if year==2020 %}
