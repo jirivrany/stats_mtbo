@@ -129,3 +129,36 @@ class Races(object):
         db_result = self.cursor.fetchall()
 
         return db_result
+
+    def get_distances_by_year(self, event):
+        """
+        Get a dictionary mapping years to distances held for a given event.
+
+        Args:
+            event: Event type (WMTBOC, EMTBOC, WCUP)
+
+        Returns:
+            dict: {year: [list of distances]}
+            Example: {
+                2002: ['sprint', 'long', 'relay'],
+                2024: ['sprint', 'middle', 'long', 'mass_start', 'relay']
+            }
+        """
+        query = """
+            SELECT year, distance
+            FROM races
+            WHERE event = %s
+            GROUP BY year, distance
+            ORDER BY year
+        """
+        self.cursor.execute(query, (event,))
+        db_result = self.cursor.fetchall()
+
+        distances_by_year = {}
+        for year, distance in db_result:
+            distance_normalized = distance.replace("-", "_")
+            if year not in distances_by_year:
+                distances_by_year[year] = []
+            distances_by_year[year].append(distance_normalized)
+
+        return distances_by_year

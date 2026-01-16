@@ -4,13 +4,15 @@
 
 {% block content %}
 {% if years %}
-    <h5>
+<nav aria-label="Year navigation">
+    <ul class="pagination pagination-sm flex-wrap mb-3">
         {% for year in years %}
-        <a href="/events/{{event}}/{{year}}/">
-                        {{ year }} 
-                        </a>
+        <li class="page-item{% if year|string == current_year|string %} active{% endif %}">
+            <a class="page-link" href="/events/{{event}}/{{year}}/">{{ year }}</a>
+        </li>
         {% endfor %}
-    </h5>
+    </ul>
+</nav>
 {% endif %}    
 <h1>{{ title }}</h1>
 {% if disclaimer %}

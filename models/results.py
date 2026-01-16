@@ -252,20 +252,20 @@ class Results(object):
 
         query = (
             "SELECT competitor_id, COUNT(race_id) FROM competitor_race "
-            "WHERE race_id IN (SELECT id FROM races WHERE event='{}') "
+            "WHERE race_id IN (SELECT id FROM races WHERE event=%s) "
             "GROUP BY competitor_id"
-        ).format(event.upper())
+        )
 
         query2 = (
             "SELECT competitor_id, COUNT(race_id) FROM competitor_relay "
-            "WHERE race_id IN (SELECT id FROM races WHERE event='{}') "
+            "WHERE race_id IN (SELECT id FROM races WHERE event=%s) "
             "GROUP BY competitor_id"
-        ).format(event.upper())
+        )
 
-        self.cursor.execute(query)
+        self.cursor.execute(query, (event.upper(),))
         res = self.cursor.fetchall()
         res = {key for key, count in res}
-        self.cursor.execute(query2)
+        self.cursor.execute(query2, (event.upper(),))
         res2 = self.cursor.fetchall()
         res2 = {key for key, count in res2}
 
@@ -278,15 +278,18 @@ class Results(object):
         :param event string
         :return
         """
-        query = "SELECT t1.competitor_id, COUNT(t1.place)\
-                    FROM competitor_{} AS t1\
+        # Validate table parameter to prevent SQL injection
+        if table not in ("race", "relay"):
+            raise ValueError(f"Invalid table parameter: {table}")
+
+        query = f"SELECT t1.competitor_id, COUNT(t1.place)\
+                    FROM competitor_{table} AS t1\
                     LEFT JOIN races AS t2\
                     ON t1.race_id = t2.id\
                     WHERE t1.place = %s\
                     AND t2.event = %s\
-                    GROUP BY t1.competitor_id".format(
-            table
-        )
+                    GROUP BY t1.competitor_id"
+
         self.cursor.execute(query, (place, event))
         return self.cursor.fetchall()
 
@@ -324,15 +327,18 @@ class Results(object):
         :param event string
         :return
         """
-        query = "SELECT t1.competitor_id, COUNT(t1.place)\
-                    FROM competitor_{} AS t1\
+        # Validate table parameter to prevent SQL injection
+        if table not in ("race", "relay"):
+            raise ValueError(f"Invalid table parameter: {table}")
+
+        query = f"SELECT t1.competitor_id, COUNT(t1.place)\
+                    FROM competitor_{table} AS t1\
                     LEFT JOIN races AS t2\
                     ON t1.race_id = t2.id\
                     WHERE t1.place = %s\
                     AND t2.event = %s\
-                    AND t1.competitor_id = %s".format(
-            table
-        )
+                    AND t1.competitor_id = %s"
+
         self.cursor.execute(query, (place, event, int(competitor_id)))
         return self.cursor.fetchall()
 
@@ -343,17 +349,24 @@ class Results(object):
         :param event string
         :return
         """
-        query = "SELECT t2.id, t2.year, t2.distance, t2.date, t1.place\
-                    FROM competitor_{} AS t1\
+        # Validate table parameter to prevent SQL injection
+        if table not in ("race", "relay"):
+            raise ValueError(f"Invalid table parameter: {table}")
+
+        # Validate limit parameter (must be positive integer)
+        if not isinstance(limit, int) or limit < 1:
+            raise ValueError(f"Invalid limit parameter: {limit}")
+
+        query = f"SELECT t2.id, t2.year, t2.distance, t2.date, t1.place\
+                    FROM competitor_{table} AS t1\
                     LEFT JOIN races AS t2\
                     ON t1.race_id = t2.id\
                     WHERE t1.place <= %s\
                     AND t2.event = %s\
                     AND t1.competitor_id = %s\
                     ORDER BY t2.date\
-                    LIMIT {}".format(
-            table, limit
-        )
+                    LIMIT {limit}"
+
         self.cursor.execute(query, (place, event, int(competitor_id)))
         return self.cursor.fetchall()
 
@@ -364,30 +377,40 @@ class Results(object):
         :param event string
         :return
         """
-        query = "SELECT t2.id, t2.year, t2.distance, t2.date, t1.place\
-                    FROM competitor_{} AS t1\
+        # Validate table parameter to prevent SQL injection
+        if table not in ("race", "relay"):
+            raise ValueError(f"Invalid table parameter: {table}")
+
+        # Validate limit parameter (must be positive integer)
+        if not isinstance(limit, int) or limit < 1:
+            raise ValueError(f"Invalid limit parameter: {limit}")
+
+        query = f"SELECT t2.id, t2.year, t2.distance, t2.date, t1.place\
+                    FROM competitor_{table} AS t1\
                     LEFT JOIN races AS t2\
                     ON t1.race_id = t2.id\
                     WHERE t1.place <= %s\
                     AND t2.event = %s\
                     AND t1.competitor_id = %s\
                     ORDER BY t2.date DESC\
-                    LIMIT {}".format(
-            table, limit
-        )
+                    LIMIT {limit}"
+
         self.cursor.execute(query, (place, event, int(competitor_id)))
         return self.cursor.fetchall()
 
     def first_medal_year(self, year, event="WMTBOC", table="race"):
-        query = "SELECT t1.competitor_id, t1.place, t2.date\
-                    FROM competitor_{} AS t1\
+        # Validate table parameter to prevent SQL injection
+        if table not in ("race", "relay"):
+            raise ValueError(f"Invalid table parameter: {table}")
+
+        query = f"SELECT t1.competitor_id, t1.place, t2.date\
+                    FROM competitor_{table} AS t1\
                     LEFT JOIN races AS t2\
                     ON t1.race_id = t2.id\
                     WHERE t1.place <= 3\
                     AND t2.event = %s\
-                    AND t2.year = %s".format(
-            table
-        )
+                    AND t2.year = %s"
+
         self.cursor.execute(query, (event, year))
 
         result = []
@@ -413,3 +436,92 @@ class Results(object):
         query = "SELECT DISTINCT year FROM races WHERE event = %s ORDER BY year DESC"
         self.cursor.execute(query, (event,))
         return [row[0] for row in self.cursor.fetchall()]
+
+    def get_career_best_with_teams(self, competitor_id):
+        """
+        Get career best results for competitor including team information for relays.
+        Returns both individual and relay results with all necessary details.
+
+        :param competitor_id: competitor ID
+        :return: tuple of (individual_results, relay_results)
+        """
+        # Individual races query
+        individual_query = """
+            SELECT
+                r.distance,
+                r.event,
+                cr.place,
+                r.year,
+                r.id as race_id,
+                cr.time,
+                r.date
+            FROM competitor_race cr
+            JOIN races r ON cr.race_id = r.id
+            WHERE cr.competitor_id = %s
+              AND r.team = 0
+            ORDER BY r.distance, cr.place ASC, r.date ASC
+        """
+
+        # Relay races query with team information
+        relay_query = """
+            SELECT
+                r.distance,
+                r.event,
+                crel.place,
+                r.year,
+                r.id as race_id,
+                crel.time,
+                r.date,
+                crel.team
+            FROM competitor_relay crel
+            JOIN races r ON crel.race_id = r.id
+            WHERE crel.competitor_id = %s
+              AND r.team = 1
+            ORDER BY r.distance, crel.place ASC, r.date ASC
+        """
+
+        self.cursor.execute(individual_query, (int(competitor_id),))
+        individual_results = self.cursor.fetchall()
+
+        self.cursor.execute(relay_query, (int(competitor_id),))
+        relay_results = self.cursor.fetchall()
+
+        return individual_results, relay_results
+
+    def get_competitors_with_at_last_one_medal(self, event, place=3):
+        """
+        Get list of competitors who have won at least one medal (up to the specified place)
+        in a given event.
+
+        :param event: string - the event name
+        :param place: int - the maximum place to consider as a medal (default is 3)
+        :return: list of competitor IDs
+        """
+        # Query for individual race medals
+        query_race = """
+            SELECT DISTINCT cr.competitor_id
+            FROM competitor_race cr
+            JOIN races r ON cr.race_id = r.id
+            WHERE r.event = %s
+              AND cr.place <= %s
+              AND cr.place > 0
+        """
+
+        # Query for relay race medals
+        query_relay = """
+            SELECT DISTINCT crel.competitor_id
+            FROM competitor_relay crel
+            JOIN races r ON crel.race_id = r.id
+            WHERE r.event = %s
+              AND crel.place <= %s
+              AND crel.place > 0
+        """
+
+        self.cursor.execute(query_race, (event, place))
+        race_competitors = {row[0] for row in self.cursor.fetchall()}
+
+        self.cursor.execute(query_relay, (event, place))
+        relay_competitors = {row[0] for row in self.cursor.fetchall()}
+
+        # Return the union of both sets as a sorted list
+        return sorted(race_competitors.union(relay_competitors))

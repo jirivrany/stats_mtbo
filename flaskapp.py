@@ -12,10 +12,12 @@ import flask
 from flaskext.mysql import MySQL
 
 from utils import tools
+
 from models.competitors import Competitors
 from models.races import Races
 from models.results import Results
 from models.wcup import Wcup
+from loguru import logger
 
 
 mysql = MySQL()
@@ -412,6 +414,36 @@ def competitor(competitor_id):
     my_wmtboc = model.get_event_competitor_participation(competitor_id, "WMTBOC")
     my_emtboc = model.get_event_competitor_participation(competitor_id, "EMTBOC")
 
+    # Get raw data from database
+    individual, relay = model.get_career_best_with_teams(competitor_id)
+
+    # Process into career best structure
+    career_best = tools.process_career_best_from_db(individual, relay)
+
+    # Analyze completeness for each event
+    wmtboc_stats = tools.analyze_event_completeness(career_best, "WMTBOC")
+    emtboc_stats = tools.analyze_event_completeness(career_best, "EMTBOC")
+    wcup_stats = tools.analyze_event_completeness(career_best, "WCUP")
+
+    # Calculate Grand Slam scores for each event
+    races_model = Races(mysql)
+    wmtboc_distances_by_year = races_model.get_distances_by_year("WMTBOC")
+    emtboc_distances_by_year = races_model.get_distances_by_year("EMTBOC")
+    wcup_distances_by_year = races_model.get_distances_by_year("WCUP")
+
+    wmtboc_grand_slam = tools.calculate_grand_slam_score(career_best, wmtboc_distances_by_year, "WMTBOC")
+    emtboc_grand_slam = tools.calculate_grand_slam_score(career_best, emtboc_distances_by_year, "EMTBOC")
+    wcup_grand_slam = tools.calculate_grand_slam_score(career_best, wcup_distances_by_year, "WCUP")
+
+    # Merge Grand Slam data into stats
+    wmtboc_stats.update(wmtboc_grand_slam)
+    emtboc_stats.update(emtboc_grand_slam)
+    wcup_stats.update(wcup_grand_slam)
+
+    logger.info(f"Competitor {competitor_id} - WMTBOC stats: {wmtboc_stats}")
+    logger.info(f"Competitor {competitor_id} - EMTBOC stats: {emtboc_stats}")
+    logger.info(f"Competitor {competitor_id} - WCUP stats: {wcup_stats}")
+
     first_medals = {
         "medal_wmtboc": model.get_first_medal(competitor_id, "WMTBOC"),
         "medal_emtboc": model.get_first_medal(competitor_id, "EMTBOC"),
@@ -449,6 +481,9 @@ def competitor(competitor_id):
         data=data,
         distances=distances,
         flags=tools.IOC_INDEX,
+        wmtboc_stats=wmtboc_stats,
+        emtboc_stats=emtboc_stats,
+        wcup_stats=wcup_stats,
     )
 
 
@@ -815,7 +850,69 @@ def event_summary(event: str = "WMTBOC", year: int = YEAR, organizer: str = ""):
         flags=tools.IOC_INDEX,
         years=model.get_event_years(event.upper()),
         event=event.upper(),
-        year=year,
+        current_year=year,
+    )
+
+
+@lru_cache()
+@app.route("/grand_slam/<event>/")
+def grand_slam(event="WMTBOC"):
+    """
+    Grand slam results with year-aware scoring.
+
+    A Grand Slam winner is someone who won all distances that existed
+    during any year they competed (career-based), with a minimum of 3 wins.
+    """
+    event_upper = event.upper()
+    result_model = Results(mysql)
+    races_model = Races(mysql)
+
+    # Get historical distances by year for the event
+    distances_by_year = races_model.get_distances_by_year(event_upper)
+
+    interesting_competitors = result_model.get_competitors_with_at_last_one_medal(event_upper, place=1)
+    carrers_data = {}
+
+    for comp in interesting_competitors:
+        individual, relay = result_model.get_career_best_with_teams(comp)
+        career_best = tools.process_career_best_from_db(individual, relay)
+
+        # Get basic event completeness stats
+        basic_stats = tools.analyze_event_completeness(career_best, event_upper)
+
+        # Calculate year-aware Grand Slam score
+        grand_slam_stats = tools.calculate_grand_slam_score(career_best, distances_by_year, event_upper)
+
+        # Count total medals (G-S-B) from raw results
+        medals_stats = tools.count_medals_by_event(individual, relay, event_upper)
+
+        # Merge all stats
+        carrers_data[comp] = {
+            **basic_stats,
+            **grand_slam_stats,
+            **medals_stats,
+        }
+
+    # Sort by: Grand Slam winners first, then completion %, then wins, then score
+    carrers_data = dict(
+        sorted(
+            carrers_data.items(),
+            key=lambda item: (
+                not item[1]["is_grand_slam_winner"],  # Grand Slam winners first
+                -item[1]["completion_percentage"],  # Higher completion % first
+                -item[1]["total_wins"],  # More wins first
+                item[1]["distances_score"],  # Lower score first (tiebreaker)
+            ),
+        )
+    )
+
+    return flask.render_template(
+        "grand_slam.html",
+        event=event_upper,
+        carrers_data=carrers_data,
+        competitors=COMPETITORS,
+        flags=tools.IOC_INDEX,
+        medal_names=MEDAL_NAMES,
     )
 
 
