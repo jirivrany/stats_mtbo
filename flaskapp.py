@@ -229,7 +229,6 @@ def wcup(year):
     """
     model = Results(mysql)
     races_model = Races(mysql)
-    wcup_model = Wcup(mysql)
     title = f"World Cup {year} individual overall standings"
 
     season_race = races_model.get_individual_ids_by_year(year)
