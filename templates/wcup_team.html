@@ -3,7 +3,7 @@
 <div class="container-fluid">
     <div class="row">
         <h2>{{ title }}</h2>
-        <h6>Season coutries: {{ stats['country'] }}. {{ counted_text }}</h6>
+        <h6>Season countries: {{ stats['country'] }}. {{ counted_text }}</h6>
         <h6>Races:
             {% for race_id, category in race_links %}
                 <a href="{{ url_for('race', race_id=race_id) }}">{{ races[race_id]['event'] }}-{{category}}</a>
