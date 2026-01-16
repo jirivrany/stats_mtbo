@@ -1,0 +1,55 @@
+{% extends "default.html" %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <h2>{{ event }} Grand Slam</h2>
+        <p>A Grand Slam winner has won all distances available during their career (minimum 3 distances).</p>
+        <p>At least a single gold medal is required to be listed in this table.</p>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Competitor</th>
+                    <th></th>
+                    <th>Completion</th>
+                    <th>Medals (G-S-B)</th>
+                    <th>Won Distances</th>
+                    <th>Available Distances</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for competitor_id, results in carrers_data.items() %}
+                <tr{% if results['is_grand_slam_winner'] %} class="table-success"{% endif %}>
+                    <td>
+                        <a href="/competitor/{{ competitor_id }}/">
+                            {{ competitors[competitor_id]["first"] }}
+                            {{ competitors[competitor_id]["last"] }}</a>
+                        <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                             class="flag flag-{{ flags[competitors[competitor_id]["nationality"]].lower() }}"
+                             alt="{{ competitors[competitor_id]["nationality"] }}" />
+                        {{ competitors[competitor_id]["nationality"] }}
+                    </td>
+                    <td>
+                        {% if results['is_grand_slam_winner'] %}
+                            <span title="Grand Slam Winner!">&#127942;</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ "%.0f"|format(results['completion_percentage']) }}%
+                        ({{ results['won_distances']|length }}/{{ results['available_distances']|length }})
+                    </td>
+                    <td>
+                        {{ results['medals_str'] }}
+                    </td>
+                    <td>
+                        {{ results['won_distances']|sort|join(', ') }}
+                    </td>
+                    <td>
+                        {{ results['available_distances']|sort|join(', ') }}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -2,13 +2,24 @@
 {% block content %}
 <div class="row">
     <div class="col-sm-5">
-        <h1>{{ title }}</h1>
-        <h3>Team {{ competitor['nationality'] }}
-            <img src="{{ url_for('static', filename='css/blank.gif') }}" class="flag flag-{{ flags[competitor['nationality']].lower() }}" alt="{{ competitor['nationality'] }}" /></h3>
-        <h3>born {{ birth }}</h3>
-        <h3>Individual medals</h3>
-        <div class="row">
-            <table class="table table-bordered table-condensed">
+        <div class="card">
+            <div class="card-header">
+                <h1>{{ title }}</h1>
+            </div>
+            <div class="card-body">
+                <h3>Team {{ competitor['nationality'] }}
+                <img src="{{ url_for('static', filename='css/blank.gif') }}" class="flag flag-{{ flags[competitor['nationality']].lower() }}" alt="{{ competitor['nationality'] }}" /></h3>
+                <p>Born {{ birth }}</p>
+                <p><a href="https://eventor.orienteering.org/Athletes/Details/{{ competitor['competitor_id'] }}">IOF Eventor profile</a></p>        
+            </div>
+
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h5>Individual medals</h5>  
+            </div>
+            <div class="card-body">
+                    <table class="table table-bordered table-condensed">
                 <tr>
                     <th>Event</th>
                     <th class="text-center">
@@ -38,143 +49,225 @@
                 </tr>
                 {% endfor %}
             </table>
-        </div>
-        <div class="row">
             {% if first_medals['title_wmtboc'] %}
-            <p>
-                First individual World Champion title on <a href="/race/{{ first_medals['title_wmtboc'][0][0] }}">{{ first_medals['title_wmtboc'][0][2]|lower }} distance in {{ first_medals['title_wmtboc'][0][1] }}</a> / age {{ first_medals['title_wmtboc'][0][1]|int - birth|int }} 
-            </p>    
+                <p>
+                    First individual World Champion title on <a href="/race/{{ first_medals['title_wmtboc'][0][0] }}">{{ first_medals['title_wmtboc'][0][2]|lower }} distance in {{ first_medals['title_wmtboc'][0][1] }}</a>{% if birth|int > 0 %} / age {{ first_medals['title_wmtboc'][0][1]|int - birth|int }}{% endif %}
+                </p>
             {% endif %}
 
             {% if first_medals['medal_wmtboc'] %}
-            <p>
-                First individual medal from WMTBOC {{ medal_names[first_medals['medal_wmtboc'][0][4]] }} on <a href="/race/{{ first_medals['medal_wmtboc'][0][0] }}">{{ first_medals['medal_wmtboc'][0][2]|lower }} distance in {{ first_medals['medal_wmtboc'][0][1] }}</a> / age {{ first_medals['medal_wmtboc'][0][1]|int - birth|int }} 
-            </p>    
+                <p>
+                    First individual medal from WMTBOC {{ medal_names[first_medals['medal_wmtboc'][0][4]] }} on <a href="/race/{{ first_medals['medal_wmtboc'][0][0] }}">{{ first_medals['medal_wmtboc'][0][2]|lower }} distance in {{ first_medals['medal_wmtboc'][0][1] }}</a>{% if birth|int > 0 %} / age {{ first_medals['medal_wmtboc'][0][1]|int - birth|int }}{% endif %}
+                </p>
             {% endif %}
 
             {% if first_medals['title_emtboc'] %}
-            <p>
-                First individual European Champion title on <a href="/race/{{ first_medals['title_emtboc'][0][0] }}">{{ first_medals['title_emtboc'][0][2]|lower }} distance in {{ first_medals['title_emtboc'][0][1] }}</a> / age {{ first_medals['title_emtboc'][0][1]|int - birth|int }} 
-            </p>    
+                <p>
+                    First individual European Champion title on <a href="/race/{{ first_medals['title_emtboc'][0][0] }}">{{ first_medals['title_emtboc'][0][2]|lower }} distance in {{ first_medals['title_emtboc'][0][1] }}</a>{% if birth|int > 0 %} / age {{ first_medals['title_emtboc'][0][1]|int - birth|int }}{% endif %}
+                </p>
             {% endif %}
 
             {% if first_medals['medal_emtboc'] %}
-            <p>
-                First individual medal from EMTBOC {{ medal_names[first_medals['medal_emtboc'][0][4]]|lower }} on <a href="/race/{{ first_medals['medal_emtboc'][0][0] }}">{{ first_medals['medal_emtboc'][0][2] }} distance in {{ first_medals['medal_emtboc'][0][1] }}</a> / age {{ first_medals['medal_emtboc'][0][1]|int - birth|int }} 
-            </p>    
+                <p>
+                    First individual medal from EMTBOC {{ medal_names[first_medals['medal_emtboc'][0][4]]|lower }} on <a href="/race/{{ first_medals['medal_emtboc'][0][0] }}">{{ first_medals['medal_emtboc'][0][2] }} distance in {{ first_medals['medal_emtboc'][0][1] }}</a>{% if birth|int > 0 %} / age {{ first_medals['medal_emtboc'][0][1]|int - birth|int }}{% endif %}
+                </p>
             {% endif %}
 
+        
+                
+            </div>
         </div>
-        <h3>Relay medals</h3>
-        <div class="row">
-            <table class="table table-bordered table-condensed">
-                <tr>
-                    <th>Event</th>
-                    <th class="text-center">
-                        <img src="{{ url_for('static', filename='img/m1.png') }}" alt="gold" title="gold" />
-                    </th>
-                    <th class="text-center">
-                        <img src="{{ url_for('static', filename='img/m2.png') }}" alt="silver" title="silver" />
-                    </th>
-                    <th class="text-center">
-                        <img src="{{ url_for('static', filename='img/m3.png') }}" alt="bronze" title="bronze" />
-                    </th>
-                </tr>
-                {% for event, medals in relay_medal_table.items() %}
-                <tr>
-                    <td>
-                        {{ event }}
-                    </td>
-                    <td class="text-center">
-                        {{ medals[0] }}
-                    </td>
-                    <td class="text-center">
-                        {{ medals[1] }}
-                    </td>
-                    <td class="text-center">
-                        {{ medals[2] }}
-                    </td>
-                </tr>
-                {% endfor %}
-            </table>
+        <div class="card">
+            <div class="card-header">
+                <h5>Relay medals</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered table-condensed">
+                    <tr>
+                        <th>Event</th>
+                        <th class="text-center">
+                            <img src="{{ url_for('static', filename='img/m1.png') }}" alt="gold" title="gold" />
+                        </th>
+                        <th class="text-center">
+                            <img src="{{ url_for('static', filename='img/m2.png') }}" alt="silver" title="silver" />
+                        </th>
+                        <th class="text-center">
+                            <img src="{{ url_for('static', filename='img/m3.png') }}" alt="bronze" title="bronze" />
+                        </th>
+                    </tr>
+                    {% for event, medals in relay_medal_table.items() %}
+                    <tr>
+                        <td>
+                            {{ event }}
+                        </td>
+                        <td class="text-center">
+                            {{ medals[0] }}
+                        </td>
+                        <td class="text-center">
+                            {{ medals[1] }}
+                        </td>
+                        <td class="text-center">
+                            {{ medals[2] }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% if first_medals['relay_title_wmtboc'] %}
+                <p>
+                    First relay World Champion title <a href="/race/{{ first_medals['relay_title_wmtboc'][0][0] }}">in {{ first_medals['relay_title_wmtboc'][0][1] }}</a>{% if birth|int > 0 %} / age {{ first_medals['relay_title_wmtboc'][0][1]|int - birth|int }}{% endif %}
+                </p>
+                {% endif %}
+
+                {% if first_medals['relay_medal_wmtboc'] %}
+                <p>
+                    First relay medal from WMTBOC {{ medal_names[first_medals['relay_medal_wmtboc'][0][4]] }} <a href="/race/{{ first_medals['relay_medal_wmtboc'][0][0] }}">in {{ first_medals['relay_medal_wmtboc'][0][1] }}</a>{% if birth|int > 0 %} / age {{ first_medals['relay_medal_wmtboc'][0][1]|int - birth|int }}{% endif %}
+                </p>
+                {% endif %}
+
+                {% if first_medals['relay_title_emtboc'] %}
+                <p>
+                    First relay European Champion title <a href="/race/{{ first_medals['relay_title_emtboc'][0][0] }}">in {{ first_medals['relay_title_emtboc'][0][1] }}</a>{% if birth|int > 0 %} / age {{ first_medals['relay_title_emtboc'][0][1]|int - birth|int }}{% endif %}
+                </p>
+                {% endif %}
+
+                {% if first_medals['relay_medal_emtboc'] %}
+                <p>
+                    First relay medal from EMTBOC {{ medal_names[first_medals['relay_medal_emtboc'][0][4]]|lower }} <a href="/race/{{ first_medals['relay_medal_emtboc'][0][0] }}">in {{ first_medals['relay_medal_emtboc'][0][1] }}</a>{% if birth|int > 0 %} / age {{ first_medals['relay_medal_emtboc'][0][1]|int - birth|int }}{% endif %}
+                </p>
+                {% endif %}
+            </div>    
         </div>
-        <div class="row">
-            {% if first_medals['relay_title_wmtboc'] %}
-            <p>
-                First relay World Champion title <a href="/race/{{ first_medals['relay_title_wmtboc'][0][0] }}">in {{ first_medals['relay_title_wmtboc'][0][1] }}</a> / age {{ first_medals['relay_title_wmtboc'][0][1]|int - birth|int }} 
-            </p>    
-            {% endif %}
-
-            {% if first_medals['relay_medal_wmtboc'] %}
-            <p>
-                First relay medal from WMTBOC {{ medal_names[first_medals['relay_medal_wmtboc'][0][4]] }} <a href="/race/{{ first_medals['relay_medal_wmtboc'][0][0] }}">in {{ first_medals['relay_medal_wmtboc'][0][1] }}</a> / age {{ first_medals['relay_medal_wmtboc'][0][1]|int - birth|int }} 
-            </p>    
-            {% endif %}
-
-            {% if first_medals['relay_title_emtboc'] %}
-            <p>
-                First relay European Champion title <a href="/race/{{ first_medals['relay_title_emtboc'][0][0] }}">in {{ first_medals['relay_title_emtboc'][0][1] }}</a> / age {{ first_medals['relay_title_emtboc'][0][1]|int - birth|int }} 
-            </p>    
-            {% endif %}
-
-            {% if first_medals['relay_medal_emtboc'] %}
-            <p>
-                First relay medal from EMTBOC {{ medal_names[first_medals['relay_medal_emtboc'][0][4]]|lower }} <a href="/race/{{ first_medals['relay_medal_emtboc'][0][0] }}">in {{ first_medals['relay_medal_emtboc'][0][1] }}</a> / age {{ first_medals['relay_medal_emtboc'][0][1]|int - birth|int }} 
-            </p>    
-            {% endif %}
-
+        <div class="card">
+            <div class="card-header">
+                <h5>Career best results</h5>
+            </div>
+            <div class="card-body">
+                <h6>WMTBOC
+                    {% if wmtboc_stats['is_grand_slam_winner'] %}
+                        <span title="WMTBOC Grand Slam Winner!">&#127942;</span>
+                    {% endif %}
+                </h6>
+                {% if wmtboc_stats['total_distances_competed'] > 0 %}
+                <p>
+                    Grand Slam: {{ "%.0f"|format(wmtboc_stats['completion_percentage']) }}%
+                    ({{ wmtboc_stats['won_distances']|length }}/{{ wmtboc_stats['available_distances']|length }} distances won)
+                </p>
+                <table class="table table-bordered table-condensed">
+                    <tr>
+                        <th>Distance</th>
+                        <th>Best position</th>
+                    </tr>
+                    {% for dist, res in wmtboc_stats['distances_best'].items() %}
+                    <tr>
+                        <td>
+                            {{ dist }}
+                        </td>
+                        <td>
+                            {{ res }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <p>Never participated at WMTBOC.</p>
+                {% endif %}
+                <h6>EMTBOC
+                    {% if emtboc_stats['is_grand_slam_winner'] %}
+                        <span title="EMTBOC Grand Slam Winner!">&#127942;</span>
+                    {% endif %}
+                </h6>
+                {% if emtboc_stats['total_distances_competed'] > 0 %}
+                <p>
+                    Grand Slam: {{ "%.0f"|format(emtboc_stats['completion_percentage']) }}%
+                    ({{ emtboc_stats['won_distances']|length }}/{{ emtboc_stats['available_distances']|length }} distances won)
+                </p>
+                <table class="table table-bordered table-condensed">
+                    <tr>
+                        <th>Distance</th>
+                        <th>Best position</th>
+                    </tr>
+                    {% for dist, res in emtboc_stats['distances_best'].items() %}
+                    <tr>
+                        <td>{{ dist }}</td>
+                        <td>{{ res }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <p>Never participated at EMTBOC (since 2006).</p>
+                {% endif %}
+                <h6>WCUP
+                    {% if wcup_stats['is_grand_slam_winner'] %}
+                        <span title="WCUP Grand Slam Winner!">&#127942;</span>
+                    {% endif %}
+                </h6>
+                {% if wcup_stats['total_distances_competed'] > 0 %}
+                <p>
+                    Grand Slam: {{ "%.0f"|format(wcup_stats['completion_percentage']) }}%
+                    ({{ wcup_stats['won_distances']|length }}/{{ wcup_stats['available_distances']|length }} distances won)
+                </p>
+                <table class="table table-bordered table-condensed">
+                    <tr>
+                        <th>Distance</th>
+                        <th>Best position</th>
+                    </tr>
+                    {% for dist, res in wcup_stats['distances_best'].items() %}
+                    <tr>
+                        <td>{{ dist }}</td>
+                        <td>{{ res }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <p>Never participated at WCUP (since 2010).</p>
+                {% endif %}
+            </div>
         </div>
-        <h3>Active years</h3>
-        <div class="row">
-            <p>
-                Number of WMTBOC participations <strong>{{ wmtboc_competitor }}</strong> of {{ wmtboc_total }} (total WMTBOC).
-            </p>
-            <p>
-                WMTBOC participation years : {{ wmtbo_years }}
-            </p>
-            <p>
-                Number of EMTBOC participations <strong>{{ emtboc_competitor }}</strong> of {{ emtboc_total }} (total EMTBOC).
-            </p>
-            <p>
-                EMTBOC participation years : {{ emtbo_years }}
-            </p>
+        <div class="card">
+            <div class="card-header">
+                <h5>Event participation summary</h5>
+            </div>
+        
+            <div class="card-body">
+                <p>
+                    Number of WMTBOC participations <strong>{{ wmtboc_competitor }}</strong> of {{ wmtboc_total }} (total WMTBOC).
+                </p>
+                {% if wmtbo_years %}
+                <p>
+                    WMTBOC participation years : {{ wmtbo_years }}
+                </p>
+                {% endif %}
+                <p>
+                    Number of EMTBOC participations <strong>{{ emtboc_competitor }}</strong> of {{ emtboc_total }} (total EMTBOC).
+                </p>
+                {% if emtbo_years %}
+                <p>
+                    EMTBOC participation years : {{ emtbo_years }}
+                </p>
+                {% endif %}
+            </div>
         </div>
     </div>
+
     <div class="col-sm-7">
-        <h3>Result history</h3>
-        <div class="row">       
+        <div class="card">
+            <div class="card-header">
+                <h3>Results</h3>
+            </div>
+            <div class="card-body">       
+                <div id="results_table_container"></div>
+            </div>
+            <script type="text/javascript">
+            
+                const DATA = {{ data | tojson }};
+                const DISTANCES = {{ distances | tojson }};
+            </script>
 
-            <div id="results_table_container"></div>
-        </div>
-        <script type="text/javascript">
-           
-            const DATA = {{ data | tojson }};
-            const DISTANCES = {{ distances | tojson }};
-        </script>
-
-
-
-        <!-- Note: when deploying, replace "development.js" with "production.min.js". -->
-     <!--
-   
-        <script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
-        <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
-
-        <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-        <script type="text/babel" src="/static/js/competitorTable.jsx" charset="utf-8"></script>
-      -->
-
-
-
-        <script src="https://unpkg.com/react@16/umd/react.production.min.js" crossorigin></script>
-        <script src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js" crossorigin></script>
-        
-        <script type="text/javascript" src="/static/js/competitorTable.js" charset="utf-8"></script>
-       
-
-       
-   
-
+            <script src="https://unpkg.com/react@16/umd/react.production.min.js" crossorigin></script>
+            <script src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js" crossorigin></script>
+            
+            <script type="text/javascript" src="/static/js/competitorTable.js" charset="utf-8"></script>
+        </div>    
     </div>
 </div>
 {% endblock %}

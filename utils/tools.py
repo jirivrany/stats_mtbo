@@ -479,3 +479,349 @@ def aggregate_medals_by_country(converted, competitors):
             converted_by_country[country] = [sum(x) for x in zip(current, medals)]
 
     return converted_by_country
+
+
+def get_career_best_by_event_and_distance(competitor_results, races):
+    """
+    Calculate career best results grouped by event and distance.
+
+    Args:
+        competitor_results: List of formatted competitor results with structure:
+            [{'race_id': int, 'date': str, 'result': int, 'dist': str, 'event': str, 'rtime': str}, ...]
+        races: Dictionary of race information keyed by race_id
+
+    Returns:
+        Dictionary with structure:
+        {
+            'WMTBOC': {
+                'individual': {'sprint': {...}, 'middle': {...}, ...},
+                'relay': {'relay': {...}, 'mix_relay': {...}, ...}
+            },
+            'EMTBOC': {...},
+            'WCUP': {...}
+        }
+    """
+    # Define distance categories
+    INDIVIDUAL_DISTANCES = ["sprint", "middle", "long", "mass_start"]
+    RELAY_DISTANCES = ["relay", "mix_relay", "sprint_relay"]
+
+    # Initialize result structure
+    career_best = {
+        "WMTBOC": {"individual": {}, "relay": {}},
+        "EMTBOC": {"individual": {}, "relay": {}},
+        "WCUP": {"individual": {}, "relay": {}},
+    }
+
+    # Process each result
+    for result in competitor_results:
+        event = result["event"]
+        distance = result["dist"]
+        place = result["result"]
+        race_id = result["race_id"]
+
+        # Skip if event not recognized
+        if event not in career_best:
+            continue
+
+        # Determine if individual or relay
+        if distance in INDIVIDUAL_DISTANCES:
+            category = "individual"
+        elif distance in RELAY_DISTANCES:
+            category = "relay"
+        else:
+            continue
+
+        # Get race details
+        race_info = races.get(race_id, {})
+
+        # Check if this is a better result than existing
+        existing = career_best[event][category].get(distance)
+
+        if existing is None or place < existing["place"]:
+            # Get team info for relay races
+            team = None
+            if category == "relay" and race_id in races:
+                # Team info would need to come from competitor_relay table
+                # For now, we'll leave it as None and handle it in database query
+                team = None
+
+            career_best[event][category][distance] = {
+                "place": place,
+                "year": race_info.get("year"),
+                "race_id": race_id,
+                "time": result.get("rtime"),
+                "date": race_info.get("date"),
+                "team": team,
+            }
+
+    return career_best
+
+
+def process_career_best_from_db(individual_results, relay_results):
+    """
+    Process raw database results into career best structure grouped by event.
+
+    Args:
+        individual_results: Tuple from get_career_best_with_teams() - individual races
+            Format: (distance, event, place, year, race_id, time, date)
+        relay_results: Tuple from get_career_best_with_teams() - relay races
+            Format: (distance, event, place, year, race_id, time, date, team)
+
+    Returns:
+        Dictionary with structure:
+        {
+            'WMTBOC': {'individual': {}, 'relay': {}},
+            'EMTBOC': {'individual': {}, 'relay': {}},
+            'WCUP': {'individual': {}, 'relay': {}}
+        }
+    """
+    career_best = {
+        "WMTBOC": {"individual": {}, "relay": {}},
+        "EMTBOC": {"individual": {}, "relay": {}},
+        "WCUP": {"individual": {}, "relay": {}},
+    }
+
+    # Process individual results
+    for row in individual_results:
+        distance, event, place, year, race_id, time, date = row
+
+        # Normalize distance name (replace hyphens with underscores)
+        distance_normalized = distance.replace("-", "_")
+
+        # Skip if event not recognized
+        if event not in career_best:
+            continue
+
+        # Check if this is better than existing result
+        existing = career_best[event]["individual"].get(distance_normalized)
+
+        if existing is None or place < existing["place"]:
+            career_best[event]["individual"][distance_normalized] = {
+                "place": place,
+                "year": year,
+                "race_id": race_id,
+                "time": time,
+                "date": date,
+            }
+
+    # Process relay results
+    for row in relay_results:
+        distance, event, place, year, race_id, time, date, team = row
+
+        # Normalize distance name
+        distance_normalized = distance.replace("-", "_")
+
+        # Skip if event not recognized
+        if event not in career_best:
+            continue
+
+        # Check if this is better than existing result
+        existing = career_best[event]["relay"].get(distance_normalized)
+
+        if existing is None or place < existing["place"]:
+            career_best[event]["relay"][distance_normalized] = {
+                "place": place,
+                "year": year,
+                "race_id": race_id,
+                "time": time,
+                "date": date,
+                "team": team,
+            }
+
+    return career_best
+
+
+def analyze_event_completeness(career_best_data, event="WMTBOC"):
+    """
+    Analyze how complete a competitor's results are for a given event.
+    Useful for finding "Grand Slam" winners or versatile competitors.
+
+    Args:
+        career_best_data: Output from get_career_best_by_event_and_distance
+        event: 'WMTBOC', 'EMTBOC', or 'WCUP'
+
+    Returns:
+        Dictionary with analysis:
+        {
+            'individual_distances_competed': 4,
+            'relay_distances_competed': 2,
+            'has_medal_all_individual': False,
+            'has_won_all_individual': False,
+            'medal_count_individual': 2,
+            'medal_count_relay': 1,
+            'distances_best': {'sprint': 1, 'middle': 3, 'long': 5, ...}
+        }
+    """
+    # Define all possible distances
+    WMTBOC_DISTANCES = ["sprint", "middle", "long", "mass_start", "relay"]
+    ALL_DISTANCES = ["relay", "mix_relay", "sprint_relay", "sprint", "middle", "long", "mass_start"]
+
+    distance_mapping = {"WMTBOC": WMTBOC_DISTANCES, "EMTBOC": ALL_DISTANCES, "WCUP": ALL_DISTANCES}
+
+    event_data = career_best_data.get(event, {"individual": {}, "relay": {}})
+
+    individual = event_data.get("individual", {})
+    relay = event_data.get("relay", {})
+
+    # Count medals (places 1-3)
+    individual_medals = sum(1 for dist, data in individual.items() if data["place"] <= 3)
+    relay_medals = sum(1 for dist, data in relay.items() if data["place"] <= 3)
+
+    # Count wins (place 1)
+    individual_wins = sum(1 for dist, data in individual.items() if data["place"] == 1)
+    relay_wins = sum(1 for dist, data in relay.items() if data["place"] == 1)
+
+    # Build distances_best dictionary with all possible distances
+    # Use 99999 for distances never competed (DNF/DSQ equivalent)
+    distances_best = {}
+
+    # Fill in best places for each distance competed, pass if not competed
+    for distance in distance_mapping.get(event, []):
+        if distance in individual:
+            distances_best[distance] = individual[distance]["place"]
+        elif distance in relay:
+            distances_best[distance] = relay[distance]["place"]
+
+    distances_score = sum(distances_best.values())
+
+    return {
+        "individual_distances_competed": len(individual),
+        "relay_distances_competed": len(relay),
+        "total_distances_competed": len(individual) + len(relay),
+        "individual_medals": individual_medals,
+        "relay_medals": relay_medals,
+        "total_medals": individual_medals + relay_medals,
+        "individual_wins": individual_wins,
+        "relay_wins": relay_wins,
+        "total_wins": individual_wins + relay_wins,
+        "has_medal_all_individual": individual_medals == len(individual) and len(individual) > 0,
+        "has_won_all_individual": individual_wins == len(individual) and len(individual) > 0,
+        "distances_best": distances_best,
+        "distances_score": distances_score,
+        "has_won_all": individual_wins + relay_wins == len(individual) + len(relay)
+        and (len(individual) + len(relay)) > 0,
+    }
+
+
+def calculate_grand_slam_score(career_best_data, distances_by_year, event="WMTBOC"):
+    """
+    Calculate Grand Slam score considering historical distance availability.
+
+    A competitor is a Grand Slam winner if they won all distances that existed
+    during any year they competed (career-based), with a minimum of 3 wins.
+
+    Args:
+        career_best_data: Output from process_career_best_from_db()
+        distances_by_year: Dict mapping years to list of distances, from Races.get_distances_by_year()
+        event: Event type (WMTBOC, EMTBOC, WCUP)
+
+    Returns:
+        Dictionary with:
+        - is_grand_slam_winner: True if won all available distances AND at least 3 wins
+        - available_distances: set of distances that existed during competitor's career
+        - won_distances: set of distances won (place=1)
+        - completion_percentage: won_distances / available_distances (0-100)
+        - years_competed: set of years the competitor has results
+    """
+    event_data = career_best_data.get(event, {"individual": {}, "relay": {}})
+    individual = event_data.get("individual", {})
+    relay = event_data.get("relay", {})
+
+    # Find years the competitor competed in (from their best results)
+    years_competed = set()
+    for dist_data in individual.values():
+        if "year" in dist_data:
+            years_competed.add(dist_data["year"])
+    for dist_data in relay.values():
+        if "year" in dist_data:
+            years_competed.add(dist_data["year"])
+
+    # Get union of all distances available during those years
+    available_distances = set()
+    for year in years_competed:
+        if year in distances_by_year:
+            available_distances.update(distances_by_year[year])
+
+    # Find distances won (place == 1)
+    won_distances = set()
+    for distance, data in individual.items():
+        if data["place"] == 1:
+            won_distances.add(distance)
+    for distance, data in relay.items():
+        if data["place"] == 1:
+            won_distances.add(distance)
+
+    # Calculate completion percentage
+    if available_distances:
+        completion_percentage = (len(won_distances) / len(available_distances)) * 100
+    else:
+        completion_percentage = 0
+
+    # Grand Slam: won all available distances AND at least 3 wins
+    is_grand_slam_winner = (
+        len(won_distances) >= 3
+        and len(won_distances) == len(available_distances)
+        and len(available_distances) > 0
+    )
+
+    return {
+        "is_grand_slam_winner": is_grand_slam_winner,
+        "available_distances": available_distances,
+        "won_distances": won_distances,
+        "completion_percentage": completion_percentage,
+        "years_competed": years_competed,
+    }
+
+
+def count_medals_by_event(individual_results, relay_results, event):
+    """
+    Count total medals (gold, silver, bronze) for a competitor at a specific event.
+
+    Args:
+        individual_results: Raw results from get_career_best_with_teams() - individual races
+            Format: (distance, event, place, year, race_id, time, date)
+        relay_results: Raw results from get_career_best_with_teams() - relay races
+            Format: (distance, event, place, year, race_id, time, date, team)
+        event: Event type to filter (WMTBOC, EMTBOC, WCUP)
+
+    Returns:
+        Dictionary with:
+        - gold: count of 1st places
+        - silver: count of 2nd places
+        - bronze: count of 3rd places
+        - medals_str: formatted string "G-S-B" (e.g., "4-2-0")
+    """
+    gold = 0
+    silver = 0
+    bronze = 0
+
+    # Count from individual results
+    for row in individual_results:
+        row_event = row[1]
+        place = row[2]
+        if row_event == event and place <= 3:
+            if place == 1:
+                gold += 1
+            elif place == 2:
+                silver += 1
+            elif place == 3:
+                bronze += 1
+
+    # Count from relay results
+    for row in relay_results:
+        row_event = row[1]
+        place = row[2]
+        if row_event == event and place <= 3:
+            if place == 1:
+                gold += 1
+            elif place == 2:
+                silver += 1
+            elif place == 3:
+                bronze += 1
+
+    return {
+        "gold": gold,
+        "silver": silver,
+        "bronze": bronze,
+        "medals_str": f"{gold}-{silver}-{bronze}",
+    }
