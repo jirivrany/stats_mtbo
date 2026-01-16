@@ -48,6 +48,4 @@ class Wcup(object):
         query = "SELECT COUNT(*) FROM wcup WHERE year = %s"
         self.cursor.execute(query, (year,))
         data = self.cursor.fetchone()
-        if data[0] > 0:
-            return True
-        return False
+        return data[0] > 0
