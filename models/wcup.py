@@ -43,3 +43,11 @@ class Wcup(object):
             results[year].append((comp_id, place))
 
         return results
+
+    def check_year_exists(self, year):
+        query = "SELECT COUNT(*) FROM wcup WHERE year = %s"
+        self.cursor.execute(query, (year,))
+        data = self.cursor.fetchone()
+        if data[0] > 0:
+            return True
+        return False

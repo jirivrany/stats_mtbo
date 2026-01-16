@@ -6,7 +6,6 @@ import sys
 import operator
 from collections import defaultdict
 from functools import lru_cache
-from datetime import datetime
 
 import flask
 from flaskext.mysql import MySQL
@@ -63,6 +62,7 @@ WCUP_COUNTED = {
     2023: 7,
     2024: 7,
     2025: 7,
+    2026: 7,
 }
 
 
@@ -229,12 +229,13 @@ def wcup(year):
     """
     model = Results(mysql)
     races_model = Races(mysql)
+    wcup_model = Wcup(mysql)
     title = f"World Cup {year} individual overall standings"
 
-    current_year = datetime.now().year + 1
     season_race = races_model.get_individual_ids_by_year(year)
     totals_f = model.get_worldcup_points(year, gender="F")
     totals_m = model.get_worldcup_points(year, gender="M")
+
     try:
         counted = WCUP_COUNTED[year]
     except KeyError:
@@ -250,6 +251,8 @@ def wcup(year):
 
     country = {COMPETITORS[row["comp_id"]]["nationality"] for row in totals_m + totals_f}
 
+    years = sorted(WCUP_COUNTED.keys(), reverse=True)
+
     return flask.render_template(
         "wcup.html",
         title=title,
@@ -258,9 +261,9 @@ def wcup(year):
         women=totals_f,
         men=totals_m,
         year=year,
+        years=years,
         stats={"men": len(totals_m), "women": len(totals_f), "country": len(country)},
         competitors=COMPETITORS,
-        current_year=current_year,
         flags=tools.IOC_INDEX,
     )
 
@@ -277,7 +280,6 @@ def team_wcup(year):
     model = Results(mysql)
     title = f"Team World Cup {year} overall standings"
 
-    current_year = datetime.now().year + 1
     totals_m = model.get_teamworldcup_points(year, "M")
     totals_f = model.get_teamworldcup_points(year, "W")
     totals_x = model.get_teamworldcup_points(year, "X")
@@ -294,6 +296,7 @@ def team_wcup(year):
     race_links.sort(key=lambda x: x[0])
 
     country = set((team["team"] for team in totals))
+    years = sorted(WCUP_COUNTED.keys(), reverse=True)
 
     return flask.render_template(
         "wcup_team.html",
@@ -304,9 +307,9 @@ def team_wcup(year):
         table_colspan=len(season_race),
         races=RACES,
         year=year,
+        years=years,
         stats={"country": len(country)},
         competitors=COMPETITORS,
-        current_year=current_year,
         flags=tools.IOC_INDEX,
     )
 
@@ -923,15 +926,6 @@ def page_not_found(error):
     """
     print("404", error)
     return flask.render_template("error_404.html"), 404
-
-
-def insert_wcup(year, totals):
-    """
-    for local use only, should be called from wordlcup endpoint
-    where the totals are calculated for each year
-    """
-    model = Wcup(mysql)
-    model.insert_results(year, totals)
 
 
 if __name__ == "__main__":

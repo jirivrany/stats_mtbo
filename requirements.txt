@@ -3,3 +3,9 @@ Flask-MySQL
 PyMySQL
 requests
 loguru
+
+# Additional dependencies for iof_crawler tools
+beautifulsoup4
+lxml
+tqdm
+python-dotenv
