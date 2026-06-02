@@ -240,10 +240,13 @@ def wcup(year):
     except KeyError:
         flask.abort(404)
 
-    if len(season_race) > 0:
-        counted_text = f"Best {counted} of {len(season_race)} results counted in overall standings."
-    else:
+    nr_races = len(season_race)
+    if nr_races == 0:
         counted_text = f"No results in {year} so far."
+    elif counted >= nr_races:
+        counted_text = f"All {nr_races} results counted in overall standings (season in progress)."
+    else:
+        counted_text = f"Best {counted} of {nr_races} results counted in overall standings."
 
     totals_f = tools.make_worldup_results(season_race, totals_f, counted)
     totals_m = tools.make_worldup_results(season_race, totals_m, counted)
