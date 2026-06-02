@@ -2,6 +2,7 @@
 """
 Flask app for the www.mtbo.info website.
 """
+
 import sys
 import operator
 from collections import defaultdict
@@ -18,7 +19,6 @@ from models.results import Results
 from models.wcup import Wcup
 from loguru import logger
 
-
 mysql = MySQL()
 app = flask.Flask(__name__)
 app.config.from_pyfile("flaskapp.cfg")
@@ -30,7 +30,7 @@ COMPETITORS = Competitors(mysql).get_all_present()
 WMTBOC_NR = Races(mysql).get_count_by_event("WMTBOC")[0][0]
 EMTBOC_NR = Races(mysql).get_count_by_event("EMTBOC")[0][0]
 MEDAL_NAMES = {1: "Gold", 2: "Silver", 3: "Bronze"}
-YEAR = 2025
+YEAR = 2026
 
 DISTANCE_NAMES = {
     "long": "Long",
