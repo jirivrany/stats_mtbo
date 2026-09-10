@@ -163,7 +163,10 @@ class Results(object):
         :param int relay race id
         :return {values}
         """
-        query = "SELECT * from competitor_relay WHERE race_id = %s AND class = %s ORDER BY place"
+        query = (
+            "SELECT * from competitor_relay WHERE race_id = %s AND class = %s "
+            "ORDER BY place IS NULL, place, team, leg"
+        )
         self.cursor.execute(query, (race_id, klasa))
         res = self.cursor.fetchall()
         return res
@@ -477,6 +480,7 @@ class Results(object):
             JOIN races r ON crel.race_id = r.id
             WHERE crel.competitor_id = %s
               AND r.team = 1
+              AND crel.place IS NOT NULL
             ORDER BY r.distance, crel.place ASC, r.date ASC
         """
 

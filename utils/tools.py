@@ -220,24 +220,38 @@ EVENT_NAMES = {
 
 
 def prepare_relay_output(source_list):
-    output = defaultdict(list)
-    for wom in source_list:
-        output[wom[5]].append(wom)
+    """
+    Rozděluje výsledky štafet na dva seznamy - oficiálně hodnocené týmy
+    a ostatní (druhé týmy federace bez umístění, chyby ražení).
 
-    wmn = {key: sorted(wom, key=lambda x: x[4]) for key, wom in output.items()}
+    Klíčem je dvojice (země, stav): jedna federace může mít víc týmů,
+    ale jen jeden z nich je hodnocený.
+    """
+    teams = defaultdict(list)
+    for row in source_list:
+        teams[(row[5], row[7])].append(row)
 
-    output = {}
-    for ioc_code, team in wmn.items():
-        country = team[0][5].upper()
-        output[ioc_code] = {
-            "place": team[0][2],
+    classified = {}
+    others = []
+    for (ioc_code, state), members in teams.items():
+        members = sorted(members, key=lambda x: x[4])
+        country = ioc_code.upper()
+        team = {
+            "place": members[0][2],
             "country": country,
             "flag": IOC_INDEX[country].lower(),
-            "time": team[0][3],
-            "members": [(x[0], x[4]) for x in team],
+            "time": members[0][3],
+            "state": state,
+            "members": [(x[0], x[4]) for x in members],
         }
+        if state == "counted":
+            classified[ioc_code] = team
+        else:
+            others.append(team)
 
-    return output
+    others.sort(key=lambda t: (t["time"] is None, t["time"] or ""))
+
+    return classified, others
 
 
 def prepare_medal_table(model, competitor_id, table="race"):

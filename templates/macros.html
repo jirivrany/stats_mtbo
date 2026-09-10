@@ -85,7 +85,7 @@
 {% macro relay_table_row(team, competitors, flags) %}
 <tr>
     <th>
-    {{ team['place'] }}
+    {{ team['place'] if team['place'] else '' }}
     </th>
     <td>
     <img src="{{ url_for('static', filename='css/blank.gif') }}"
@@ -96,13 +96,30 @@
     </td>
     <th>
         {% for row in team['members'] %}
-            <a href="/competitor/{{ row[0] }}/">{{ competitors[row[0]]["first"] }} {{ competitors[row[0]]["last"] }}</a>{% if not loop.last%},{% endif %} 
-        {% endfor %}    
+            <a href="/competitor/{{ row[0] }}/">{{ competitors[row[0]]["first"] }} {{ competitors[row[0]]["last"] }}</a>{% if not loop.last%},{% endif %}
+        {% endfor %}
     </th>
     <td>
-    {{ team['time'] }}
+    {% if team['time'] %}{{ team['time'] }}{% elif team['state'] == 'notvalid' %}<span class="text-muted">mispunched</span>{% endif %}
     </td>
 </tr>
+{% endmacro %}
+
+{% macro relay_others_table(teams, competitors, flags, heading) %}
+{% if teams %}
+<h5 class="mt-4 text-muted">{{ heading }}</h5>
+<p class="small text-muted mb-1">
+    Teams that started but are not ranked: second teams of a federation
+    (IOF rule 24.10) and teams without a valid result.
+</p>
+<table class="table table-sm">
+    <tbody>
+    {% for team in teams %}
+        {{ relay_table_row(team, competitors, flags) }}
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
 {% endmacro %}
 
 {% macro event_summary_table(table_data, race_ids, competitors, flags) %}

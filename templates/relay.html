@@ -1,5 +1,5 @@
 {% extends "default.html" %}
-{% from 'macros.html' import  relay_table_row %}
+{% from 'macros.html' import  relay_table_row, relay_others_table %}
 
 {% block content %}
 <div class="container-fluid">
@@ -14,6 +14,7 @@
                 {% endfor %}
                 </tbody>
             </table>
+            {{ relay_others_table(women_others, competitors, flags, 'Women - not ranked') }}
         </div>
         <div class="col-md-6">
             <h2>Men</h2>
@@ -24,8 +25,9 @@
                 {% endfor %}
                 </tbody>
             </table>
+            {{ relay_others_table(men_others, competitors, flags, 'Men - not ranked') }}
         </div>
     </div>
-</div>    
+</div>
 {% include 'relay_disclaimer.html' %}
 {% endblock %}
