@@ -4,7 +4,6 @@ Flask app for the www.mtbo.info website.
 """
 
 import sys
-import operator
 from collections import defaultdict
 from functools import lru_cache
 
@@ -337,8 +336,8 @@ def race(race_id):
         women_list = model.get_relay_results(race_id, "W")
         men_list = model.get_relay_results(race_id, "M")
 
-        women = tools.prepare_relay_output(women_list)
-        men = tools.prepare_relay_output(men_list)
+        women, women_others = tools.prepare_relay_output(women_list)
+        men, men_others = tools.prepare_relay_output(men_list)
         country = set(men.keys()).union(set(women.keys()))
 
         return flask.render_template(
@@ -346,6 +345,8 @@ def race(race_id):
             title=title,
             women=women,
             men=men,
+            women_others=women_others,
+            men_others=men_others,
             stats={
                 "men": len(men.keys()),
                 "women": len(women.keys()),
@@ -359,12 +360,13 @@ def race(race_id):
 
     elif cur_race["distance"] in ("sprint-relay", "mix-relay"):
         result_list = model.get_relay_results(race_id, "X")
-        results = tools.prepare_relay_output(result_list)
+        results, results_others = tools.prepare_relay_output(result_list)
 
         return flask.render_template(
             "mix_relay.html",
             title=title,
             results=results,
+            results_others=results_others,
             stats={"teams": len(results.keys())},
             competitors=COMPETITORS,
             flags=tools.IOC_INDEX,
@@ -407,7 +409,8 @@ def competitor(competitor_id):
         flask.abort(404)
 
     data = model.get_competitor_results(competitor_id)
-    data.sort(key=operator.itemgetter(2))
+    # place je None u štafet bez oficiálního umístění - řadí se na konec
+    data.sort(key=lambda row: (row[2] is None, row[2]))
 
     data = [tools.format_competitor_row(row, RACES) for row in data]
 
@@ -818,18 +821,18 @@ def event_summary(event: str = "WMTBOC", year: int = YEAR, organizer: str = ""):
             women_list = women_list[:9]
             men_list = men_list[:9]
 
-            team_women = tools.prepare_relay_output(women_list)
-            team_men = tools.prepare_relay_output(men_list)
+            team_women, _ = tools.prepare_relay_output(women_list)
+            team_men, _ = tools.prepare_relay_output(men_list)
 
         if race_distance == "sprint-relay":
             result_list = model.get_relay_results(race_id, "X")
             result_list = result_list[:6]
-            team_mix = tools.prepare_relay_output(result_list)
+            team_mix, _ = tools.prepare_relay_output(result_list)
 
         if race_distance == "mix-relay":
             result_list = model.get_relay_results(race_id, "X")
             result_list = result_list[:9]
-            team_mix = tools.prepare_relay_output(result_list)
+            team_mix, _ = tools.prepare_relay_output(result_list)
 
         team_results.append({"men": team_men, "women": team_women, "mix": team_mix})
 
