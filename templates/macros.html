@@ -1,3 +1,28 @@
+{# Medaile jako barevný odznak - zlatá, stříbrná, bronzová. Používá se
+   na všech žebříčcích, aby "3" znamenala všude totéž.
+
+   zero='muted' pro tabulky se sloupcem na každý kov (nula musí zůstat
+   vidět, jinak vypadá buňka rozbitě), zero='hide' tam, kde jsou medaile
+   v jedné buňce vedle sebe. #}
+{% macro medal_badge(count, kind, zero='muted') %}
+{% set colors = {'gold': 'warning', 'silver': 'secondary', 'bronze': 'danger'} %}
+{% if count %}
+<span class="badge text-bg-{{ colors[kind] }}" title="{{ kind }}">{{ count }}</span>
+{% elif zero == 'muted' %}
+<span class="badge text-bg-light text-muted" title="{{ kind }}">0</span>
+{% endif %}
+{% endmacro %}
+
+
+{# Trojice odznaků do jedné buňky (G-S-B). Nuly se vynechávají, pořadí
+   kovů je pořád stejné, takže se to dá číst i bez nich. #}
+{% macro medal_set(gold, silver, bronze) %}
+{{ medal_badge(gold, 'gold', zero='hide') }}
+{{ medal_badge(silver, 'silver', zero='hide') }}
+{{ medal_badge(bronze, 'bronze', zero='hide') }}
+{% endmacro %}
+
+
 {% macro wcup_overall_table(table_title, table_data, flags, competitors) %}
     <h2>{{ table_title }}</h2>
             <table class="table table-sm">

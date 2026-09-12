@@ -221,6 +221,38 @@ class Results(object):
         self.cursor.execute(query, (event,))
         return self.cursor.fetchall()
 
+    def get_individual_medals(self, place=3, events=None):
+        """
+        Medailová umístění v individuálních závodech.
+
+        Jedním dotazem pro celou historii - progression dashboard staví
+        celou tabulku z tohohle, takže se nesmí ptát po závodnících.
+
+        Štafety schválně nejsou. Postup z juniorů mezi elitu je
+        individuální výkon a stejně to berou i ostatní žebříčky
+        (young_stars, great_masters, grand_slam) - kdyby se tu štafety
+        počítaly, znamenala by "medaile" na každé stránce něco jiného.
+
+        :param place: nejhorší započítané umístění (3 = medaile, 1 = zlato)
+        :param events: kódy událostí, None = všechny
+        :return list of (competitor_id, event, year, race_id, distance, place)
+        """
+        # _event_filter vrací nekvalifikované "event", což by v JOINu bylo
+        # dvojznačné, kdyby sloupec přibyl i do competitor_race
+        condition, extra = self._event_filter(events)
+        condition = condition.replace(" event IN", " r.event IN")
+
+        query = (
+            "SELECT cr.competitor_id, r.event, r.year, r.id, r.distance, cr.place"
+            " FROM competitor_race cr"
+            " JOIN races r ON cr.race_id = r.id"
+            f" WHERE r.team = 0 AND cr.place BETWEEN 1 AND %s{condition}"
+            " ORDER BY r.year, cr.place"
+        )
+
+        self.cursor.execute(query, (place, *extra))
+        return self.cursor.fetchall()
+
     def get_relay_results(self, race_id, klasa):
         """
         get results of relay race

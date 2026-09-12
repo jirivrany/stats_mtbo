@@ -113,15 +113,17 @@ def test_event_codes_order_and_filter():
     """
     assert tools.event_codes()[:3] == ["WMTBOC", "EMTBOC", "WCUP"]
     assert tools.event_codes(tools.ELITE) == ["WMTBOC", "EMTBOC", "WCUP"]
-    assert tools.event_codes({tools.JUNIOR, tools.YOUTH}) == ["JWMTBOC", "EJMTBOC"]
+    assert tools.event_codes(tools.JUNIOR) == ["JWMTBOC", "EJMTBOC"]
+    assert tools.event_codes(tools.YOUTH) == ["EYMTBOC"]
 
 
 def test_non_elite_codes_covers_youth():
     """
-    youth se má chytit sám, až přibude - proto se ptáme "není elita"
+    youth i junioři dohromady - dělí se jen elita/neelita (navigace)
     """
     assert tools.non_elite_codes() == tools.event_codes({tools.JUNIOR, tools.YOUTH})
     assert "WMTBOC" not in tools.non_elite_codes()
+    assert "EYMTBOC" in tools.non_elite_codes()
 
 
 def test_get_event_is_case_insensitive():
@@ -167,6 +169,32 @@ def test_prepare_medal_table_keeps_groups_apart():
     assert all(medals == [0, 0, 0] for medals in elite.values())
     assert junior["JWMTBOC"] == [1, 1, 1]
     assert junior["EJMTBOC"] == [0, 0, 0]
+
+
+def test_youth_medals_do_not_land_in_junior_table():
+    """
+    Youth medaile se nesmí přičíst juniorským.
+
+    Karta na detailu závodníka se stavěla z non_elite_codes(), což je
+    "všechno kromě elity" - jakmile přibyl EYMTBOC do registru, youth
+    medaile tiše spadly do juniorské tabulky. Proto se karty ptají
+    event_codes(JUNIOR) a event_codes(YOUTH) zvlášť.
+    """
+    class OnlyYouthMedals:
+        def get_competitor_place_count(self, competitor_id, place, event, table="race"):
+            return [(1, 2)] if event == "EYMTBOC" else []
+
+    junior = tools.prepare_medal_table(
+        OnlyYouthMedals(), 1, events=tools.event_codes(tools.JUNIOR)
+    )
+    youth = tools.prepare_medal_table(
+        OnlyYouthMedals(), 1, events=tools.event_codes(tools.YOUTH)
+    )
+
+    # jezdec, který jel jen youth, nesmí mít nic v juniorské tabulce
+    assert "EYMTBOC" not in junior
+    assert all(medals == [0, 0, 0] for medals in junior.values())
+    assert youth["EYMTBOC"] == [2, 2, 2]
 
 
 # --- build_race_history ---
@@ -284,3 +312,171 @@ def test_build_race_history_skips_unknown_competitor():
     )
 
     assert history[0]["champions"] == []
+
+
+# --- build_progression ---
+
+# řádek medaile má tvar z Results.get_individual_medals:
+# (competitor_id, event, year, race_id, distance, place)
+WORLD = tools.CAREER_PATHS["world"]["groups"]
+FULL = tools.CAREER_PATHS["full"]["groups"]
+
+RIDERS = {
+    1: {"first": "Krystof", "last": "Bogar", "nationality": "CZE", "gender": "M"},
+    2: {"first": "Susanna", "last": "Laurila", "nationality": "FIN", "gender": "F"},
+    3: {"first": "Jen", "last": "Junior", "nationality": "SWE", "gender": "F"},
+    4: {"first": "Jen", "last": "Elita", "nationality": "NOR", "gender": "M"},
+    5: {"first": "Kaarina", "last": "Nurminen", "nationality": "FIN", "gender": "F"},
+}
+
+
+def test_build_progression_needs_every_stage():
+    """
+    kdo má medaili jen v jedné etapě, do tabulky nepatří - jde
+    o přechod mezi kategoriemi, ne o seznam medailistů
+    """
+    medals = [
+        (1, "JWMTBOC", 2011, 10, "long", 1),
+        (1, "WMTBOC", 2013, 20, "sprint", 1),
+        (3, "JWMTBOC", 2011, 10, "long", 2),   # jen junior
+        (4, "WMTBOC", 2013, 20, "sprint", 3),  # jen elita
+    ]
+
+    rows = tools.build_progression(medals, RIDERS, WORLD)
+
+    assert [row["competitor_id"] for row in rows] == [1]
+
+
+def test_build_progression_counts_medals_and_gap():
+    medals = [
+        (1, "JWMTBOC", 2011, 10, "long", 1),
+        (1, "JWMTBOC", 2012, 11, "sprint", 2),
+        (1, "WMTBOC", 2013, 20, "sprint", 1),
+        (1, "WMTBOC", 2014, 21, "middle", 1),
+    ]
+
+    row = tools.build_progression(medals, RIDERS, WORLD)[0]
+
+    assert row["stages"]["Junior"]["medals"] == [1, 1, 0]
+    assert row["stages"]["Elite"]["medals"] == [2, 0, 0]
+    assert row["gap"] == 2
+
+
+def test_build_progression_first_medal_is_oldest():
+    """
+    při shodě roku rozhoduje lepší umístění - první medaile je ta,
+    kterou by závodník jmenoval jako svůj průlom
+    """
+    medals = [
+        (1, "JWMTBOC", 2011, 10, "long", 3),
+        (1, "JWMTBOC", 2011, 11, "sprint", 1),
+        (1, "JWMTBOC", 2012, 12, "middle", 1),
+        (1, "WMTBOC", 2013, 20, "sprint", 2),
+    ]
+
+    first = tools.build_progression(medals, RIDERS, WORLD)[0]["stages"]["Junior"]["first"]
+
+    assert first == (2011, 11, "sprint", 1)
+
+
+def test_build_progression_place_filter_makes_champions():
+    """
+    place=1 dělá variantu champions - stříbro už nestačí ani k zařazení
+    """
+    medals = [
+        (1, "JWMTBOC", 2011, 10, "long", 1),
+        (1, "WMTBOC", 2013, 20, "sprint", 1),
+        (2, "JWMTBOC", 2009, 12, "sprint", 1),
+        (2, "WMTBOC", 2012, 22, "middle", 2),  # jen stříbro v elitě
+    ]
+
+    medalists = tools.build_progression(medals, RIDERS, WORLD)
+    champions = tools.build_progression(medals, RIDERS, WORLD, place=1)
+
+    assert {row["competitor_id"] for row in medalists} == {1, 2}
+    assert [row["competitor_id"] for row in champions] == [1]
+
+
+def test_build_progression_sorted_by_gap_not_by_year():
+    """
+    Nejrychlejší přechod první.
+
+    Řazení podle roku první elitní medaile by zvýhodňovalo starší jezdce -
+    nahoru by se dostal ten, kdo závodil dřív, ne ten, kdo to zvládl
+    nejrychleji. Tady má jezdec 2 starší medaile, ale delší rozestup,
+    takže musí být až druhý.
+    """
+    medals = [
+        (1, "JWMTBOC", 2011, 10, "long", 1),
+        (1, "WMTBOC", 2013, 20, "sprint", 1),   # gap 2, elita 2013
+        (2, "JWMTBOC", 2005, 12, "sprint", 1),
+        (2, "WMTBOC", 2012, 22, "middle", 1),   # gap 7, elita 2012
+    ]
+
+    rows = tools.build_progression(medals, RIDERS, WORLD)
+
+    assert [row["competitor_id"] for row in rows] == [1, 2]
+    assert [row["gap"] for row in rows] == [2, 7]
+
+
+def test_build_progression_same_gap_orders_by_year():
+    """
+    při shodném rozestupu jde první ten starší - pořadí musí být úplné
+    """
+    medals = [
+        (1, "JWMTBOC", 2011, 10, "long", 1),
+        (1, "WMTBOC", 2013, 20, "sprint", 1),
+        (2, "JWMTBOC", 2009, 12, "sprint", 1),
+        (2, "WMTBOC", 2011, 22, "middle", 1),
+    ]
+
+    rows = tools.build_progression(medals, RIDERS, WORLD)
+
+    assert [row["competitor_id"] for row in rows] == [2, 1]
+    assert [row["gap"] for row in rows] == [2, 2]
+
+
+def test_build_progression_three_stages():
+    """
+    celý oblouk youth -> junior -> elita je jen delší seznam skupin,
+    žádná zvláštní větev v kódu
+    """
+    medals = [
+        (5, "EYMTBOC", 2017, 30, "sprint", 2),
+        (5, "EJMTBOC", 2018, 31, "middle", 1),
+        (5, "EMTBOC", 2023, 32, "long", 3),
+        (1, "EJMTBOC", 2018, 31, "middle", 2),  # chybí youth
+        (1, "EMTBOC", 2023, 32, "long", 1),
+    ]
+
+    rows = tools.build_progression(medals, RIDERS, FULL)
+
+    assert [row["competitor_id"] for row in rows] == [5]
+    assert rows[0]["gap"] == 6
+    assert set(rows[0]["stages"]) == {"Youth", "Junior", "Elite"}
+
+
+def test_build_progression_ignores_other_events():
+    """
+    světová větev nesmí započítat evropské tituly - jsou to dvě
+    samostatné soutěže a míchat je by tabulku nafouklo
+    """
+    medals = [
+        (1, "EJMTBOC", 2011, 10, "long", 1),
+        (1, "WMTBOC", 2013, 20, "sprint", 1),
+    ]
+
+    assert tools.build_progression(medals, RIDERS, WORLD) == []
+
+
+def test_build_progression_skips_unknown_competitor():
+    medals = [
+        (999, "JWMTBOC", 2011, 10, "long", 1),
+        (999, "WMTBOC", 2013, 20, "sprint", 1),
+    ]
+
+    assert tools.build_progression(medals, RIDERS, WORLD) == []
+
+
+def test_build_progression_empty_input():
+    assert tools.build_progression([], RIDERS, WORLD) == []

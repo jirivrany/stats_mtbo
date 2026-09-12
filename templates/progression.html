@@ -1,0 +1,82 @@
+{% extends "default.html" %}
+{% from "macros.html" import medal_badge %}
+{% block content %}
+<h1>{{ title }}</h1>
+
+<p class="text-muted">
+    {# Dvě pravidla, která rozhodují o tom, kdo v tabulce je - bez nich
+       vypadá chybějící jezdec jako chyba dat. #}
+    Only <strong>individual</strong> medals count &mdash; a relay medal is
+    a team achievement, and the step up from juniors is a personal one.
+    World and European titles are tracked separately, so each table follows
+    one competition.
+    {% if 'EYMTBOC' in meta['groups'][0][1] %}
+    The European Youth championship has only been held since 2016, so riders
+    from earlier generations cannot appear here.
+    {% elif 'EJMTBOC' in meta['groups'][0][1] %}
+    The European Junior championship has only been held since 2018, so this
+    list is still short and will grow.
+    {% endif %}
+</p>
+
+{% if table_data %}
+<p>
+    {{ table_data|length }}
+    {%- if place == 1 %} rider{{ 's' if table_data|length != 1 }} won gold
+    {%- else %} rider{{ 's' if table_data|length != 1 }} medalled
+    {%- endif %}
+    at every stage: {{ stages|join(' &rarr; ')|safe }}.
+    Sorted by how long the step up took, fastest first &mdash; that way the
+    ranking compares riders from different eras.
+</p>
+
+<div class="container-fluid">
+    <table class="table table-sm">
+        <thead>
+            <tr class="table-info">
+                <th>#</th>
+                <th>Competitor</th>
+                {% for stage in stages %}
+                <th>{{ stage }} breakthrough</th>
+                <th>{{ stage }} {{ 'titles' if place == 1 else 'medals' }}</th>
+                {% endfor %}
+                {# Podle tohohle sloupce se řadí - proto je zvýrazněný #}
+                <th title="Years from the first to the last breakthrough">Years taken</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in table_data %}
+            <tr>
+                <th>{{ loop.index }}</th>
+                <td>
+                    <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                        class="flag flag-{{ flags[row['nationality']].lower() }}"
+                        alt="{{ row['nationality'] }}" />
+                    <a href="{{ url_for('competitor', competitor_id=row['competitor_id']) }}">{{ row['name'] }}</a>
+                </td>
+                {% for stage in stages %}
+                {% set entry = row['stages'][stage] %}
+                {% set year, race_id, distance, result = entry['first'] %}
+                <td>
+                    <a href="{{ url_for('race', race_id=race_id) }}">
+                        {{ year }} {{ distance_names[distance] }}
+                    </a>
+                </td>
+                <td>
+                    {# zlato se ukazuje vždy - nula tu nese informaci
+                       ("medailista, ale ne šampion"), u ostatních kovů ne #}
+                    {{ medal_badge(entry['medals'][0], 'gold') }}
+                    {{ medal_badge(entry['medals'][1], 'silver', zero='hide') }}
+                    {{ medal_badge(entry['medals'][2], 'bronze', zero='hide') }}
+                </td>
+                {% endfor %}
+                <td><strong>{{ row['gap'] }}</strong></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p>Nobody has managed this yet.</p>
+{% endif %}
+{% endblock %}

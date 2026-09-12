@@ -77,6 +77,7 @@ def inject_events():
         "EVENTS": tools.EVENTS,
         "ELITE": tools.ELITE,
         "JUNIOR_CODES": tools.non_elite_codes(),
+        "CAREER_PATHS": tools.CAREER_PATHS,
     }
 
 
@@ -423,16 +424,23 @@ def competitor(competitor_id):
 
     distances = list({row["dist"] for row in data})
 
-    # Elitní a mládežnické medaile se drží zvlášť - jsou to jiné závody
-    # a sčítat je dohromady by bylo zavádějící.
+    # Každá věková kategorie má vlastní tabulku - jsou to jiné závody
+    # a sčítat je dohromady by bylo zavádějící. Youth se nesmí slít
+    # s juniory: jsou jezdci, kteří jeli youth a do juniorů nedorostli
+    # (nebo zatím nedorostli), ve sloučené tabulce by zmizeli.
     elite_codes = tools.event_codes(tools.ELITE)
-    junior_codes = tools.non_elite_codes()
+    junior_codes = tools.event_codes(tools.JUNIOR)
+    youth_codes = tools.event_codes(tools.YOUTH)
 
     medal_table = tools.prepare_medal_table(model, competitor_id, events=elite_codes)
     relay_medal_table = tools.prepare_medal_table(model, competitor_id, "relay", events=elite_codes)
     junior_medal_table = tools.prepare_medal_table(model, competitor_id, events=junior_codes)
     junior_relay_medal_table = tools.prepare_medal_table(
         model, competitor_id, "relay", events=junior_codes
+    )
+    youth_medal_table = tools.prepare_medal_table(model, competitor_id, events=youth_codes)
+    youth_relay_medal_table = tools.prepare_medal_table(
+        model, competitor_id, "relay", events=youth_codes
     )
 
     # Get raw data from database
@@ -470,11 +478,15 @@ def competitor(competitor_id):
             "relay_title": model.get_first_medal(competitor_id, code, 1, table="relay"),
         }
 
-    # Juniorské karty se ukazují, jen když tam něco je - většina závodníků
-    # v juniorech nestartovala.
-    has_junior = any(
-        any(table[code]) for table in (junior_medal_table, junior_relay_medal_table) for code in junior_codes
-    ) or any(event_stats[code]["total_distances_competed"] for code in junior_codes)
+    # Karty se ukazují, jen když tam něco je - většina závodníků
+    # v juniorech ani v youth nestartovala.
+    def competed_in(codes, *tables):
+        return any(
+            any(table[code]) for table in tables for code in codes
+        ) or any(event_stats[code]["total_distances_competed"] for code in codes)
+
+    has_junior = competed_in(junior_codes, junior_medal_table, junior_relay_medal_table)
+    has_youth = competed_in(youth_codes, youth_medal_table, youth_relay_medal_table)
 
     title = " ".join([current["first"], current["last"]])
 
@@ -492,8 +504,12 @@ def competitor(competitor_id):
         junior_medal_table=junior_medal_table,
         junior_relay_medal_table=junior_relay_medal_table,
         has_junior=has_junior,
+        youth_medal_table=youth_medal_table,
+        youth_relay_medal_table=youth_relay_medal_table,
+        has_youth=has_youth,
         elite_codes=elite_codes,
         junior_codes=junior_codes,
+        youth_codes=youth_codes,
         participation=participation,
         first_medals=first_medals,
         medal_names=MEDAL_NAMES,
@@ -783,6 +799,47 @@ def great_masters(event="WMTBOC", place=None):
         place=place,
         medal_names=MEDAL_NAMES,
         competitors=COMPETITORS,
+        flags=tools.IOC_INDEX,
+    )
+
+
+@lru_cache()
+@app.route("/progression/<path>/")
+@app.route("/progression/<path>/<int:place>/")
+def progression(path="world", place=None):
+    """
+    Závodníci, kteří získali medaili jako junioři i mezi elitou.
+
+    Bez place jsou to medailisté, s place=1 mistři - stejná konvence
+    jako /young_stars/<event>/3/. Větev (world/europe/full) drží
+    světové a evropské tituly oddělené, míchat se nesmí.
+    """
+    meta = tools.career_path(path)
+    if meta is None:
+        flask.abort(404)
+
+    groups = meta["groups"]
+    # bez parametru medailisté, jinak zadané místo omezené na 1-3
+    place = 3 if place is None else max(1, min(place, 3))
+
+    model = Results(mysql)
+    medals = model.get_individual_medals(place=place, events=tools.path_events(groups))
+    table_data = tools.build_progression(medals, COMPETITORS, groups, place=place)
+
+    stages = [stage for stage, _ in groups]
+    noun = "champions" if place == 1 else "medalists"
+    title = f"{' to '.join(stages)} {noun} - {meta['name']} championships"
+
+    return flask.render_template(
+        "progression.html",
+        title=title,
+        table_data=table_data,
+        stages=stages,
+        place=place,
+        path=path,
+        meta=meta,
+        competitors=COMPETITORS,
+        distance_names=DISTANCE_NAMES,
         flags=tools.IOC_INDEX,
     )
 

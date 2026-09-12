@@ -19,13 +19,22 @@
 <body>
     <div class="container">
         <div class="container-fluid">
-           <div class="row">
+           {# Název je v hlavičce přes fotku - z navbaru zmizel kvůli místu,
+              ale stránka se bez něj nepředstavila. #}
+           <div class="row banner">
             <img src="{{ url_for('static', filename=['img/1.jpg', 'img/2.jpg', 'img/martina.jpg']|random ) }}" class="img-responsive">
+            <span class="banner-title">MTBO stats</span>
            </div>
         </div>
         <nav class="navbar navbar-expand-lg bg-light">
             <div class="container-fluid">
-                <a class="navbar-brand" href="/">MTBO statistics</a>
+                {# Jen ikona - název zabíral místo, které v hlavním menu chybí.
+                   Titulek stránky ho stejně nese. #}
+                <a class="navbar-brand" href="/" aria-label="Home" title="MTBO statistics">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16" role="img" aria-hidden="true">
+                        <path d="M8.354 1.146a.5.5 0 0 0-.708 0L1 7.793V15.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5V7.793z"/>
+                    </svg>
+                </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                   </button>
@@ -42,7 +51,7 @@
                                 {% for code, ev in EVENTS.items() %}
                                 {% if code in JUNIOR_CODES and loop.previtem and loop.previtem[0] not in JUNIOR_CODES %}
                                 <li><hr class="dropdown-divider"></li>
-                                <li><h6 class="dropdown-header">Junior</h6></li>
+                                <li><h6 class="dropdown-header">Junior &amp; Youth</h6></li>
                                 {% endif %}
                                 <li>
                                     <a class="dropdown-item" href="/team_medals_table/{{ ev.slug }}/">{{ code }}</a>
@@ -62,7 +71,7 @@
                                 {% for code, ev in EVENTS.items() if not ev.needs_organizer %}
                                 {% if code in JUNIOR_CODES and loop.previtem and loop.previtem[0] not in JUNIOR_CODES %}
                                 <li><hr class="dropdown-divider"></li>
-                                <li><h6 class="dropdown-header">Junior</h6></li>
+                                <li><h6 class="dropdown-header">Junior &amp; Youth</h6></li>
                                 {% endif %}
                                 <li>
                                     <a class="dropdown-item" href="/events/{{ ev.slug }}/">{{ code }}</a>
@@ -80,7 +89,7 @@
                                 {% for code, ev in EVENTS.items() %}
                                 {% if code in JUNIOR_CODES and loop.previtem and loop.previtem[0] not in JUNIOR_CODES %}
                                 <li><hr class="dropdown-divider"></li>
-                                <li><h6 class="dropdown-header">Junior</h6></li>
+                                <li><h6 class="dropdown-header">Junior &amp; Youth</h6></li>
                                 {% endif %}
                                 <li>
                                     <a class="dropdown-item" href="/races/{{ ev.slug }}/">{{ code }}</a>
@@ -96,7 +105,7 @@
                                 {% for code, ev in EVENTS.items() %}
                                 {% if code in JUNIOR_CODES and loop.previtem and loop.previtem[0] not in JUNIOR_CODES %}
                                 <li><hr class="dropdown-divider"></li>
-                                <li><h6 class="dropdown-header">Junior</h6></li>
+                                <li><h6 class="dropdown-header">Junior &amp; Youth</h6></li>
                                 {% endif %}
                                 <li>
                                     <a class="dropdown-item" href="/medals_table/{{ ev.slug }}/">{{ code }}</a>
@@ -106,13 +115,23 @@
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('wcup_overall') }}">WCUP - overall winners</a>
                                 </li>
-                                <li><hr class="dropdown-divider"></li>
+                            </ul>
+                        </li>
+                        {# Medaile jsou "kdo kolik má", achievements "co se komu
+                           povedlo" - dohromady to byl jeden seznam přes celou
+                           obrazovku. #}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="/grand_slam/wmtboc/" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Achievements
+                            </a>
+                            <ul class="dropdown-menu">
                                 {% for code, ev in EVENTS.items() if ev.kind == ELITE %}
                                 <li>
                                     <a class="dropdown-item" href="/grand_slam/{{ ev.slug }}/">Grand Slam - {{ code }}</a>
                                 </li>
                                 {% endfor %}
                                 <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">By age</h6></li>
                                 {# Věkové žebříčky dávají smysl jen u elity - v juniorech
                                    je věk daný kategorií. #}
                                 {% for code, ev in EVENTS.items() if ev.kind == ELITE and code != 'WCUP' %}
@@ -125,7 +144,6 @@
                                     <a class="dropdown-item" href="/great_masters/{{ ev.slug }}/">Great Masters - champions {{ code }}</a>
                                 </li>
                                 {% endfor %}
-                                <li><hr class="dropdown-divider"></li>
                                 {% for code, ev in EVENTS.items() if ev.kind == ELITE and code != 'WCUP' %}
                                 <li>
                                     <a class="dropdown-item" href="/young_stars/{{ ev.slug }}/3/">Young Medalists {{ code }}</a>
@@ -136,6 +154,26 @@
                                     <a class="dropdown-item" href="/great_masters/{{ ev.slug }}/3/">Masters Medalists {{ code }}</a>
                                 </li>
                                 {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Career progression</h6></li>
+                                {# Světová a evropská větev zvlášť - tituly se nemíchají.
+                                   Celý oblouk (youth) je jen evropský, mistrovství světa
+                                   pro M17/W17 neexistuje. #}
+                                <li>
+                                    <a class="dropdown-item" href="/progression/world/1/">Junior &rarr; Elite champions (World)</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/progression/world/">Junior &rarr; Elite medalists (World)</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/progression/europe/1/">Junior &rarr; Elite champions (Europe)</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/progression/europe/">Junior &rarr; Elite medalists (Europe)</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/progression/full/">Youth &rarr; Junior &rarr; Elite (Europe)</a>
+                                </li>
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
@@ -146,7 +184,7 @@
                                 {% for code, ev in EVENTS.items() %}
                                 {% if code in JUNIOR_CODES and loop.previtem and loop.previtem[0] not in JUNIOR_CODES %}
                                 <li><hr class="dropdown-divider"></li>
-                                <li><h6 class="dropdown-header">Junior</h6></li>
+                                <li><h6 class="dropdown-header">Junior &amp; Youth</h6></li>
                                 {% endif %}
                                 <li>
                                     <a class="dropdown-item" href="/participation/{{ ev.slug }}/">Competitors at {{ code }}</a>
@@ -176,13 +214,6 @@
                                 </li>
                             </ul>        
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="https://orienteering.sport/mtbo/">What is MTBO?</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/about/">About</a>
-                        </li>
-
                     </ul>
                 </div>    
                 <div class="col-sm-3 col-md-3 pull-right">
@@ -200,7 +231,16 @@
 
         <div class="container-fluid">
            <div class="footer well">
-           
+
+                {# Odkazy, které nepatří k datům, sedí tady - v hlavním menu
+                   braly místo kategoriím. #}
+                <nav class="border-bottom mb-3 pb-2" aria-label="Site links">
+                    <a class="me-3" href="/">Home</a>
+                    <a class="me-3" href="/about/">About</a>
+                    <a class="me-3" href="https://orienteering.sport/mtbo/">What is MTBO?</a>
+                    <a class="me-3" href="https://eventor.orienteering.org/Events">Eventor</a>
+                </nav>
+
                 <p>The competitors names are displayed as they are currently set in the competitor <a href="https://eventor.orienteering.org/Events">Eventor</a> profile. There may be some changes against the original results, such as different surname for the girls after marriage, etc.</p>
 
                 <p>Please report any mistakes you found, I will correct them gladly. Old results were converted by hand, there are some mistakes in Eventor too. I can't catch them all even I try hard ;-)</p>

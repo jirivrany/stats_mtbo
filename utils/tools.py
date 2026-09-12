@@ -291,6 +291,18 @@ EVENTS = {
         "since": 2018,
         "distances": ALL_DISTANCES,
     },
+    # Mistrovství světa pro kategorii M17/W17 neexistuje, jezdí se jen
+    # evropské. Nekonalo se 2018 (výsledky nejsou v Eventoru) a 2020 (covid).
+    "EYMTBOC": {
+        "name": "European Youth MTBO championship",
+        "kind": YOUTH,
+        "slug": "eymtboc",
+        "scores_wcup": False,
+        "needs_organizer": False,
+        "title_noun": "European Youth Champion",
+        "since": 2016,
+        "distances": ALL_DISTANCES,
+    },
 }
 
 # Zpětná kompatibilita - spousta míst hledá jen název události.
@@ -1087,3 +1099,120 @@ def build_race_history(races, individual_winners, relay_winners, competitors):
     history.sort(key=lambda race: (race["year"], race["date"], race["race_id"]), reverse=True)
 
     return history
+
+
+# --- Progression: z juniorů mezi elitu ---
+
+# Větve kariéry. Každá je uzavřená sama v sobě - světové a evropské
+# tituly se nemíchají, protože "juniorský mistr světa se stal mistrem
+# Evropy" je jiný příběh než postup uvnitř téže soutěže.
+#
+# Youth má jen evropskou variantu, mistrovství světa pro M17/W17
+# neexistuje. WCUP tu není vůbec - juniorský ani mládežnický Světový
+# pohár se nejede, takže by nebylo co s čím párovat.
+#
+# Kódy jsou vyjmenované schválně, ne odvozené z event_codes(kind) -
+# ten by slil JWMTBOC s EJMTBOC do jedné skupiny.
+CAREER_PATHS = {
+    "world": {
+        "name": "World",
+        "groups": (("Junior", ("JWMTBOC",)), ("Elite", ("WMTBOC",))),
+    },
+    "europe": {
+        "name": "European",
+        "groups": (("Junior", ("EJMTBOC",)), ("Elite", ("EMTBOC",))),
+    },
+    "full": {
+        "name": "European",
+        "groups": (
+            ("Youth", ("EYMTBOC",)),
+            ("Junior", ("EJMTBOC",)),
+            ("Elite", ("EMTBOC",)),
+        ),
+    },
+}
+
+
+def career_path(path):
+    """Popis větve podle klíče z URL, nebo None."""
+    if not path:
+        return None
+
+    return CAREER_PATHS.get(path.lower())
+
+
+def path_events(groups):
+    """Všechny kódy událostí větve - na filtr dotazu do databáze."""
+    return [code for _, codes in groups for code in codes]
+
+
+def build_progression(medals, competitors, groups, place=3):
+    """
+    Závodníci, kteří získali medaili v KAŽDÉ etapě kariéry.
+
+    Čistá funkce nad výstupem Results.get_individual_medals(), aby šla
+    testovat bez databáze.
+
+    :param medals: (competitor_id, event, year, race_id, distance, place)
+    :param competitors: mapa id -> závodník (COMPETITORS)
+    :param groups: ((jméno, (kódy událostí, ...)), ...) v pořadí kariéry
+    :param place: nejhorší započítané umístění; 1 dělá variantu "champions"
+    :return: [{competitor_id, name, nationality, stages, gap}] seřazené
+             podle roku první medaile v poslední etapě
+    """
+    # kód události -> jméno etapy
+    stage_of = {code: stage for stage, codes in groups for code in codes}
+
+    collected = {}
+    for competitor_id, event, year, race_id, distance, result in medals:
+        stage = stage_of.get(event)
+        if stage is None or not result or result > place:
+            continue
+
+        stages = collected.setdefault(competitor_id, {})
+        entry = stages.setdefault(stage, {"first": None, "medals": [0, 0, 0]})
+        entry["medals"][result - 1] += 1
+
+        # první medaile = nejstarší; při shodě roku lepší umístění
+        current = entry["first"]
+        candidate = (year, race_id, distance, result)
+        if current is None or (year, result) < (current[0], current[3]):
+            entry["first"] = candidate
+
+    wanted = [stage for stage, _ in groups]
+
+    progression = []
+    for competitor_id, stages in collected.items():
+        if not all(stage in stages for stage in wanted):
+            continue
+
+        person = competitors.get(competitor_id)
+        if person is None:
+            continue
+
+        first_year = stages[wanted[0]]["first"][0]
+        last_year = stages[wanted[-1]]["first"][0]
+        progression.append(
+            {
+                "competitor_id": competitor_id,
+                "name": f"{person['first']} {person['last']}",
+                "nationality": person["nationality"],
+                "stages": stages,
+                "gap": last_year - first_year,
+            }
+        )
+
+    # Řadí se podle počtu let, za které to jezdec zvládl - nejrychlejší
+    # přechod první. Původně to bylo podle roku první elitní medaile, jenže
+    # to nebyl žebříček, ale časová osa: nahoru se dostal ten, kdo závodil
+    # dřív, ne ten, komu se to povedlo nejlíp. Gap je srovnatelný napříč
+    # generacemi. Při shodě rozhoduje starší přechod.
+    progression.sort(
+        key=lambda row: (
+            row["gap"],
+            row["stages"][wanted[-1]]["first"][0],
+            row["name"],
+        )
+    )
+
+    return progression

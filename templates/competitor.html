@@ -60,6 +60,29 @@
             </div>
         </div>
         {% endif %}
+        {% if has_youth %}
+        {# Youth má vlastní kartu, ne společnou s juniory - jsou jezdci,
+           kteří jeli youth a do juniorů (zatím) nedorostli. #}
+        <div class="card border-info">
+            <div class="card-header bg-info-subtle">
+                <h5>Youth medals</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">
+                    Youth championships are a separate competition — these medals
+                    are not counted together with the junior or elite ones.
+                </p>
+                <h6>Individual</h6>
+                {{ competitor_medals(youth_medal_table) }}
+                <h6>Relay</h6>
+                {{ competitor_medals(youth_relay_medal_table) }}
+                {% for code in youth_codes %}
+                    {{ first_medal_note(first_medals[code]['title'], code, 'title', 'individual', medal_names, birth) }}
+                    {{ first_medal_note(first_medals[code]['relay_title'], code, 'title', 'relay', medal_names, birth) }}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
         <div class="card">
             <div class="card-header">
                 <h5>Career best results</h5>
