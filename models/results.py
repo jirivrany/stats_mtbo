@@ -178,6 +178,49 @@ class Results(object):
         self.cursor.execute(query, (race_id,))
         return self.cursor.fetchall()
 
+    def get_event_race_winners(self, event):
+        """
+        Vítězové všech individuálních závodů jedné události.
+
+        Jedním dotazem pro celou historii - přehled závodů jich má i sto
+        a dotaz na každý zvlášť by stránku zbytečně zdržel.
+
+        Na závod vycházejí dva řádky (muž a žena, protože pohlaví je
+        u závodníka, ne u závodu), při dělených prvních místech i víc.
+
+        :return list of (race_id, competitor_id)
+        """
+        query = (
+            "SELECT cr.race_id, cr.competitor_id"
+            " FROM competitor_race cr"
+            " JOIN races r ON cr.race_id = r.id"
+            " WHERE r.event = %s AND r.team = 0 AND cr.place = 1"
+        )
+
+        self.cursor.execute(query, (event,))
+        return self.cursor.fetchall()
+
+    def get_event_relay_winners(self, event):
+        """
+        Vítězné štafety jedné události.
+
+        U štafet vyhrává tým, ne jednotlivec, takže se vrací všichni členové
+        a volající je složí podle (race_id, class, team). Řazení podle leg
+        drží jezdce v pořadí, ve kterém jeli.
+
+        :return list of (race_id, class, team, competitor_id)
+        """
+        query = (
+            "SELECT crel.race_id, crel.class, crel.team, crel.competitor_id"
+            " FROM competitor_relay crel"
+            " JOIN races r ON crel.race_id = r.id"
+            " WHERE r.event = %s AND r.team = 1 AND crel.place = 1"
+            " ORDER BY crel.class, crel.team, crel.leg"
+        )
+
+        self.cursor.execute(query, (event,))
+        return self.cursor.fetchall()
+
     def get_relay_results(self, race_id, klasa):
         """
         get results of relay race

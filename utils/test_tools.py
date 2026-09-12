@@ -1,6 +1,8 @@
 __author__ = "albert"
 # -*- coding: utf-8 -*-
 
+from datetime import date
+
 from utils import tools
 
 
@@ -165,3 +167,120 @@ def test_prepare_medal_table_keeps_groups_apart():
     assert all(medals == [0, 0, 0] for medals in elite.values())
     assert junior["JWMTBOC"] == [1, 1, 1]
     assert junior["EJMTBOC"] == [0, 0, 0]
+
+
+# --- build_race_history ---
+
+# řádek závodu má tvar z Races.get_by_event:
+# (id, year, date, distance, event, venue, country, url, map_m, map_w, iofurl, team)
+def _race_row(race_id, year, day, distance, country="SWE"):
+    return (race_id, year, date(year, 8, day), distance, "WMTBOC", "Mora", country,
+            None, None, None, None, 0)
+
+
+PEOPLE = {
+    1: {"first": "Gabriella", "last": "Gustafsson", "nationality": "SWE", "gender": "F"},
+    2: {"first": "Samuel", "last": "Pokala", "nationality": "FIN", "gender": "M"},
+    3: {"first": "Hans Jorgen", "last": "Kvale", "nationality": "NOR", "gender": "M"},
+    4: {"first": "Anton", "last": "Foliforov", "nationality": "RUS", "gender": "M"},
+    5: {"first": "Jana", "last": "Ceska", "nationality": "CZE", "gender": "F"},
+    6: {"first": "Eva", "last": "Ceska", "nationality": "CZE", "gender": "F"},
+    7: {"first": "Petra", "last": "Ceska", "nationality": "CZE", "gender": "F"},
+}
+
+
+def test_build_race_history_two_genders_women_first():
+    """
+    individuální závod má dva vítěze - ženu a muže; ženy se ukazují první
+    """
+    history = tools.build_race_history(
+        [_race_row(8775, 2026, 26, "middle")], [(8775, 1), (8775, 2)], [], PEOPLE
+    )
+
+    assert len(history) == 1
+    champions = history[0]["champions"]
+    assert [c["group"] for c in champions] == ["W", "M"]
+    assert champions[0]["members"] == [(1, "Gabriella Gustafsson", "SWE")]
+    assert champions[1]["members"] == [(2, "Samuel Pokala", "FIN")]
+
+
+def test_build_race_history_tie_keeps_both_nationalities():
+    """
+    dělené první místo bývá napříč státy, takže vlajka patří ke jménu
+    """
+    history = tools.build_race_history(
+        [_race_row(4702, 2014, 26, "sprint")], [(4702, 3), (4702, 4)], [], PEOPLE
+    )
+
+    champions = history[0]["champions"]
+    assert len(champions) == 1
+    assert champions[0]["group"] == "M"
+    assert [member[2] for member in champions[0]["members"]] == ["NOR", "RUS"]
+
+
+def test_build_race_history_relay_is_a_team():
+    """
+    štafeta má jednoho vítěze na třídu a v něm tři jezdce v pořadí legů
+    """
+    relay = [
+        (8778, "M", "LTU", 2),
+        (8778, "W", "FIN", 5),
+        (8778, "W", "FIN", 6),
+        (8778, "W", "FIN", 7),
+    ]
+    history = tools.build_race_history(
+        [_race_row(8778, 2026, 30, "relay")], [], relay, PEOPLE
+    )
+
+    champions = history[0]["champions"]
+    assert [c["group"] for c in champions] == ["W", "M"]
+    assert all(c["team"] for c in champions)
+    assert [member[0] for member in champions[0]["members"]] == [5, 6, 7]
+
+
+def test_build_race_history_mix_relay_single_group():
+    history = tools.build_race_history(
+        [_race_row(8934, 2026, 28, "mix-relay")],
+        [],
+        [(8934, "X", "CZE", 5), (8934, "X", "CZE", 2)],
+        PEOPLE,
+    )
+
+    champions = history[0]["champions"]
+    assert len(champions) == 1
+    assert champions[0]["group"] == "X"
+
+
+def test_build_race_history_keeps_race_without_winner():
+    """
+    závod bez vítěze se nesmí zahodit - odkaz na něj je smysl té stránky
+    """
+    history = tools.build_race_history([_race_row(1, 2009, 10, "relay")], [], [], PEOPLE)
+
+    assert len(history) == 1
+    assert history[0]["champions"] == []
+
+
+def test_build_race_history_newest_first():
+    """
+    v jeden den se jede víc závodů, takže řadí i datum a id
+    """
+    races = [
+        _race_row(10, 2025, 12, "sprint"),
+        _race_row(11, 2026, 26, "middle"),
+        _race_row(12, 2026, 30, "long"),
+    ]
+    history = tools.build_race_history(races, [], [], PEOPLE)
+
+    assert [race["race_id"] for race in history] == [12, 11, 10]
+
+
+def test_build_race_history_skips_unknown_competitor():
+    """
+    závodník bez záznamu (např. smazaný) nesmí stránku shodit
+    """
+    history = tools.build_race_history(
+        [_race_row(8775, 2026, 26, "middle")], [(8775, 999)], [], PEOPLE
+    )
+
+    assert history[0]["champions"] == []

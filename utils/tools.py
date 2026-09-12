@@ -998,3 +998,92 @@ def results_link(race):
         return ("IOF results page", IOF_ARCHIVE_URL.format(iofurl))
 
     return ("Eventor results page", EVENTOR_EVENT_URL.format(iofurl))
+
+
+# Kategorie vítězů v přehledu závodů. Pohlaví je u závodníka jako F/M,
+# štafetové třídy jsou W/M/X - sjednocuje se na W/M/X, aby stačil jeden
+# slovník názvů (RELAY_FORMATS ve flaskapp).
+WINNER_GROUP_ORDER = ("W", "M", "X")
+
+
+def _champion(group, members, team=False):
+    """Jeden vítěz do přehledu - jednotlivec i štafeta vypadají stejně."""
+    return {"group": group, "team": team, "members": members}
+
+
+def build_race_history(races, individual_winners, relay_winners, competitors):
+    """
+    Závody jedné události spolu s vítězi, připravené pro šablonu.
+
+    Individuální vítěz je člověk (dva na závod - muž a žena), štafetový je
+    tým. Šablona to nesmí rozlišovat, proto mají oba stejný tvar: seznam
+    členů, kde každý nese i svou zemi. Jednotlivec je tedy tým o jednom,
+    dělené první místo tým o dvou, štafeta o třech.
+
+    Země je u každého člena zvlášť, protože dělená první místa bývají
+    napříč státy - u štafety se jen třikrát zopakuje ta samá.
+
+    :param races: řádky z Races.get_by_event
+    :param individual_winners: (race_id, competitor_id) z Results
+    :param relay_winners: (race_id, class, team, competitor_id) z Results
+    :param competitors: slovník závodníků (flaskapp.COMPETITORS)
+    :return: seznam dictů, nejnovější závod první
+    """
+    def named(competitor_id):
+        person = competitors.get(competitor_id)
+        if not person:
+            return None
+
+        return (competitor_id, f"{person['first']} {person['last']}", person["nationality"])
+
+    # individuálové: nejdřív podle závodu, pak podle pohlaví
+    by_race = {}
+    for race_id, competitor_id in individual_winners:
+        person = competitors.get(competitor_id)
+        entry = named(competitor_id)
+        if not person or not entry:
+            continue
+        group = "W" if person["gender"] == "F" else "M"
+        by_race.setdefault(race_id, {}).setdefault(group, []).append(entry)
+
+    # štafety: podle závodu, třídy a týmu
+    by_relay = {}
+    for race_id, klasa, team, competitor_id in relay_winners:
+        entry = named(competitor_id)
+        if not entry:
+            continue
+        by_relay.setdefault(race_id, {}).setdefault((klasa, team), []).append(entry)
+
+    history = []
+    for row in races:
+        race_id = row[0]
+        champions = []
+
+        for group in WINNER_GROUP_ORDER:
+            members = by_race.get(race_id, {}).get(group)
+            if members:
+                champions.append(_champion(group, members))
+
+        relays = by_relay.get(race_id, {})
+        for klasa, team in sorted(
+            relays, key=lambda key: (WINNER_GROUP_ORDER.index(key[0]), key[1])
+        ):
+            champions.append(_champion(klasa, relays[(klasa, team)], team=True))
+
+        history.append(
+            {
+                "race_id": race_id,
+                "year": row[1],
+                "date": row[2],
+                "distance": row[3],
+                "venue": row[5],
+                "country": row[6],
+                "champions": champions,
+            }
+        )
+
+    # nejnovější první; datum a id dělají řazení jednoznačné, protože
+    # v jeden den se jede víc závodů
+    history.sort(key=lambda race: (race["year"], race["date"], race["race_id"]), reverse=True)
+
+    return history

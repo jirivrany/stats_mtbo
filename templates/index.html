@@ -98,56 +98,32 @@
         </div>
     </div>
     <div class="row">
-        <h2>Results year by year</h2>
-        {# Sloupce se skládají podle registru událostí - row-cols se samo
-           zalomí, takže pátá (a šestá) kategorie nic nerozbije. #}
+        <h2>Browse the history</h2>
+        {# Rozcestí podle registru událostí - seznamy závodů mají vlastní
+           stránky, tady zůstávají jen odkazy. #}
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3">
             {% for code, ev in EVENTS.items() %}
             <div class="col mb-3">
-                <h3>{{ code }}</h3>
-                <ul class="event-list">
-                    {% for details in years_by_event[code] %}
-                    <li>
-                        <img src="{{ url_for('static', filename='css/blank.gif') }}"
-                            class="flag flag-{{ flags[details[1]].lower() }}"
-                            alt="{{ details[1] }}" />
-                        {% if ev.needs_organizer %}
-                        <a href="{{ url_for('event_summary', event=ev.slug, year=details[0], organizer=details[1]) }}">
-                        {% else %}
-                        <a href="{{ url_for('event_summary', event=ev.slug, year=details[0]) }}">
-                        {% endif %}
-                            {{ details[0] }}
-                        </a>
-                    </li>
-                    {% endfor %}
-                </ul>
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h3>{{ code }}</h3>
+                        <small class="text-muted">{{ ev.name }}, since {{ ev.since }}</small>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0">
+                            <li><a href="/races/{{ ev.slug }}/">All races and champions</a></li>
+                            {% if ev.needs_organizer %}
+                            <li><a href="/worldcup/">Year-by-year standings</a></li>
+                            {% else %}
+                            <li><a href="/events/{{ ev.slug }}/">Year-by-year summaries</a></li>
+                            {% endif %}
+                            <li><a href="/medals_table/{{ ev.slug }}/">Medal table</a></li>
+                            <li><a href="/participation/{{ ev.slug }}/">Participation</a></li>
+                        </ul>
+                    </div>
+                </div>
             </div>
             {% endfor %}
         </div>
     </div>
-    <div class="row">
-        <h2>All races in the history</h2>
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3">
-            {% for code, ev in EVENTS.items() %}
-            <div class="col mb-3">
-                <h3>{{ code }}</h3>
-                <ul class="event-list">
-                    {% for details in races_by_event[code] %}
-                    <li>
-                        <img src="{{ url_for('static', filename='css/blank.gif') }}"
-                            class="flag flag-{{ flags[details[6]].lower() }}"
-                            alt="{{ details[6] }}" />
-                        <a href="/race/{{ details[0] }}">
-                            {{ details[1] }}
-                            {{ details[4] }}
-                            {{ details[3]|capitalize }}
-                        </a>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
 {% endblock %}

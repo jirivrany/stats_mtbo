@@ -71,6 +71,24 @@
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="/races/wmtboc/" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Races history
+                            </a>
+                            <ul class="dropdown-menu">
+                                {# Na rozdíl od shrnutí ročníků tu Světový pohár je -
+                                   přehled závodů ho má taky. #}
+                                {% for code, ev in EVENTS.items() %}
+                                {% if code in JUNIOR_CODES and loop.previtem and loop.previtem[0] not in JUNIOR_CODES %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Junior</h6></li>
+                                {% endif %}
+                                <li>
+                                    <a class="dropdown-item" href="/races/{{ ev.slug }}/">{{ code }}</a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </li>
+                        <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="/medals_table/wmtboc/" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 Medals
                             </a>

@@ -1,0 +1,88 @@
+{% extends "default.html" %}
+{% block content %}
+<h1>{{ title }}</h1>
+
+{% if history %}
+<p>
+    {{ history|length }} races since {{ meta['since'] }}.
+    See also
+    {% if meta['needs_organizer'] %}
+        <a href="/worldcup/">year-by-year standings</a>,
+    {% else %}
+        <a href="/events/{{ meta['slug'] }}/">year-by-year summaries</a>,
+    {% endif %}
+    <a href="/medals_table/{{ meta['slug'] }}/">medal table</a>
+    and <a href="/participation/{{ meta['slug'] }}/">participation</a>.
+</p>
+
+{# Skok na ročník - stejný vzor jako stránkování ve summary.html #}
+<nav aria-label="Year navigation">
+    <ul class="pagination pagination-sm flex-wrap mb-3">
+        {% for year in years %}
+        <li class="page-item">
+            <a class="page-link" href="#y{{ year }}">{{ year }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+</nav>
+
+<table class="table table-sm">
+    <thead>
+        <tr class="table-info">
+            <th>Race</th>
+            <th>Category</th>
+            <th>{{ meta['title_noun'] }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {# anchor dostane první závod každého ročníku #}
+        {% set seen = namespace(year=None) %}
+        {% for race in history %}
+        {% set first_of_year = race['year'] != seen.year %}
+        {% set seen.year = race['year'] %}
+        {# Závod se vypíše jednou a překlene řádky svých vítězů #}
+        {% set rows = race['champions']|length or 1 %}
+        {% for champ in race['champions'] or [None] %}
+        <tr{% if loop.first and first_of_year %} id="y{{ race['year'] }}"{% endif %}>
+            {% if loop.first %}
+            <td rowspan="{{ rows }}">
+                <a href="{{ url_for('race', race_id=race['race_id']) }}">
+                    <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                        class="flag flag-{{ flags[race['country']].lower() }}"
+                        alt="{{ race['country'] }}" />
+                    {{ race['year'] }}
+                    {{ distance_names[race['distance']] }}
+                </a>
+                {% if race['venue'] %}
+                <br /><small class="text-muted">{{ race['venue'] }}</small>
+                {% endif %}
+            </td>
+            {% endif %}
+            {% if champ %}
+            <td>
+                {{ relay_formats[champ['group']] }}
+                {% if champ['team'] %}
+                <span class="badge text-bg-secondary">Team</span>
+                {% endif %}
+            </td>
+            <td>
+                {% for competitor_id, name, nationality in champ['members'] %}
+                <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                    class="flag flag-{{ flags[nationality].lower() }}"
+                    alt="{{ nationality }}" />
+                <a href="{{ url_for('competitor', competitor_id=competitor_id) }}">{{ name }}</a>
+                {%- if not loop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+            {% else %}
+            <td colspan="2" class="text-muted">&mdash;</td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No races recorded yet.</p>
+{% endif %}
+{% endblock %}

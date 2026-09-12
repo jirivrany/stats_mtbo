@@ -86,17 +86,9 @@ def home():
     """
     Main page
     """
-    races_model = Races(mysql)
-
-    # Závody i ročníky po událostech - šablona si je projde smyčkou, takže
-    # další kategorie se objeví sama.
-    races_by_event = {
-        code: sorted(races_model.get_by_event(code), key=lambda row: row[1], reverse=True)
-        for code in tools.event_codes()
-    }
-    years_by_event = {code: races_model.get_event_years(code) for code in tools.event_codes()}
-
-    recent = races_model.get_by_year(YEAR)
+    # Seznamy závodů mají vlastní stránky (/races/<event>/) - na rozcestí
+    # jich bylo přes tři sta a stránka kvůli tomu vážila 200 kB.
+    recent = Races(mysql).get_by_year(YEAR)
 
     res = Results(mysql)
     first_ms = res.first_medal_year(YEAR)
@@ -109,8 +101,6 @@ def home():
 
     return flask.render_template(
         "index.html",
-        races_by_event=races_by_event,
-        years_by_event=years_by_event,
         recent=recent,
         flags=tools.IOC_INDEX,
         first=first,
@@ -905,6 +895,42 @@ def event_summary(event: str = "WMTBOC", year: int = YEAR, organizer: str = ""):
         years=model.get_event_years(event.upper()),
         event=event.upper(),
         current_year=year,
+    )
+
+
+@lru_cache()
+@app.route("/races/<event>/")
+def races_history(event):
+    """
+    display all races of given event type with their champions
+    params:
+        event: event type
+    """
+    meta = tools.get_event(event)
+    if meta is None:
+        flask.abort(404)
+
+    code = event.upper()
+    races_model = Races(mysql)
+    model = Results(mysql)
+
+    history = tools.build_race_history(
+        races_model.get_by_event(code),
+        model.get_event_race_winners(code),
+        model.get_event_relay_winners(code),
+        COMPETITORS,
+    )
+
+    return flask.render_template(
+        "races_history.html",
+        title=f"{meta['name']} - all races",
+        history=history,
+        event=code,
+        meta=meta,
+        years=sorted({race["year"] for race in history}, reverse=True),
+        distance_names=DISTANCE_NAMES,
+        relay_formats=RELAY_FORMATS,
+        flags=tools.IOC_INDEX,
     )
 
 
