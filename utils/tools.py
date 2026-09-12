@@ -212,11 +212,141 @@ IOC_INDEX = {
     "CUB": "CU",
 }
 
-EVENT_NAMES = {
-    "WMTBOC": "World MTBO championship",
-    "EMTBOC": "European MTBO championship",
-    "WCUP": "MTBO World Cup",
+# Věkové kategorie. Youth se zavede, až budou data - registr s ním počítá,
+# aby přidání znamenalo jeden záznam a nic víc.
+ELITE = "elite"
+JUNIOR = "junior"
+YOUTH = "youth"
+
+# Disciplíny, které se u dané události mohly jet. WMTBOC nikdy nemělo
+# smíšenou ani sprintovou štafetu, ostatní ano.
+WMTBOC_DISTANCES = ["sprint", "middle", "long", "mass_start", "relay"]
+ALL_DISTANCES = [
+    "relay",
+    "mix_relay",
+    "sprint_relay",
+    "sprint",
+    "middle",
+    "long",
+    "mass_start",
+]
+
+# Jediný seznam událostí v aplikaci. Pořadí klíčů je zároveň pořadím
+# zobrazení - dict si ho v Pythonu drží, takže není druhý seznam, který by
+# se mohl rozejít. Přesně tím se to dřív rozbíjelo.
+#
+#   kind            věková kategorie, rozhoduje o oddělení medailí
+#   scores_wcup     počítá se do Světového poháru (junioři ne)
+#   needs_organizer shrnutí ročníku potřebuje i pořadatele (jen WCUP)
+#   title_noun      jak se jmenuje vítěz, do textů na stránce závodníka
+#   since           první ročník, do hlášky "nikdy se nezúčastnil"
+EVENTS = {
+    "WMTBOC": {
+        "name": "World MTBO championship",
+        "kind": ELITE,
+        "slug": "wmtboc",
+        "scores_wcup": True,
+        "needs_organizer": False,
+        "title_noun": "World Champion",
+        "since": 2002,
+        "distances": WMTBOC_DISTANCES,
+    },
+    "EMTBOC": {
+        "name": "European MTBO championship",
+        "kind": ELITE,
+        "slug": "emtboc",
+        "scores_wcup": True,
+        "needs_organizer": False,
+        "title_noun": "European Champion",
+        "since": 2006,
+        "distances": ALL_DISTANCES,
+    },
+    "WCUP": {
+        "name": "MTBO World Cup",
+        "kind": ELITE,
+        "slug": "wcup",
+        "scores_wcup": True,
+        "needs_organizer": True,
+        "title_noun": "World Cup winner",
+        "since": 2010,
+        "distances": ALL_DISTANCES,
+    },
+    "JWMTBOC": {
+        "name": "Junior World MTBO championship",
+        "kind": JUNIOR,
+        "slug": "jwmtboc",
+        "scores_wcup": False,
+        "needs_organizer": False,
+        "title_noun": "Junior World Champion",
+        "since": 2008,
+        "distances": ALL_DISTANCES,
+    },
+    "EJMTBOC": {
+        "name": "European Junior MTBO championship",
+        "kind": JUNIOR,
+        "slug": "ejmtboc",
+        "scores_wcup": False,
+        "needs_organizer": False,
+        "title_noun": "European Junior Champion",
+        "since": 2018,
+        "distances": ALL_DISTANCES,
+    },
 }
+
+# Zpětná kompatibilita - spousta míst hledá jen název události.
+EVENT_NAMES = {code: meta["name"] for code, meta in EVENTS.items()}
+
+
+def get_event(code):
+    """
+    Popis události podle kódu, nebo None. Kód je case-insensitive, protože
+    v URL chodí malými písmeny.
+    """
+    if not code:
+        return None
+
+    return EVENTS.get(code.upper())
+
+
+def event_codes(kind=None):
+    """
+    Kódy událostí v pořadí registru.
+
+    :param kind: jedna kategorie ("elite") nebo víc ({"junior", "youth"});
+                 None vrátí všechny
+    """
+    if kind is None:
+        return list(EVENTS)
+
+    wanted = {kind} if isinstance(kind, str) else set(kind)
+
+    return [code for code, meta in EVENTS.items() if meta["kind"] in wanted]
+
+
+def non_elite_codes():
+    """
+    Všechno, co není elita. Až přibude youth, spadne sem sám - proto se
+    nikde neptáme "je to junior", ale "není to elita".
+    """
+    return event_codes({JUNIOR, YOUTH})
+
+
+def is_junior(code):
+    """Je to mládežnická kategorie (junioři nebo youth)?"""
+    meta = get_event(code)
+
+    return bool(meta) and meta["kind"] in (JUNIOR, YOUTH)
+
+
+def wcup_scoring_events():
+    """
+    Události, které se počítají do Světového poháru.
+
+    Juniorské závody se jezdí ve stejných letech jako elitní, takže bez
+    tohohle filtru by se dostaly do tabulek Světového poháru jako prázdné
+    sloupce.
+    """
+    return [code for code, meta in EVENTS.items() if meta["scores_wcup"]]
 
 
 def prepare_relay_output(source_list):
@@ -254,13 +384,18 @@ def prepare_relay_output(source_list):
     return classified, others
 
 
-def prepare_medal_table(model, competitor_id, table="race"):
-    if table == "relay":
-        mkeys = ["WMTBOC", "EMTBOC", "WCUP"]
-    else:
-        mkeys = ["WMTBOC", "EMTBOC", "WCUP"]
+def prepare_medal_table(model, competitor_id, table="race", events=None):
+    """
+    Medaile závodníka po událostech.
 
-    medal_table = dict.fromkeys(mkeys, [])
+    :param events: které události počítat; None vezme všechny z registru.
+                   Elitní a juniorské se zobrazují odděleně, takže si volající
+                   řekne o jednu skupinu.
+    :return: {kód události: [zlaté, stříbrné, bronzové]} v pořadí registru
+    """
+    mkeys = list(events) if events else event_codes()
+
+    medal_table = {event: [0, 0, 0] for event in mkeys}
     for event in mkeys:
         medal_lines = [
             model.get_competitor_place_count(competitor_id, place, event.upper(), table) for place in range(1, 4)
@@ -520,11 +655,7 @@ def get_career_best_by_event_and_distance(competitor_results, races):
     RELAY_DISTANCES = ["relay", "mix_relay", "sprint_relay"]
 
     # Initialize result structure
-    career_best = {
-        "WMTBOC": {"individual": {}, "relay": {}},
-        "EMTBOC": {"individual": {}, "relay": {}},
-        "WCUP": {"individual": {}, "relay": {}},
-    }
+    career_best = {code: {"individual": {}, "relay": {}} for code in event_codes()}
 
     # Process each result
     for result in competitor_results:
@@ -589,11 +720,7 @@ def process_career_best_from_db(individual_results, relay_results):
             'WCUP': {'individual': {}, 'relay': {}}
         }
     """
-    career_best = {
-        "WMTBOC": {"individual": {}, "relay": {}},
-        "EMTBOC": {"individual": {}, "relay": {}},
-        "WCUP": {"individual": {}, "relay": {}},
-    }
+    career_best = {code: {"individual": {}, "relay": {}} for code in event_codes()}
 
     # Process individual results
     for row in individual_results:
@@ -666,12 +793,6 @@ def analyze_event_completeness(career_best_data, event="WMTBOC"):
             'distances_best': {'sprint': 1, 'middle': 3, 'long': 5, ...}
         }
     """
-    # Define all possible distances
-    WMTBOC_DISTANCES = ["sprint", "middle", "long", "mass_start", "relay"]
-    ALL_DISTANCES = ["relay", "mix_relay", "sprint_relay", "sprint", "middle", "long", "mass_start"]
-
-    distance_mapping = {"WMTBOC": WMTBOC_DISTANCES, "EMTBOC": ALL_DISTANCES, "WCUP": ALL_DISTANCES}
-
     event_data = career_best_data.get(event, {"individual": {}, "relay": {}})
 
     individual = event_data.get("individual", {})
@@ -690,7 +811,8 @@ def analyze_event_completeness(career_best_data, event="WMTBOC"):
     distances_best = {}
 
     # Fill in best places for each distance competed, pass if not competed
-    for distance in distance_mapping.get(event, []):
+    meta = get_event(event)
+    for distance in meta["distances"] if meta else ALL_DISTANCES:
         if distance in individual:
             distances_best[distance] = individual[distance]["place"]
         elif distance in relay:

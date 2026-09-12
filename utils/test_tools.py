@@ -103,3 +103,65 @@ def test_results_link_without_any_id():
     bez obou identifikátorů odkaz sestavit nejde
     """
     assert tools.results_link({"race_id": None, "iofurl": None}) is None
+
+
+def test_event_codes_order_and_filter():
+    """
+    registr drží pořadí zobrazení a umí filtrovat po kategoriích
+    """
+    assert tools.event_codes()[:3] == ["WMTBOC", "EMTBOC", "WCUP"]
+    assert tools.event_codes(tools.ELITE) == ["WMTBOC", "EMTBOC", "WCUP"]
+    assert tools.event_codes({tools.JUNIOR, tools.YOUTH}) == ["JWMTBOC", "EJMTBOC"]
+
+
+def test_non_elite_codes_covers_youth():
+    """
+    youth se má chytit sám, až přibude - proto se ptáme "není elita"
+    """
+    assert tools.non_elite_codes() == tools.event_codes({tools.JUNIOR, tools.YOUTH})
+    assert "WMTBOC" not in tools.non_elite_codes()
+
+
+def test_get_event_is_case_insensitive():
+    """
+    v URL chodí kódy malými písmeny
+    """
+    assert tools.get_event("jwmtboc")["kind"] == tools.JUNIOR
+    assert tools.get_event("JWMTBOC")["name"].startswith("Junior")
+    assert tools.get_event("nonsense") is None
+    assert tools.get_event("") is None
+
+
+def test_is_junior():
+    assert tools.is_junior("JWMTBOC")
+    assert tools.is_junior("ejmtboc")
+    assert not tools.is_junior("WMTBOC")
+    assert not tools.is_junior("nonsense")
+
+
+def test_wcup_scoring_excludes_juniors():
+    """
+    juniorské závody se jedou ve stejné roky jako elitní, ale do
+    Světového poháru nepatří - bez toho lezly do tabulek jako prázdné sloupce
+    """
+    scoring = tools.wcup_scoring_events()
+
+    assert scoring == ["WMTBOC", "EMTBOC", "WCUP"]
+    assert not any(tools.is_junior(code) for code in scoring)
+
+
+def test_prepare_medal_table_keeps_groups_apart():
+    """
+    juniorské a elitní medaile se nesmí sčítat, tak se tabulka staví zvlášť
+    """
+    class FakeModel:
+        def get_competitor_place_count(self, competitor_id, place, event, table="race"):
+            return [(1, 1)] if event == "JWMTBOC" else []
+
+    elite = tools.prepare_medal_table(FakeModel(), 1, events=tools.event_codes(tools.ELITE))
+    junior = tools.prepare_medal_table(FakeModel(), 1, events=tools.non_elite_codes())
+
+    assert list(elite) == ["WMTBOC", "EMTBOC", "WCUP"]
+    assert all(medals == [0, 0, 0] for medals in elite.values())
+    assert junior["JWMTBOC"] == [1, 1, 1]
+    assert junior["EJMTBOC"] == [0, 0, 0]

@@ -31,24 +31,27 @@
                   </button>
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        {# Nabídky se staví z registru událostí (tools.EVENTS).
+                           Elitní a mládežnické jsou oddělené nadpisem, aby se
+                           seznam nerozrostl do nepřehledna. #}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="/team_medals_table/wmtboc/" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 Teams
                             </a>
                             <ul class="dropdown-menu">
+                                {% for code, ev in EVENTS.items() %}
+                                {% if code in JUNIOR_CODES and loop.previtem and loop.previtem[0] not in JUNIOR_CODES %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Junior</h6></li>
+                                {% endif %}
                                 <li>
-                                    <a class="dropdown-item" href="/team_medals_table/wmtboc/">WMTBOC</a>
+                                    <a class="dropdown-item" href="/team_medals_table/{{ ev.slug }}/">{{ code }}</a>
                                 </li>
-                                <li>
-                                    <a class="dropdown-item" href="/team_medals_table/emtboc/">EMTBOC</a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="/team_medals_table/wcup/">WCUP</a>
-                                </li>
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item" href="/teams/">Results by year</a>
                                 </li>
-                            
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
@@ -56,12 +59,15 @@
                                 Event summaries
                             </a>
                             <ul class="dropdown-menu">
+                                {% for code, ev in EVENTS.items() if not ev.needs_organizer %}
+                                {% if code in JUNIOR_CODES and loop.previtem and loop.previtem[0] not in JUNIOR_CODES %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Junior</h6></li>
+                                {% endif %}
                                 <li>
-                                    <a class="dropdown-item" href="/events/wmtboc/">WMTBOC</a>
+                                    <a class="dropdown-item" href="/events/{{ ev.slug }}/">{{ code }}</a>
                                 </li>
-                                <li>
-                                    <a class="dropdown-item" href="/events/emtboc/">EMTBOC</a>
-                                </li>                                
+                                {% endfor %}
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
@@ -69,73 +75,71 @@
                                 Medals
                             </a>
                             <ul class="dropdown-menu">
+                                {% for code, ev in EVENTS.items() %}
+                                {% if code in JUNIOR_CODES and loop.previtem and loop.previtem[0] not in JUNIOR_CODES %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Junior</h6></li>
+                                {% endif %}
                                 <li>
-                                    <a class="dropdown-item" href="/medals_table/wmtboc/">WMTBOC</a>
+                                    <a class="dropdown-item" href="/medals_table/{{ ev.slug }}/">{{ code }}</a>
                                 </li>
-                                <li>
-                                    <a class="dropdown-item" href="/medals_table/emtboc/">EMTBOC</a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="/medals_table/wcup/">WCUP - medal table</a>
-                                </li>
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('wcup_overall') }}">WCUP - overall winners</a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
+                                {% for code, ev in EVENTS.items() if ev.kind == ELITE %}
                                 <li>
-                                    <a class="dropdown-item" href="/grand_slam/wmtboc/">Grand Slam - WMTBOC</a>
+                                    <a class="dropdown-item" href="/grand_slam/{{ ev.slug }}/">Grand Slam - {{ code }}</a>
                                 </li>
-                                <li>
-                                    <a class="dropdown-item" href="/grand_slam/emtboc/">Grand Slam - EMTBOC</a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="/grand_slam/wcup/">Grand Slam - WCUP</a>
-                                </li>
+                                {% endfor %}
                                 <li><hr class="dropdown-divider"></li>
+                                {# Věkové žebříčky dávají smysl jen u elity - v juniorech
+                                   je věk daný kategorií. #}
+                                {% for code, ev in EVENTS.items() if ev.kind == ELITE and code != 'WCUP' %}
                                 <li>
-                                    <a class="dropdown-item" href="/young_stars/wmtboc/">Young Stars - champions WMTBOC</a>
+                                    <a class="dropdown-item" href="/young_stars/{{ ev.slug }}/">Young Stars - champions {{ code }}</a>
                                 </li>
+                                {% endfor %}
+                                {% for code, ev in EVENTS.items() if ev.kind == ELITE and code != 'WCUP' %}
                                 <li>
-                                    <a class="dropdown-item" href="/young_stars/emtboc/">Young Stars - champions EMTBOC</a>
+                                    <a class="dropdown-item" href="/great_masters/{{ ev.slug }}/">Great Masters - champions {{ code }}</a>
                                 </li>
-                                <li>
-                                    <a class="dropdown-item" href="/great_masters/wmtboc/">Great Masters - champions WMTBOC</a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="/great_masters/emtboc/">Great Masters - champions EMTBOC</a>
-                                </li>
+                                {% endfor %}
                                 <li><hr class="dropdown-divider"></li>
+                                {% for code, ev in EVENTS.items() if ev.kind == ELITE and code != 'WCUP' %}
                                 <li>
-                                    <a class="dropdown-item" href="/young_stars/wmtboc/3/">Young Medalists WMTBOC</a>
+                                    <a class="dropdown-item" href="/young_stars/{{ ev.slug }}/3/">Young Medalists {{ code }}</a>
                                 </li>
+                                {% endfor %}
+                                {% for code, ev in EVENTS.items() if ev.kind == ELITE and code != 'WCUP' %}
                                 <li>
-                                    <a class="dropdown-item" href="/young_stars/emtboc/3/">Young Medalists EMTBOC</a>
+                                    <a class="dropdown-item" href="/great_masters/{{ ev.slug }}/3/">Masters Medalists {{ code }}</a>
                                 </li>
-                                <li>
-                                    <a class="dropdown-item" href="/great_masters/wmtboc/3/">Masters Medalists WMTBOC</a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="/great_masters/emtboc/3/">Masters Medalists EMTBOC</a>
-                                </li>
+                                {% endfor %}
                             </ul>
-                        </li>                                       
+                        </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="/all_time_participation/wmtboc/" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 Participations
                             </a>
                             <ul class="dropdown-menu">
+                                {% for code, ev in EVENTS.items() %}
+                                {% if code in JUNIOR_CODES and loop.previtem and loop.previtem[0] not in JUNIOR_CODES %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Junior</h6></li>
+                                {% endif %}
                                 <li>
-                                    <a class="dropdown-item" href="/participation/wmtboc/">Competitors at WMTBOC</a>
+                                    <a class="dropdown-item" href="/participation/{{ ev.slug }}/">Competitors at {{ code }}</a>
                                 </li>
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
+                                {% for code, ev in EVENTS.items() if ev.kind == ELITE and code != 'WCUP' %}
                                 <li>
-                                    <a class="dropdown-item" href="/participation/emtboc/">Competitors at EMTBOC</a>
+                                    <a class="dropdown-item" href="/all_time_participation/{{ ev.slug }}/">Countries at {{ code }}</a>
                                 </li>
-                                <li>
-                                    <a class="dropdown-item" href="/all_time_participation/wmtboc/">Countries at WMTBOC</a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="/all_time_participation/emtboc/">Countries at EMTBOC</a>
-                                </li>
+                                {% endfor %}
                             </ul>
                         </li>
                         <li class="nav-item dropdown">

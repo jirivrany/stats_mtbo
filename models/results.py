@@ -119,32 +119,53 @@ class Results(object):
 
         return self.cursor.fetchall()
 
-    def get_worldcup_points(self, year, gender="M"):
+    @staticmethod
+    def _event_filter(events):
+        """
+        Podmínka IN pro typy událostí a její parametry.
+
+        Juniorské závody se jedou ve stejné roky jako elitní, takže výběr
+        jen podle roku by je do Světového poháru zatáhl taky.
+        """
+        if not events:
+            return "", []
+
+        return f" AND event IN ({', '.join(['%s'] * len(events))})", list(events)
+
+    def get_worldcup_points(self, year, gender="M", events=None):
         """
         get results for inidividual wcup and year and category
+        :param events - omezení na typy událostí bodující do Světového poháru
         """
+        condition, extra = self._event_filter(events)
 
-        query = "SELECT competitor_id, race_id, wcup\
-                FROM competitor_race\
-                WHERE race_id IN (SELECT id FROM races WHERE year=%s AND team=0 ORDER BY date)\
-                AND competitor_id IN (SELECT id FROM competitors WHERE gender = %s)\
-                ORDER BY competitor_id;"
+        query = (
+            "SELECT competitor_id, race_id, wcup"
+            " FROM competitor_race"
+            f" WHERE race_id IN (SELECT id FROM races WHERE year=%s AND team=0{condition})"
+            " AND competitor_id IN (SELECT id FROM competitors WHERE gender = %s)"
+            " ORDER BY competitor_id;"
+        )
 
-        self.cursor.execute(query, (year, gender))
+        self.cursor.execute(query, (year, *extra, gender))
         return self.cursor.fetchall()
 
-    def get_teamworldcup_points(self, year, category="M"):
+    def get_teamworldcup_points(self, year, category="M", events=None):
         """
         get results for team wcup and year
+        :param events - omezení na typy událostí bodující do Světového poháru
         """
+        condition, extra = self._event_filter(events)
 
-        query = "SELECT competitor_id, race_id, team, wcup\
-                FROM competitor_relay\
-                WHERE race_id IN (SELECT id FROM races WHERE year=%s AND team=1 ORDER BY date)\
-                AND class=%s\
-                ORDER BY competitor_id;"
+        query = (
+            "SELECT competitor_id, race_id, team, wcup"
+            " FROM competitor_relay"
+            f" WHERE race_id IN (SELECT id FROM races WHERE year=%s AND team=1{condition})"
+            " AND class=%s"
+            " ORDER BY competitor_id;"
+        )
 
-        self.cursor.execute(query, (year, category))
+        self.cursor.execute(query, (year, *extra, category))
         return self.cursor.fetchall()
 
     def get_race_results(self, race_id):

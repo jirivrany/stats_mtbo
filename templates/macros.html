@@ -145,3 +145,52 @@
         </tr>
     {% endfor %}
 {% endmacro %}
+
+{# Medailová tabulka závodníka. Volá se zvlášť pro elitu a zvlášť pro
+   mládežnické kategorie - juniorské medaile se s elitními nesčítají. #}
+{% macro competitor_medals(medal_table) %}
+<table class="table table-bordered table-condensed">
+    <tr>
+        <th>Event</th>
+        <th class="text-center">
+            <img src="{{ url_for('static', filename='img/m1.png') }}" alt="gold" title="gold" />
+        </th>
+        <th class="text-center">
+            <img src="{{ url_for('static', filename='img/m2.png') }}" alt="silver" title="silver" />
+        </th>
+        <th class="text-center">
+            <img src="{{ url_for('static', filename='img/m3.png') }}" alt="bronze" title="bronze" />
+        </th>
+    </tr>
+    {% for event, medals in medal_table.items() %}
+    <tr>
+        <td>{{ event }}</td>
+        <td class="text-center">{{ medals[0] }}</td>
+        <td class="text-center">{{ medals[1] }}</td>
+        <td class="text-center">{{ medals[2] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endmacro %}
+
+
+{# "První medaile / titul". Text se liší podle události (title_noun
+   z registru tools.EVENTS) a podle toho, jestli jde o individuál nebo štafetu. #}
+{% macro first_medal_note(entry, code, kind, scope, medal_names, birth) %}
+    {% if entry %}
+    {% set meta = EVENTS[code] %}
+    <p>
+        {% if kind == 'title' %}
+            First {{ scope }} {{ meta['title_noun'] }} title
+        {% else %}
+            First {{ scope }} medal from {{ code }} {{ medal_names[entry[0][4]]|lower }}
+        {% endif %}
+        {% if scope == 'individual' %}
+            on <a href="/race/{{ entry[0][0] }}">{{ entry[0][2]|lower }} distance in {{ entry[0][1] }}</a>
+        {% else %}
+            <a href="/race/{{ entry[0][0] }}">in {{ entry[0][1] }}</a>
+        {% endif %}
+        {%- if birth|int > 0 %} / age {{ entry[0][1]|int - birth|int }}{% endif %}
+    </p>
+    {% endif %}
+{% endmacro %}
