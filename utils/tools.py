@@ -839,3 +839,40 @@ def count_medals_by_event(individual_results, relay_results, event):
         "bronze": bronze,
         "medals_str": f"{gold}-{silver}-{bronze}",
     }
+
+
+# Práh mezi ID z IOF archivu a ID z Eventoru. Archivní ID jsou v datech
+# 0-457, eventorová od 3868 výš, takže se rozsahy nepřekrývají.
+IOF_ARCHIVE_MAX_ID = 1000
+
+IOF_ARCHIVE_URL = "https://old.orienteering.sport/events/{}/"
+EVENTOR_EVENT_URL = "https://eventor.orienteering.sport/Events/Show/{}"
+
+
+def results_link(race):
+    """
+    Odkaz na oficiální výsledky závodu.
+
+    Zdroj se pozná podle hodnoty iofurl:
+        < 1000  ID v IOF archivu (staré závody, dnes na old.orienteering.sport)
+        >= 1000 Eventor ID, když se liší od primárního klíče
+        None    Eventor ID je zároveň primární klíč závodu
+
+    Staré štafety (id 1-23) jsou v databázi od začátku a v Eventoru nejsou
+    vůbec - jejich id není eventorové, takže odkaz nevzniká.
+
+    :param race: dict závodu z models.races
+    :return: (text odkazu, url) nebo None, když odkaz sestavit nejde
+    """
+    iofurl = race.get("iofurl")
+
+    if iofurl is None:
+        race_id = race.get("race_id")
+        if not race_id or race_id < IOF_ARCHIVE_MAX_ID:
+            return None
+        return ("Eventor results page", EVENTOR_EVENT_URL.format(race_id))
+
+    if iofurl < IOF_ARCHIVE_MAX_ID:
+        return ("IOF results page", IOF_ARCHIVE_URL.format(iofurl))
+
+    return ("Eventor results page", EVENTOR_EVENT_URL.format(iofurl))

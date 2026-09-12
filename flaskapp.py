@@ -331,6 +331,7 @@ def race(race_id):
 
     data = model.get_race_results(race_id)
     title = f'{cur_race["event"]} {cur_race["year"]} {DISTANCE_NAMES[cur_race["distance"]]}'
+    race_results_link = tools.results_link(cur_race)
 
     if cur_race["distance"] == "relay":
         women_list = model.get_relay_results(race_id, "W")
@@ -356,6 +357,7 @@ def race(race_id):
             competitors=COMPETITORS,
             flags=tools.IOC_INDEX,
             race=cur_race,
+            results_link=race_results_link,
         )
 
     elif cur_race["distance"] in ("sprint-relay", "mix-relay"):
@@ -371,6 +373,7 @@ def race(race_id):
             competitors=COMPETITORS,
             flags=tools.IOC_INDEX,
             race=cur_race,
+            results_link=race_results_link,
         )
     else:
         women = [row for row in data if COMPETITORS[row[0]]["gender"] == "F"]
@@ -391,6 +394,7 @@ def race(race_id):
             competitors=COMPETITORS,
             flags=tools.IOC_INDEX,
             race=cur_race,
+            results_link=race_results_link,
         )
 
 
