@@ -71,3 +71,9 @@ td.marked {
     outline: 0;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
+
+/* Juniorské a youth výsledky v tabulce kariéry - odlišené, ale čitelné.
+   Bootstrap 5 zvýrazňuje řádky přes --bs-table-bg, jinak by to table-hover přebil. */
+.junior-result {
+    --bs-table-bg: #eef7fb;
+}
