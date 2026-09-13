@@ -567,3 +567,61 @@ def test_filter_medal_table_country_without_medals():
 
     assert filtered == {}
     assert filtered_ranking == []
+
+
+def test_could_have_competed_elite_has_no_age_limit():
+    """
+    elita se jezdí bez horní hranice - i ročník 1975 tam patří
+    """
+    assert tools.could_have_competed(tools.EVENTS["WMTBOC"], 1975)
+    assert tools.could_have_competed(tools.EVENTS["WCUP"], 1975)
+
+
+def test_could_have_competed_too_old_when_event_started():
+    """
+    Stengard (1975) vyrostla z juniorů dávno před prvním JWMTBOC 2008
+    """
+    assert not tools.could_have_competed(tools.EVENTS["JWMTBOC"], 1975)
+    assert not tools.could_have_competed(tools.EVENTS["EJMTBOC"], 1975)
+    assert not tools.could_have_competed(tools.EVENTS["EYMTBOC"], 1975)
+
+
+def test_could_have_competed_bogar():
+    """
+    Bogar (1994) na JWMTBOC jet mohl a jel, na EJMTBOC (2018) byl už dospělý
+    """
+    assert tools.could_have_competed(tools.EVENTS["JWMTBOC"], 1994)
+    assert not tools.could_have_competed(tools.EVENTS["EJMTBOC"], 1994)
+    assert not tools.could_have_competed(tools.EVENTS["EYMTBOC"], 1994)
+
+
+def test_could_have_competed_last_eligible_year_counts():
+    """
+    hranice: kdo je v kategorii přesně v prvním ročníku, ještě se počítá
+    """
+    # EJMTBOC od 2018, junior do 20 let -> ročník 1998 je akorát
+    assert tools.could_have_competed(tools.EVENTS["EJMTBOC"], 1998)
+    assert not tools.could_have_competed(tools.EVENTS["EJMTBOC"], 1997)
+
+    # EYMTBOC od 2016, youth do 17 let -> ročník 1999 je akorát
+    assert tools.could_have_competed(tools.EVENTS["EYMTBOC"], 1999)
+    assert not tools.could_have_competed(tools.EVENTS["EYMTBOC"], 1998)
+
+
+def test_could_have_competed_unknown_birth_year_shows_event():
+    """
+    pětina jezdců nemá v databázi rok narození - radši řádek navíc
+    než zamlčená možnost
+    """
+    assert tools.could_have_competed(tools.EVENTS["JWMTBOC"], None)
+    assert tools.could_have_competed(tools.EVENTS["JWMTBOC"], "")
+    assert tools.could_have_competed(tools.EVENTS["JWMTBOC"], "nesmysl")
+    assert tools.could_have_competed(tools.EVENTS["JWMTBOC"], 0)
+
+
+def test_could_have_competed_accepts_year_as_string():
+    """
+    ze šablony chodí rok jako string
+    """
+    assert tools.could_have_competed(tools.EVENTS["JWMTBOC"], "1994")
+    assert not tools.could_have_competed(tools.EVENTS["EJMTBOC"], "1994")

@@ -240,6 +240,7 @@ ALL_DISTANCES = [
 #   needs_organizer shrnutí ročníku potřebuje i pořadatele (jen WCUP)
 #   title_noun      jak se jmenuje vítěz, do textů na stránce závodníka
 #   since           první ročník, do hlášky "nikdy se nezúčastnil"
+#   max_age         horní hranice kategorie (jen mládež), viz could_have_competed
 EVENTS = {
     "WMTBOC": {
         "name": "World MTBO championship",
@@ -279,6 +280,7 @@ EVENTS = {
         "needs_organizer": False,
         "title_noun": "Junior World Champion",
         "since": 2008,
+        "max_age": 20,
         "distances": ALL_DISTANCES,
     },
     "EJMTBOC": {
@@ -289,6 +291,7 @@ EVENTS = {
         "needs_organizer": False,
         "title_noun": "European Junior Champion",
         "since": 2018,
+        "max_age": 20,
         "distances": ALL_DISTANCES,
     },
     # Mistrovství světa pro kategorii M17/W17 neexistuje, jezdí se jen
@@ -301,6 +304,7 @@ EVENTS = {
         "needs_organizer": False,
         "title_noun": "European Youth Champion",
         "since": 2016,
+        "max_age": 17,
         "distances": ALL_DISTANCES,
     },
 }
@@ -348,6 +352,37 @@ def is_junior(code):
     meta = get_event(code)
 
     return bool(meta) and meta["kind"] in (JUNIOR, YOUTH)
+
+
+def could_have_competed(meta, birth_year):
+    """
+    Mohl se závodník narozený v daném roce vůbec zúčastnit?
+
+    Elita horní věkovou hranici nemá, takže vždycky ano. U mládeže musí
+    poslední rok v kategorii padnout nejdřív do prvního ročníku soutěže -
+    kdo z kategorie vyrostl dřív, než vznikla, neměl šanci. Bogar (1994)
+    tak na JWMTBOC jet mohl a jel, na EJMTBOC (od 2018) už byl dospělý.
+
+    Neznámý nebo nesmyslný rok narození bere jako "mohl" - pětina jezdců
+    ho v databázi nemá a zamlčet kvůli tomu reálnou možnost by bylo horší
+    než ukázat řádek navíc.
+
+    :param meta: záznam události z EVENTS
+    :param birth_year: rok narození, None/nesmysl = nevíme
+    """
+    max_age = meta.get("max_age")
+    if not max_age:
+        return True
+
+    try:
+        birth_year = int(birth_year)
+    except (TypeError, ValueError):
+        return True
+
+    if birth_year < 1900:
+        return True
+
+    return birth_year + max_age >= meta["since"]
 
 
 def wcup_scoring_events():

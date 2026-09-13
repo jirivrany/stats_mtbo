@@ -88,7 +88,12 @@
                 <h5>Career best results</h5>
             </div>
             <div class="card-body">
+                {# Soutěž, do které se závodník věkem nemohl dostat, se
+                   vynechává celá včetně nadpisu - viz could_have_competed.
+                   Výsledky ale mají vždycky přednost: když v datech něco
+                   je, ukáže se to bez ohledu na pravidlo. #}
                 {% for code, meta in EVENTS.items() %}
+                {% if event_stats[code]['total_distances_competed'] > 0 or eligible[code] %}
                 <h6>{{ code }}
                     {% if event_stats[code]['is_grand_slam_winner'] %}
                         <span title="{{ code }} Grand Slam Winner!">&#127942;</span>
@@ -113,6 +118,7 @@
                 </table>
                 {% else %}
                 <p>Never participated at {{ code }}{% if meta['since'] %} (since {{ meta['since'] }}){% endif %}.</p>
+                {% endif %}
                 {% endif %}
                 {% endfor %}
             </div>

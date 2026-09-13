@@ -495,6 +495,12 @@ def competitor(competitor_id):
     except AttributeError:
         birth = None
 
+    # Soutěže, do kterých se závodník věkem vůbec nemohl dostat, se na
+    # kartě neukazují - "nikdy se nezúčastnil" u JWMTBOC v roce 2008
+    # u někoho narozeného 1975 nic neříká, soutěž vznikla dávno potom,
+    # co z juniorů vyrostl.
+    eligible = {code: tools.could_have_competed(meta, birth) for code, meta in tools.EVENTS.items()}
+
     return flask.render_template(
         "competitor.html",
         title=title,
@@ -519,6 +525,7 @@ def competitor(competitor_id):
         distances=distances,
         flags=tools.IOC_INDEX,
         event_stats=event_stats,
+        eligible=eligible,
     )
 
 
