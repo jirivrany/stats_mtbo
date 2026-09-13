@@ -522,13 +522,15 @@ def competitor(competitor_id):
     )
 
 
-@lru_cache()
+@lru_cache(maxsize=256)
 @app.route("/medals_table/<event>/")
-def medals_table(event="WMTBOC"):
+@app.route("/medals_table/<event>/<country>/")
+def medals_table(event="WMTBOC", country=None):
     """
-    display medal table for given event type
+    display medal table for given event type, optionally for one country only
     params:
         event: event type
+        country: IOC country code, None shows the whole field
     """
     meta = tools.get_event(event)
     if meta is None:
@@ -542,12 +544,32 @@ def medals_table(event="WMTBOC"):
     converted_relay = tools.merge_medal_lines(*relay_lines)
     together = tools.merge_medal_dicts(converted, converted_relay)
 
+    # Žebříčky se počítají nad celým polem i při filtru - jen tak sedí
+    # globální pořadí včetně dělených míst.
     ranking = tools.sort_medal_table(converted)
     ranking_relay = tools.sort_medal_table(converted_relay)
     ranking_together = tools.sort_medal_table(together)
 
     countries = {COMPETITORS[com_id]["nationality"] for com_id in converted.keys()}
     rel_countries = {COMPETITORS[com_id]["nationality"] for com_id in converted_relay.keys()}
+
+    # Pruh vlajek nad tabulkou - jen země, které mají aspoň jednu medaili,
+    # s celkovým počtem, takže slouží i jako rychlé srovnání národů.
+    all_countries = tools.medal_countries(together, COMPETITORS)
+    country_totals = tools.aggregate_medals_by_country(together, COMPETITORS)
+
+    if country is not None:
+        country = country.upper()
+        if country not in all_countries:
+            flask.abort(404)
+
+    converted, ranking = tools.filter_medal_table(converted, ranking, COMPETITORS, country)
+    converted_relay, ranking_relay = tools.filter_medal_table(
+        converted_relay, ranking_relay, COMPETITORS, country
+    )
+    together, ranking_together = tools.filter_medal_table(
+        together, ranking_together, COMPETITORS, country
+    )
 
     disclaimer = ""
     if event == "wcup":
@@ -568,6 +590,8 @@ def medals_table(event="WMTBOC"):
     }
 
     title = f"Medals from {meta['name']}"
+    if country:
+        title = f"{title} - {country}"
 
     return flask.render_template(
         "medals.html",
@@ -577,6 +601,10 @@ def medals_table(event="WMTBOC"):
         table_content=table_content,
         competitors=COMPETITORS,
         flags=tools.IOC_INDEX,
+        event_slug=meta["slug"],
+        country=country,
+        all_countries=all_countries,
+        country_totals=country_totals,
     )
 
 

@@ -642,6 +642,64 @@ def aggregate_medals_by_country(converted, competitors):
     return converted_by_country
 
 
+def medal_countries(converted, competitors):
+    """
+    Kódy zemí, které mají v tabulce aspoň jednu medaili.
+
+    Staví se ze sloučené tabulky (individuál + štafety), aby žádná vlajka
+    nevedla na prázdnou stránku - SVK má třeba na WMTBOC jen štafetové
+    medaile, ale filtr pro něj smysl má.
+    """
+    return sorted({competitors[com_id]["nationality"] for com_id in converted if com_id in competitors})
+
+
+def filter_medal_table(converted, ranking, competitors, country=None):
+    """
+    Podmnožina medailové tabulky pro jednu zemi.
+
+    Globální pořadí se nepočítá znovu - bere se z už hotového žebříčku nad
+    celým polem, takže i po odfiltrování sedí včetně dělených míst.
+
+    :param converted: {competitor_id: [zlato, stříbro, bronz]}
+    :param ranking: [(globální_pořadí, competitor_id), ...] nad celým polem
+    :param competitors: registr závodníků kvůli národnosti
+    :param country: kód země, None nechá tabulku beze změny
+    :return: (filtrovaný dict, [(lokální_pořadí, globální_pořadí, competitor_id), ...])
+
+    Bez filtru je lokální pořadí rovno globálnímu - šablona tak má pořád
+    stejný tvar řádku a nemusí se ptát, jestli se filtruje.
+    """
+    if country is None:
+        return converted, [(rank, rank, com_id) for rank, com_id in ranking]
+
+    filtered = {
+        com_id: medals
+        for com_id, medals in converted.items()
+        if com_id in competitors and competitors[com_id]["nationality"] == country
+    }
+
+    filtered_ranking = []
+    local = -1
+    skip = 1
+    prev = None
+    for global_rank, com_id in ranking:
+        if com_id not in filtered:
+            continue
+
+        # Stejný počet medailí = stejné místo i v národní tabulce.
+        current = filtered[com_id]
+        if current == prev:
+            skip += 1
+        else:
+            local += skip
+            skip = 1
+
+        filtered_ranking.append((local, global_rank, com_id))
+        prev = current
+
+    return filtered, filtered_ranking
+
+
 def get_career_best_by_event_and_distance(competitor_results, races):
     """
     Calculate career best results grouped by event and distance.

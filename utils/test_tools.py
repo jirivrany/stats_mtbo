@@ -480,3 +480,90 @@ def test_build_progression_skips_unknown_competitor():
 
 def test_build_progression_empty_input():
     assert tools.build_progression([], RIDERS, WORLD) == []
+
+
+MEDALISTS = {
+    1: {"nationality": "CZE"},
+    2: {"nationality": "FIN"},
+    3: {"nationality": "CZE"},
+    4: {"nationality": "SVK"},
+    5: {"nationality": "FIN"},
+}
+
+
+def test_medal_countries_sorted_and_unique():
+    converted = {1: [1, 0, 0], 2: [2, 0, 0], 3: [0, 1, 0]}
+
+    assert tools.medal_countries(converted, MEDALISTS) == ["CZE", "FIN"]
+
+
+def test_medal_countries_skips_unknown_competitor():
+    """
+    závodník mimo registr nesmí shodit stavbu seznamu vlajek
+    """
+    converted = {1: [1, 0, 0], 999: [1, 0, 0]}
+
+    assert tools.medal_countries(converted, MEDALISTS) == ["CZE"]
+
+
+def test_filter_medal_table_without_country_keeps_everything():
+    """
+    bez filtru je lokální pořadí rovno globálnímu - řádek má pořád stejný tvar
+    """
+    converted = {1: [2, 0, 0], 2: [1, 0, 0]}
+    ranking = [(0, 1), (1, 2)]
+
+    filtered, filtered_ranking = tools.filter_medal_table(converted, ranking, MEDALISTS)
+
+    assert filtered == converted
+    assert filtered_ranking == [(0, 0, 1), (1, 1, 2)]
+
+
+def test_filter_medal_table_keeps_only_country():
+    converted = {1: [3, 0, 0], 2: [2, 0, 0], 3: [1, 0, 0], 5: [1, 0, 0]}
+    ranking = [(0, 1), (1, 2), (2, 3), (3, 5)]
+
+    filtered, filtered_ranking = tools.filter_medal_table(converted, ranking, MEDALISTS, "CZE")
+
+    assert filtered == {1: [3, 0, 0], 3: [1, 0, 0]}
+    assert filtered_ranking == [(0, 0, 1), (1, 2, 3)]
+
+
+def test_filter_medal_table_renumbers_locally_but_keeps_global():
+    """
+    lokální pořadí jde od nuly bez děr, globální zůstává z celého pole
+    """
+    converted = {2: [5, 0, 0], 5: [4, 0, 0], 1: [3, 0, 0], 3: [2, 0, 0]}
+    ranking = [(0, 2), (1, 5), (2, 1), (3, 3)]
+
+    _, filtered_ranking = tools.filter_medal_table(converted, ranking, MEDALISTS, "FIN")
+
+    assert [local for local, _, _ in filtered_ranking] == [0, 1]
+    assert [glob for _, glob, _ in filtered_ranking] == [0, 1]
+
+    _, cze_ranking = tools.filter_medal_table(converted, ranking, MEDALISTS, "CZE")
+
+    assert [local for local, _, _ in cze_ranking] == [0, 1]
+    assert [glob for _, glob, _ in cze_ranking] == [2, 3]
+
+
+def test_filter_medal_table_shares_local_place_on_tie():
+    """
+    stejný počet medailí = dělené místo i v národní tabulce
+    """
+    converted = {1: [1, 0, 0], 3: [1, 0, 0], 2: [1, 0, 0]}
+    ranking = [(0, 1), (0, 3), (0, 2)]
+
+    _, filtered_ranking = tools.filter_medal_table(converted, ranking, MEDALISTS, "CZE")
+
+    assert [local for local, _, _ in filtered_ranking] == [0, 0]
+
+
+def test_filter_medal_table_country_without_medals():
+    converted = {1: [1, 0, 0], 2: [1, 0, 0]}
+    ranking = [(0, 1), (1, 2)]
+
+    filtered, filtered_ranking = tools.filter_medal_table(converted, ranking, MEDALISTS, "NOR")
+
+    assert filtered == {}
+    assert filtered_ranking == []
