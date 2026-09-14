@@ -674,21 +674,29 @@ def sort_full_results(results):
 def make_team_worldup_results_base(results, category="M"):
     """
     create sorted team worlcup results list
-    :param races: list of races in year
-    :param results: tuple of (comp_id, race_id, place) from db
-    :param competitors: dictionary with competitors
+
+    Federace může v jednom závodě postavit víc týmů (druhý jede jako
+    `reduced`, bez místa a bez bodů). Body do Poháru se podle pravidel
+    IOF počítají jen nejlepšímu týmu federace, takže se tu z řádků jedné
+    federace bere maximum - dřív o výsledku rozhodovalo pořadí řádků
+    z databáze a nulový tým běžně přepsal ten bodující.
+
+    :param results: tuple of (comp_id, race_id, team, score) from db
+    :param category: M/W/X, jede se do klíče závodu
     """
     results_basic = defaultdict(dict)
     all_races = set()
     for comp_id, race_id, team, score in results:
         key = f"{race_id}-{category}"
-        results_basic[team][key] = {"members": [], "points": 0}
+        race = results_basic[team].setdefault(key, {"members": [], "points": 0})
         all_races.add(key)
 
-    for comp_id, race_id, team, score in results:
-        key = f"{race_id}-{category}"
-        results_basic[team][key]["points"] = score
-        results_basic[team][key]["members"].append(comp_id)
+        if score > race["points"]:
+            # lepší tým federace přebíjí ten dosavadní i se sestavou
+            race["members"] = [comp_id]
+            race["points"] = score
+        elif score == race["points"]:
+            race["members"].append(comp_id)
 
     return results_basic, all_races
 

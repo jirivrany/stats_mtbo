@@ -782,3 +782,41 @@ def test_format_place_without_status_falls_back():
 def test_format_place_handles_missing_value():
     assert tools.format_place(None) == ""
     assert tools.format_place("") == ""
+
+
+def test_team_worldcup_keeps_best_team_of_federation():
+    """
+    Pravidla IOF: "only the best placed team of each federation shall be
+    considered". Federace může postavit druhý tým, ten jede jako `reduced`
+    bez místa a bez bodů. Dřív o výsledku rozhodovalo pořadí řádků
+    z databáze, takže nulový druhý tým přepsal ten bodující.
+
+    Data jsou skutečná - LTU na EMTBOC 2026 mix-relay (závod 8934).
+    """
+    rows = [
+        (6568, 8934, "LTU", 17),
+        (24215, 8934, "LTU", 0),
+        (10248, 8934, "LTU", 0),
+        (13160, 8934, "LTU", 17),
+        (19787, 8934, "LTU", 0),
+        (23324, 8934, "LTU", 17),
+    ]
+
+    base, races = tools.make_team_worldup_results_base(rows, "X")
+
+    assert races == {"8934-X"}
+    assert base["LTU"]["8934-X"]["points"] == 17
+    assert sorted(base["LTU"]["8934-X"]["members"]) == [6568, 13160, 23324]
+
+
+def test_team_worldcup_keeps_members_of_scoreless_team():
+    """
+    Tým bez bodů (diskvalifikace, 16. místo a dál) se musí v sestavě
+    objevit taky - jinak by zmizel ze seznamu závodníků.
+    """
+    rows = [(1, 8934, "TUR", 0), (2, 8934, "TUR", 0), (3, 8934, "TUR", 0)]
+
+    base, _ = tools.make_team_worldup_results_base(rows, "X")
+
+    assert base["TUR"]["8934-X"]["points"] == 0
+    assert sorted(base["TUR"]["8934-X"]["members"]) == [1, 2, 3]
