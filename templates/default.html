@@ -212,6 +212,14 @@
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('team_wcup') }}">Team / per year</a>
                                 </li>
+                                {# U23 se jede uvnitř elitních závodů, ale má
+                                   vlastní pořadí - IOF ho z běžných kol
+                                   nepublikuje, tohle je jediný kompletní
+                                   přehled. #}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('wcup_u23') }}">U23 / per year</a>
+                                </li>
                             </ul>        
                         </li>
                     </ul>

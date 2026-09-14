@@ -234,17 +234,53 @@ def wcup(year):
     params:
         year: year
     """
+    return worldcup_standings(
+        year,
+        title=f"World Cup {year} individual overall standings",
+        scoring=tools.wcup_scoring_events(),
+        counted_by_year=WCUP_COUNTED,
+        year_url="/worldcup/",
+    )
+
+
+@lru_cache()
+@app.route("/worldcup/u23/", defaults={"year": YEAR})
+@app.route("/worldcup/u23/<int:year>/")
+def wcup_u23(year):
+    """
+    U23 world cup standings for a given year
+
+    Stejná tabulka jako elitní, jen nad jinými závody a s jiným počtem
+    započítaných výsledků - U23 se nejede dlouhá trať na MS, takže je
+    o jeden závod kratší. Body jsou v databázi (materialize_u23_results.py
+    + update_wcup_points.py), počítá se tu jen součet nejlepších.
+    """
+    return worldcup_standings(
+        year,
+        title=f"U23 World Cup {year} individual overall standings",
+        scoring=tools.u23_scoring_events(),
+        counted_by_year=tools.U23_WCUP_COUNTED,
+        year_url="/worldcup/u23/",
+    )
+
+
+def worldcup_standings(year, title, scoring, counted_by_year, year_url):
+    """
+    Celkové pořadí Světového poháru - elitního i U23.
+
+    Obě soutěže se počítají stejně (součet N nejlepších výsledků, při
+    shodě rozhoduje nejlepší jednotlivý), liší se jen závody a N. Kdyby
+    to byly dvě funkce, dřív nebo později se rozejdou.
+    """
     model = Results(mysql)
     races_model = Races(mysql)
-    title = f"World Cup {year} individual overall standings"
 
-    scoring = tools.wcup_scoring_events()
     season_race = races_model.get_individual_ids_by_year(year, events=scoring)
     totals_f = model.get_worldcup_points(year, gender="F", events=scoring)
     totals_m = model.get_worldcup_points(year, gender="M", events=scoring)
 
     try:
-        counted = WCUP_COUNTED[year]
+        counted = counted_by_year[year]
     except KeyError:
         flask.abort(404)
 
@@ -261,7 +297,7 @@ def wcup(year):
 
     country = {COMPETITORS[row["comp_id"]]["nationality"] for row in totals_m + totals_f}
 
-    years = sorted(WCUP_COUNTED.keys(), reverse=True)
+    years = sorted(counted_by_year.keys(), reverse=True)
 
     return flask.render_template(
         "wcup.html",
@@ -272,6 +308,7 @@ def wcup(year):
         men=totals_m,
         year=year,
         years=years,
+        year_url=year_url,
         stats={"men": len(totals_m), "women": len(totals_f), "country": len(country)},
         competitors=COMPETITORS,
         flags=tools.IOC_INDEX,
@@ -339,7 +376,16 @@ def race(race_id):
     except KeyError:
         flask.abort(404)
 
-    data = model.get_race_results(race_id)
+    # Závody U23 vlastní výsledky nemají - jezdci startují v elitním
+    # závodě (jeho id je v iofurl) a pořadí U23 z něj vznikne až tady
+    # odfiltrováním jezdců do 23 let a přečíslováním.
+    if cur_race["event"] == "U23WMTBOC":
+        data = tools.u23_race_results(
+            model.get_race_results(cur_race["iofurl"]), COMPETITORS, cur_race["year"]
+        )
+    else:
+        data = model.get_race_results(race_id)
+
     title = f'{cur_race["event"]} {cur_race["year"]} {DISTANCE_NAMES[cur_race["distance"]]}'
     race_results_link = tools.results_link(cur_race)
 

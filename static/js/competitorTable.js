@@ -18,11 +18,21 @@
 
     // Pořadí událostí v liště - co v datech není, se přeskočí; co tu
     // není vyjmenované (nová událost), spadne podle abecedy na konec.
-    const EVENT_ORDER = ['WMTBOC', 'EMTBOC', 'WCUP', 'JWMTBOC', 'EJMTBOC', 'EYMTBOC'];
+    const EVENT_ORDER = ['WMTBOC', 'EMTBOC', 'WCUP', 'U23WMTBOC', 'U23WCUP',
+        'JWMTBOC', 'EJMTBOC', 'EYMTBOC'];
 
     // Juniorské a youth šampionáty se odlišují barvou tlačítka, aby šlo
     // na první pohled poznat, která část kariéry je zrovna vidět.
     const JUNIOR_EVENTS = new Set(['JWMTBOC', 'EJMTBOC', 'EYMTBOC']);
+
+    // U23 se jede uvnitř elitních závodů, takže na každý elitní výsledek
+    // vychází ještě jeden řádek U23. Vlastní barva je odliší.
+    const U23_EVENTS = new Set(['U23WMTBOC', 'U23WCUP']);
+
+    // Průběžná kola U23 Poháru by tabulku zdvojnásobila, a přitom je to
+    // doplňková informace - defaultně se schovají a jdou zapnout tlačítkem.
+    // Šampionát U23 zůstává vidět: tam se jede o titul.
+    const HIDDEN_BY_DEFAULT = new Set(['U23WCUP']);
 
     const COLUMNS = [
         { key: 'date', label: 'Date' },
@@ -52,10 +62,12 @@
         ['sprint', 'middle', 'long', 'mass_start', 'relay', 'mix_relay', 'sprint_relay']
     );
 
-    // Zapnuté filtry. Na začátku je vidět všechno - hlavní smysl téhle
-    // stránky je ukázat kariéru vcelku, včetně juniorských let.
+    // Zapnuté filtry. Na začátku je vidět celá kariéra včetně juniorských
+    // let - jen průběžná kola U23 Poháru ne, viz HIDDEN_BY_DEFAULT.
+    const shown = events.filter((event) => !HIDDEN_BY_DEFAULT.has(event));
+
     const state = {
-        events: new Set(events),
+        events: new Set(shown.length ? shown : events),
         distances: new Set(distances),
         column: 'date',
         direction: 'desc',
@@ -127,7 +139,12 @@
         const eventBar = document.createElement('div');
         eventBar.className = 'btn-toolbar mb-1';
         events.forEach((event) => {
-            const colour = JUNIOR_EVENTS.has(event) ? 'info' : 'primary';
+            let colour = 'primary';
+            if (JUNIOR_EVENTS.has(event)) {
+                colour = 'info';
+            } else if (U23_EVENTS.has(event)) {
+                colour = 'success';
+            }
             eventBar.appendChild(
                 button(event, state.events.has(event), colour, () => {
                     toggle(state.events, event, events);

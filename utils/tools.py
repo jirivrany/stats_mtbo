@@ -218,6 +218,13 @@ ELITE = "elite"
 JUNIOR = "junior"
 YOUTH = "youth"
 
+# U23 stojí stranou: jezdí se uvnitř elitních závodů (jezdec startuje
+# normálně v elitě a teprve z výsledku se vyfiltruje), takže to není
+# věková kategorie ve stejném smyslu jako junioři. Vlastní druh ji drží
+# mimo elitní medailové tabulky - titul U23 mistra světa je jiný titul
+# než ten elitní - a zároveň mimo non_elite_codes(), kde jsou junioři.
+U23 = "u23"
+
 # Disciplíny, které se u dané události mohly jet. WMTBOC nikdy nemělo
 # smíšenou ani sprintovou štafetu, ostatní ano.
 WMTBOC_DISTANCES = ["sprint", "middle", "long", "mass_start", "relay"]
@@ -307,7 +314,44 @@ EVENTS = {
         "max_age": 17,
         "distances": ALL_DISTANCES,
     },
+    # Od 2022. Vlastní závody nemá - jezdci startují v elitním závodě
+    # a výsledek U23 vznikne odfiltrováním jezdců do 23 let a přečíslováním.
+    # Tituly se udělují jen ve dvou závodech ročně (U23_CHAMPIONSHIP_RACES),
+    # proto jsou kódy dva: medaile a šampioni patří sem, ostatní kola
+    # Světového poháru pod U23WCUP. Kdyby byl kód jeden, medailové tabulky
+    # by počítaly "tituly" i za obyčejná kola.
+    "U23WMTBOC": {
+        "name": "U23 World MTBO championship",
+        "kind": U23,
+        "slug": "u23wmtboc",
+        "scores_wcup": False,
+        "scores_u23_wcup": True,
+        "needs_organizer": False,
+        "title_noun": "U23 World Champion",
+        "since": 2022,
+        "max_age": 23,
+        "distances": ALL_DISTANCES,
+    },
+    # Kola Světového poháru, kde se U23 vyhodnocuje, ale titul se neuděluje.
+    # IOF pořadí U23 z těchhle závodů nikde nepublikuje a pořadatelé jen
+    # někdy - tohle je tedy jediné místo, kde si jezdec svoje průběžné
+    # pořadí přečte, aniž by si ho počítal ručně.
+    "U23WCUP": {
+        "name": "U23 MTBO World Cup",
+        "kind": U23,
+        "slug": "u23wcup",
+        "scores_wcup": False,
+        "scores_u23_wcup": True,
+        "needs_organizer": True,
+        "title_noun": "U23 World Cup winner",
+        "since": 2022,
+        "max_age": 23,
+        "distances": ALL_DISTANCES,
+    },
 }
+
+# Kódy, ze kterých se skládá sezóna U23 Světového poháru.
+U23_EVENTS = ("U23WMTBOC", "U23WCUP")
 
 # Zpětná kompatibilita - spousta míst hledá jen název události.
 EVENT_NAMES = {code: meta["name"] for code, meta in EVENTS.items()}
@@ -452,6 +496,138 @@ def nationality_in(competitor, year):
         return history[0][0]
 
     return history[-1][0]
+
+
+# Závody, ve kterých se udělují tituly U23 mistra světa. Pravidla je
+# vyjmenovávají ročník po ročníku a odvodit se nedají: 2026 má kolo
+# v Maďarsku tři individuální závody, ale titul se jede jen ve sprintu
+# a na dlouhé trati, middle ne. Klíč je rok, hodnota id elitních závodů,
+# ze kterých se výsledek filtruje.
+U23_CHAMPIONSHIP_RACES = {
+    2022: (7484, 7485),
+    2023: (7860, 7861),
+    2024: (8085, 8086),
+    2025: (8500, 8509),
+    2026: (8937, 8936),
+}
+
+U23_MAX_AGE = 23
+
+# Kolik nejlepších výsledků se počítá do celkového pořadí U23 Poháru.
+# Vždycky o jeden míň než u elity (WCUP_COUNTED ve flaskapp.py), protože
+# dlouhá trať na WMTBOC do U23 Poháru nepatří - pravidla ji každý ročník
+# výslovně vyjímají ("not a scoring event for the U23 World Cup").
+U23_WCUP_COUNTED = {
+    2022: 5,
+    2023: 6,
+    2024: 6,
+    2025: 6,
+    2026: 6,
+}
+
+
+def u23_scoring_events():
+    """Události, ze kterých se skládá pořadí U23 Světového poháru."""
+    return [code for code, meta in EVENTS.items() if meta.get("scores_u23_wcup")]
+
+
+def scores_for_u23(event, distance):
+    """
+    Boduje tenhle elitní závod do U23 Světového poháru?
+
+    Jediná výjimka je dlouhá trať na mistrovství světa - pravidla ji
+    vyjímají každý ročník 2022-2026 a kvůli ní je i U23_WCUP_COUNTED
+    o jedničku nižší než u elity.
+    """
+    return not (event == "WMTBOC" and distance == "long")
+
+
+def is_u23(birth_year, season_year):
+    """
+    Patří jezdec v dané sezóně do U23?
+
+    Pravidla: "up to the end of the calendar year in which they have their
+    23rd birthday" - rozhoduje tedy ročník, ne datum závodu, a jezdec je
+    U23 celou sezónu.
+
+    Na rozdíl od could_have_competed() se neznámý rok narození bere jako
+    "nepatří". Tam jde o to, jestli jezdec vůbec mohl startovat, a pustit
+    ho dál je bezpečnější; tady by se dostal do oficiálního pořadí, kam
+    možná nepatří. Mlčet je horší než jednoho jezdce vynechat.
+
+    :param birth_year: rok narození, None/nesmysl = nepatří
+    :param season_year: ročník sezóny
+    """
+    try:
+        birth_year = int(birth_year)
+    except (TypeError, ValueError):
+        return False
+
+    if birth_year < 1900:
+        return False
+
+    return season_year - birth_year <= U23_MAX_AGE
+
+
+def u23_places(results):
+    """
+    Přečísluje elitní výsledek na pořadí U23.
+
+    Sdílená místa musí zůstat sdílená: pravidla říkají "if two or more
+    competitors share a place, they all receive the higher point score",
+    takže když jsou dva osmí, další je desátý, ne devátý. Prosté
+    očíslování 1..n by všechny pod nimi posunulo o příčku a body by
+    nesouhlasily s oficiální tabulkou IOF - přesně na tom se to dalo
+    poznat (Racansky 2026: 233 místo 234).
+
+    :param results: [(place, cokoliv...), ...] - elitní umístění, už
+                    profiltrovaná na U23 jezdce jednoho pohlaví
+    :return [(u23_place, původní řádek), ...] seřazené podle umístění
+    """
+    places = [row[0] for row in results]
+
+    return sorted(
+        ((sum(1 for other in places if other < row[0]) + 1, row) for row in results),
+        key=lambda pair: pair[0],
+    )
+
+
+def u23_race_results(results, competitors, season_year):
+    """
+    Z elitního výsledku závodu udělá výsledek U23.
+
+    Závody U23WMTBOC nemají v databázi vlastní řádky - jezdci startují
+    v elitním závodě a teprve tady se vyberou ti do 23 let a přečíslují.
+    Vrací se řádky ve stejném tvaru, jaký dává get_race_results(), jen
+    s přepsaným umístěním, takže šablona závodu je nepozná.
+
+    Nedokončené (place >= NO_PLACE_FROM) se nepřečíslovávají - zůstávají
+    se svým příznakem na konci, stejně jako v elitním výsledku.
+
+    :param results: řádky z get_race_results() elitního závodu
+    :param competitors: registr závodníků (kvůli roku narození a pohlaví)
+    :param season_year: ročník, podle kterého se počítá věk
+    """
+    starters = []
+    unplaced = []
+    for row in results:
+        rider = competitors.get(row[0])
+        if not rider:
+            continue
+
+        born = (rider.get("born") or "").split("-")[0]
+        if not is_u23(born, season_year):
+            continue
+
+        (unplaced if row[2] >= NO_PLACE_FROM else starters).append(row)
+
+    output = []
+    for gender in ("F", "M"):
+        same = [row for row in starters if competitors[row[0]]["gender"] == gender]
+        for place, (_, row) in u23_places([(row[2], row) for row in same]):
+            output.append((row[0], row[1], place, row[3], row[4], row[5]))
+
+    return output + unplaced
 
 
 def wcup_scoring_events():

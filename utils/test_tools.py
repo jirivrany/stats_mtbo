@@ -820,3 +820,78 @@ def test_team_worldcup_keeps_members_of_scoreless_team():
 
     assert base["TUR"]["8934-X"]["points"] == 0
     assert sorted(base["TUR"]["8934-X"]["members"]) == [1, 2, 3]
+
+
+def test_is_u23_uses_season_year_not_race_date():
+    """
+    "up to the end of the calendar year in which they have their 23rd
+    birthday" - jezdec je U23 celou sezónu. Ověřeno na 2026: ročník 2003
+    ještě patří, 2002 už ne.
+    """
+    assert tools.is_u23(2003, 2026) is True
+    assert tools.is_u23(2002, 2026) is False
+    assert tools.is_u23(2004, 2026) is True
+
+
+def test_is_u23_excludes_unknown_birth_year():
+    """
+    Opak could_have_competed() - do oficiálního pořadí se nesmí dostat
+    jezdec, u kterého nevíme, jestli tam patří.
+    """
+    for unknown in (None, "", "nesmysl", 0, 1800):
+        assert tools.is_u23(unknown, 2026) is False
+
+
+def test_u23_places_renumber_from_elite_results():
+    """Z elitních míst se stane pořadí 1..n."""
+    rows = [(7, "a"), (14, "b"), (16, "c"), (18, "d")]
+
+    assert tools.u23_places(rows) == [
+        (1, (7, "a")),
+        (2, (14, "b")),
+        (3, (16, "c")),
+        (4, (18, "d")),
+    ]
+
+
+def test_u23_places_keep_shared_places_shared():
+    """
+    Skutečný případ - WMTBOC 2026 middle (závod 8775): Nowak a Klemettinen
+    dojeli oba na 36. místě ve stejném čase. Oba jsou U23 osmí a další
+    v pořadí je desátý, ne devátý. Prosté číslování 1..n posune všechny
+    pod nimi a body přestanou sedět s oficiální tabulkou IOF.
+    """
+    rows = [(20, "Hnilica"), (36, "Nowak"), (36, "Klemettinen"), (40, "Janowski")]
+
+    numbered = tools.u23_places(rows)
+
+    assert [pair[0] for pair in numbered] == [1, 2, 2, 4]
+
+
+def test_u23_scoring_events_are_separate_from_elite():
+    """
+    U23 nesmí být v elitním seznamu - wcup_scoring_events() řídí elitní
+    stránky Poháru a U23 řádky by do nich přitekly jako cizí body.
+    Málem se to stalo: stačilo dát U23 událostem scores_wcup=True.
+    """
+    elite = tools.wcup_scoring_events()
+    u23 = tools.u23_scoring_events()
+
+    assert sorted(elite) == ["EMTBOC", "WCUP", "WMTBOC"]
+    assert sorted(u23) == ["U23WCUP", "U23WMTBOC"]
+    assert not set(elite) & set(u23)
+
+
+def test_u23_counted_is_one_below_elite():
+    """
+    Do U23 Poháru se počítá o jeden výsledek míň, protože dlouhá trať
+    na MS do U23 neboduje. Ročníky musí sedět s WCUP_COUNTED v aplikaci.
+    """
+    assert tools.U23_WCUP_COUNTED == {2022: 5, 2023: 6, 2024: 6, 2025: 6, 2026: 6}
+
+
+def test_scores_for_u23_excludes_only_wmtboc_long():
+    assert tools.scores_for_u23("WMTBOC", "long") is False
+    assert tools.scores_for_u23("WMTBOC", "sprint") is True
+    assert tools.scores_for_u23("WCUP", "long") is True
+    assert tools.scores_for_u23("EMTBOC", "long") is True
