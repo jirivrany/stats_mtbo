@@ -625,3 +625,160 @@ def test_could_have_competed_accepts_year_as_string():
     """
     assert tools.could_have_competed(tools.EVENTS["JWMTBOC"], "1994")
     assert not tools.could_have_competed(tools.EVENTS["EJMTBOC"], "1994")
+
+
+GARDE = {"nationality": "FRA", "nat_history": [("SVK", 2005, 2012), ("FRA", 2014, None)]}
+BALLOT = {"nationality": "SUI", "nat_history": [("FRA", 2004, 2007)]}
+
+
+def test_nationality_in_without_history_returns_current():
+    """
+    drtivá většina závodníků historii nemá - rychlá cesta bez dohledávání
+    """
+    assert tools.nationality_in({"nationality": "CZE"}, 2009) == "CZE"
+
+
+def test_nationality_in_picks_the_right_stint():
+    """
+    Garde jela do 2012 za Slovensko, od 2014 za Francii
+    """
+    assert tools.nationality_in(GARDE, 2005) == "SVK"
+    assert tools.nationality_in(GARDE, 2012) == "SVK"
+    assert tools.nationality_in(GARDE, 2014) == "FRA"
+    assert tools.nationality_in(GARDE, 2017) == "FRA"
+
+
+def test_nationality_in_gap_year_falls_to_later_stint():
+    """
+    2013 Garde nezávodila, rok mezi úseky nesmí spadnout na chybu
+    """
+    assert tools.nationality_in(GARDE, 2013) == "FRA"
+
+
+def test_nationality_in_before_first_stint():
+    """
+    rok před prvním úsekem bere nejbližší, ne dnešní registraci
+    """
+    assert tools.nationality_in(GARDE, 2004) == "SVK"
+    assert tools.nationality_in(BALLOT, 2003) == "FRA"
+
+
+def test_nationality_in_after_closed_stint_keeps_history():
+    """
+    Ballot jela za Francii, dnes je v Eventoru jako Švýcarsko - staré
+    výsledky musí zůstat francouzské
+    """
+    assert tools.nationality_in(BALLOT, 2005) == "FRA"
+    assert tools.nationality_in(BALLOT, 2020) == "FRA"
+
+
+def test_nationality_in_open_ended_stint():
+    """
+    valid_to NULL = trvá dosud
+    """
+    stengard = {"nationality": "FIN", "nat_history": [("FIN", 2002, 2025), ("SWE", 2026, None)]}
+
+    assert tools.nationality_in(stengard, 2025) == "FIN"
+    assert tools.nationality_in(stengard, 2026) == "SWE"
+    assert tools.nationality_in(stengard, 2030) == "SWE"
+
+
+def test_nationality_in_handles_year_as_string_and_junk():
+    assert tools.nationality_in(GARDE, "2009") == "SVK"
+    assert tools.nationality_in(GARDE, None) == "FRA"
+    assert tools.nationality_in(GARDE, "nesmysl") == "FRA"
+
+
+SWITCHER = {
+    270: {"nationality": "FRA", "nat_history": [("SVK", 2005, 2012), ("FRA", 2014, None)]},
+    99: {"nationality": "CZE"},
+}
+
+
+def test_medals_for_country_splits_by_era():
+    """
+    Garde má individuální medaile za obě země - každá tabulka jen svoje
+    """
+    by_year = {(270, 2008): [1, 0, 0], (270, 2009): [1, 0, 1], (270, 2015): [0, 0, 1]}
+
+    svk = tools.medals_for_country(by_year, SWITCHER, "SVK")
+    fra = tools.medals_for_country(by_year, SWITCHER, "FRA")
+
+    assert svk == {270: [2, 0, 1]}
+    assert fra == {270: [0, 0, 1]}
+
+
+def test_medals_for_country_skips_competitor_without_medals_there():
+    by_year = {(270, 2008): [1, 0, 0], (99, 2008): [0, 1, 0]}
+
+    assert tools.medals_for_country(by_year, SWITCHER, "SVK") == {270: [1, 0, 0]}
+    assert tools.medals_for_country(by_year, SWITCHER, "CZE") == {99: [0, 1, 0]}
+
+
+def test_relay_medals_for_country_uses_team_not_nationality():
+    """
+    u štafet drží zemi competitor_relay.team, rok se dohledávat nemusí
+    """
+    lines = [
+        [(270, "SVK", 1)],
+        [(270, "FRA", 1)],
+        [(270, "SVK", 2), (99, "CZE", 1)],
+    ]
+
+    assert tools.relay_medals_for_country(lines, "SVK") == {270: [1, 0, 2]}
+    assert tools.relay_medals_for_country(lines, "FRA") == {270: [0, 1, 0]}
+    assert tools.relay_medals_for_country(lines, "CZE") == {99: [0, 0, 1]}
+
+
+def test_aggregate_relay_medals_by_team_counts_competitors():
+    """
+    pruh vlajek počítá jednotlivce, ne týmy - jeden bronz štafety = tři medaile
+    """
+    lines = [[], [], [(1, "CZE", 1), (2, "CZE", 1), (3, "CZE", 1)]]
+
+    assert tools.aggregate_relay_medals_by_team(lines) == {"CZE": [0, 0, 3]}
+
+
+def test_filter_medal_table_by_country_overrides_nationality():
+    """
+    hotové počty za zemi mají přednost před dnešní národností
+    """
+    converted = {270: [2, 0, 1], 99: [1, 0, 0]}
+    ranking = [(0, 270), (1, 99)]
+    by_country = {270: [1, 0, 1]}
+
+    filtered, filtered_ranking = tools.filter_medal_table(
+        converted, ranking, SWITCHER, "SVK", by_country
+    )
+
+    assert filtered == {270: [1, 0, 1]}
+    assert filtered_ranking == [(0, 0, 270)]
+
+
+def test_format_place_keeps_real_places():
+    assert tools.format_place(1) == "1"
+    assert tools.format_place(120) == "120"
+    assert tools.format_place("7") == "7"
+
+
+def test_format_place_uses_status_from_time_column():
+    """
+    důvod je v databázi ve sloupci s časem - DSQ nesmí vypadat jako nedokončeno
+    """
+    assert tools.format_place(9999, "DSQ") == "DSQ"
+    assert tools.format_place(99999, "NC") == "NC"
+    assert tools.format_place(9999, "dsq") == "DSQ"
+
+
+def test_format_place_without_status_falls_back():
+    """
+    od 2015 je u nedokončených závodů čas prázdný
+    """
+    assert tools.format_place(99999) == "nc"
+    assert tools.format_place(99999, "") == "nc"
+    assert tools.format_place(9999, "1:23:45") == "nc"
+
+
+def test_format_place_handles_missing_value():
+    assert tools.format_place(None) == ""
+    assert tools.format_place("") == ""

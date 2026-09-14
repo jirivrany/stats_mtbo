@@ -221,7 +221,7 @@
             line.appendChild(dateCell);
 
             [
-                row.result === null || row.result === undefined ? '-' : row.result,
+                row.result_label || (row.result === null || row.result === undefined ? '-' : row.result),
                 label(row.dist),
                 row.event,
                 row.rtime || '',

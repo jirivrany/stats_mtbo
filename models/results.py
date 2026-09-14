@@ -392,11 +392,64 @@ class Results(object):
         self.cursor.execute(query, (place, event))
         return self.cursor.fetchall()
 
+    def get_place_count_by_year(self, place, event, table="race"):
+        """
+        Jako get_place_count, ale s rokem závodu u každé medaile.
+
+        Tabulka medailí po zemích potřebuje vědět, ve kterém roce medaile
+        padla - závodník mohl mezitím změnit zemi a starý výsledek patří té
+        tehdejší. Bez roku by se nedalo rozhodnout.
+
+        :param place: umístění (1 zlato, 2 stříbro, 3 bronz)
+        :param event: kód události
+        :param table: "race" nebo "relay"
+        :return list of (competitor_id, year, count)
+        """
+        if table not in ("race", "relay"):
+            raise ValueError(f"Invalid table parameter: {table}")
+
+        query = (
+            "SELECT t1.competitor_id, t2.year, COUNT(t1.place)"
+            f" FROM competitor_{table} AS t1"
+            " LEFT JOIN races AS t2 ON t1.race_id = t2.id"
+            " WHERE t1.place = %s AND t2.event = %s"
+            " GROUP BY t1.competitor_id, t2.year"
+        )
+
+        self.cursor.execute(query, (place, event))
+        return self.cursor.fetchall()
+
+    def get_relay_place_count_by_team(self, place, event):
+        """
+        Štafetové medaile jednotlivců i se zemí, za kterou se jelo.
+
+        Na rozdíl od individuálních závodů se rok dohledávat nemusí -
+        competitor_relay.team drží stát přímo u výsledku.
+
+        :param place: umístění (1 zlato, 2 stříbro, 3 bronz)
+        :param event: kód události
+        :return list of (competitor_id, team, count)
+        """
+        query = (
+            "SELECT crel.competitor_id, crel.team, COUNT(crel.place)"
+            " FROM competitor_relay crel"
+            " JOIN races r ON crel.race_id = r.id"
+            " WHERE crel.place = %s AND r.event = %s"
+            " GROUP BY crel.competitor_id, crel.team"
+        )
+
+        self.cursor.execute(query, (place, event))
+        return self.cursor.fetchall()
+
     def get_relay_country_place_count(self, place, event):
         """
         Counts how many times each country finished at a given place in relay events.
-        Since relay teams are always from a single country, we can get the nationality
-        from any team member.
+
+        Země se bere z competitor_relay.team, ne z competitors.nationality -
+        team drží stát, za který se ten závod jel, kdežto nationality jen to,
+        kde je závodník registrovaný dnes. Kdo během kariéry přestoupil (nebo
+        si po ní změnil občanství), by jinak vozil staré medaile nové zemi:
+        Garde jela 2011 a 2012 bronz za Slovensko, ale dnes je vedená jako FRA.
 
         :param place: int - the place to count (1 for gold, 2 for silver, 3 for bronze)
         :param event: string - the event name
@@ -404,15 +457,14 @@ class Results(object):
         """
 
         query = """
-            SELECT 
-                c.nationality,
+            SELECT
+                cr.team,
                 COUNT(DISTINCT cr.race_id, cr.team) as medal_count
             FROM competitor_relay cr
             JOIN races r ON cr.race_id = r.id
-            JOIN competitors c ON cr.competitor_id = c.id
-            WHERE cr.place = %s 
+            WHERE cr.place = %s
                 AND r.event = %s
-            GROUP BY c.nationality
+            GROUP BY cr.team
             ORDER BY medal_count DESC
         """
 

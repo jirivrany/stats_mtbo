@@ -385,6 +385,75 @@ def could_have_competed(meta, birth_year):
     return birth_year + max_age >= meta["since"]
 
 
+# Nedokončené závody nemají v databázi umístění, ale číslo - sloupec je
+# integer. Devítky jsou dvojí jen kvůli historii importu (9999 do 2014,
+# 99999 od 2015), význam mají stejný. Nejvyšší skutečné umístění je 120.
+NO_PLACE_FROM = 999
+
+
+def format_place(place, status=None):
+    """
+    Umístění pro čtenáře - z devítek udělá zkratku.
+
+    Skutečný důvod (nedokončil, diskvalifikace) je v databázi ve sloupci
+    s časem, takže se použije, když je po ruce. Bez něj zbude obecné "nc".
+
+    :param place: hodnota z competitor_race.place
+    :param status: competitor_race.time, kde bývá "NC" nebo "DSQ"
+    :return číslo jako string, nebo zkratka
+    """
+    try:
+        place = int(place)
+    except (TypeError, ValueError):
+        return ""
+
+    if place < NO_PLACE_FROM:
+        return str(place)
+
+    status = (status or "").strip().upper()
+
+    return status if status in ("NC", "DSQ") else "nc"
+
+
+def nationality_in(competitor, year):
+    """
+    Zemi, kterou závodník reprezentoval v daném roce.
+
+    competitors.nationality drží jen dnešní registraci v Eventoru. Kdo
+    během kariéry přestoupil (Garde 2013 Slovensko -> Francie) nebo si
+    zemi změnil až po ní (Ballot jela za Francii, dnes je vedená jako
+    Švýcarsko), by jinak měl staré výsledky pod novou vlajkou.
+
+    Drtivá většina závodníků historii nemá a rovnou dostane nationality -
+    dohledávání se týká jen těch pár, co ji mají.
+
+    Rok mimo všechny úseky (Garde 2013, kdy nezávodila) spadne na nejbližší
+    úsek, takže funkce vrátí vždycky nějakou zemi.
+
+    :param competitor: záznam závodníka z COMPETITORS
+    :param year: rok závodu
+    """
+    history = competitor.get("nat_history")
+    if not history:
+        return competitor["nationality"]
+
+    try:
+        year = int(year)
+    except (TypeError, ValueError):
+        return competitor["nationality"]
+
+    for country, valid_from, valid_to in history:
+        if year >= valid_from and (valid_to is None or year <= valid_to):
+            return country
+
+    # Rok v mezeře mezi úseky nebo před prvním z nich - vezme se ten
+    # časově nejbližší, ať zůstane vidět historická země a ne dnešní.
+    if year < history[0][1]:
+        return history[0][0]
+
+    return history[-1][0]
+
+
 def wcup_scoring_events():
     """
     Události, které se počítají do Světového poháru.
@@ -555,7 +624,10 @@ def format_competitor_row(row, races):
     return {
         "race_id": row[1],
         "date": daystr,
+        # result zůstává číslo kvůli řazení v tabulce, na zobrazení je
+        # result_label - nedokončené závody mají v databázi devítky.
         "result": row[2],
+        "result_label": format_place(row[2], row[3]),
         "dist": races[row[1]]["distance"].lower().replace("-", "_"),
         "event": races[row[1]]["event"],
         "rtime": row[3],
@@ -663,6 +735,43 @@ def flatten(data: list):
     return [item for sublist in data for item in sublist]
 
 
+def merge_medal_lines_by_year(line_a, line_b, line_c):
+    """
+    Jako merge_medal_lines, ale vstupem jsou řádky s rokem.
+
+    :param line_*: [(competitor_id, year, count), ...] pro zlato/stříbro/bronz
+    :return {(competitor_id, year): [zlato, stříbro, bronz]}
+    """
+    result = {}
+    for pos, line in enumerate((line_a, line_b, line_c)):
+        for com_id, year, count in line:
+            result.setdefault((com_id, year), [0, 0, 0])[pos] = count
+
+    return result
+
+
+def aggregate_medals_by_country_and_year(by_year, competitors):
+    """
+    Medaile po zemích, s ohledem na to, za koho se v daném roce jelo.
+
+    Garde má individuální medaile z let 2006-2009 za Slovensko a jednu
+    z 2015 za Francii - bez roku by všech sedm spadlo pod dnešní FRA.
+
+    :param by_year: {(competitor_id, year): [zlato, stříbro, bronz]}
+    :param competitors: registr závodníků
+    :return {country: [zlato, stříbro, bronz]}
+    """
+    by_country = defaultdict(lambda: [0, 0, 0])
+    for (com_id, year), medals in by_year.items():
+        if com_id not in competitors:
+            continue
+
+        country = nationality_in(competitors[com_id], year)
+        by_country[country] = [sum(x) for x in zip(by_country[country], medals)]
+
+    return dict(by_country)
+
+
 def aggregate_medals_by_country(converted, competitors):
     converted_by_country = defaultdict(list)
     for com_id, medals in converted.items():
@@ -688,7 +797,77 @@ def medal_countries(converted, competitors):
     return sorted({competitors[com_id]["nationality"] for com_id in converted if com_id in competitors})
 
 
-def filter_medal_table(converted, ranking, competitors, country=None):
+def medals_for_country(by_year, competitors, country):
+    """
+    Medaile jednoho státu po závodnících, počítané podle roku.
+
+    Kdo změnil zemi, přispívá každému státu jen medailemi z té doby -
+    Garde má šest individuálních medailí z WMTBOC za Slovensko (2006-2009)
+    a jednu z EMTBOC za Francii (2015), takže v slovenské tabulce musí být
+    se šesti a ve francouzské s jednou.
+
+    :param by_year: {(competitor_id, year): [zlato, stříbro, bronz]}
+    :param competitors: registr závodníků
+    :param country: kód země
+    :return {competitor_id: [zlato, stříbro, bronz]} jen za tu zemi
+    """
+    result = {}
+    for (com_id, year), medals in by_year.items():
+        if com_id not in competitors:
+            continue
+
+        if nationality_in(competitors[com_id], year) != country:
+            continue
+
+        current = result.setdefault(com_id, [0, 0, 0])
+        result[com_id] = [sum(x) for x in zip(current, medals)]
+
+    return {com_id: medals for com_id, medals in result.items() if any(medals)}
+
+
+def aggregate_relay_medals_by_team(lines):
+    """
+    Štafetové medaile po zemích, počítané po závodnících.
+
+    Pruh vlajek musí sedět se součtem řádků v tabulce, a ta je po
+    jednotlivcích - jeden štafetový bronz jsou tedy tři medaile.
+
+    :param lines: trojice seznamů [(competitor_id, team, count), ...]
+    :return {country: [zlato, stříbro, bronz]}
+    """
+    result = defaultdict(lambda: [0, 0, 0])
+    for pos, line in enumerate(lines):
+        for _, team, count in line:
+            result[team][pos] += count
+
+    return dict(result)
+
+
+def relay_medals_for_country(lines, country):
+    """
+    Štafetové medaile jednoho státu po závodnících.
+
+    Zemi tu netřeba dohledávat podle roku - competitor_relay.team ji drží
+    přímo, takže Garde přispěje Slovensku štafetami do 2012 a Francii těmi
+    od 2014 úplně sama od sebe.
+
+    :param lines: trojice seznamů [(competitor_id, team, count), ...]
+                  pro zlato, stříbro a bronz
+    :param country: kód země
+    :return {competitor_id: [zlato, stříbro, bronz]}
+    """
+    result = {}
+    for pos, line in enumerate(lines):
+        for com_id, team, count in line:
+            if team != country:
+                continue
+
+            result.setdefault(com_id, [0, 0, 0])[pos] += count
+
+    return {com_id: medals for com_id, medals in result.items() if any(medals)}
+
+
+def filter_medal_table(converted, ranking, competitors, country=None, by_country=None):
     """
     Podmnožina medailové tabulky pro jednu zemi.
 
@@ -699,6 +878,9 @@ def filter_medal_table(converted, ranking, competitors, country=None):
     :param ranking: [(globální_pořadí, competitor_id), ...] nad celým polem
     :param competitors: registr závodníků kvůli národnosti
     :param country: kód země, None nechá tabulku beze změny
+    :param by_country: hotové počty za tu zemi z medals_for_country - použije
+                       se místo dnešní národnosti, takže závodník, který zemi
+                       změnil, přispěje jen medailemi z příslušné doby
     :return: (filtrovaný dict, [(lokální_pořadí, globální_pořadí, competitor_id), ...])
 
     Bez filtru je lokální pořadí rovno globálnímu - šablona tak má pořád
@@ -707,20 +889,28 @@ def filter_medal_table(converted, ranking, competitors, country=None):
     if country is None:
         return converted, [(rank, rank, com_id) for rank, com_id in ranking]
 
-    filtered = {
-        com_id: medals
-        for com_id, medals in converted.items()
-        if com_id in competitors and competitors[com_id]["nationality"] == country
-    }
+    if by_country is not None:
+        filtered = dict(by_country)
+    else:
+        filtered = {
+            com_id: medals
+            for com_id, medals in converted.items()
+            if com_id in competitors and competitors[com_id]["nationality"] == country
+        }
+
+    # Globální pořadí se drží u závodníka, ať je řádek kdekoliv.
+    global_ranks = {com_id: rank for rank, com_id in ranking}
+
+    # Řadit se musí podle počtů za tu zemi, ne podle globálního pořadí:
+    # kdo zemi změnil, má v národní tabulce jen část medailí a v celkovém
+    # žebříčku by seděl jinde, než kam v ní patří.
+    order = [com_id for _, com_id in sort_medal_table(filtered)]
 
     filtered_ranking = []
     local = -1
     skip = 1
     prev = None
-    for global_rank, com_id in ranking:
-        if com_id not in filtered:
-            continue
-
+    for com_id in order:
         # Stejný počet medailí = stejné místo i v národní tabulce.
         current = filtered[com_id]
         if current == prev:
@@ -729,7 +919,7 @@ def filter_medal_table(converted, ranking, competitors, country=None):
             local += skip
             skip = 1
 
-        filtered_ranking.append((local, global_rank, com_id))
+        filtered_ranking.append((local, global_ranks.get(com_id, 0), com_id))
         prev = current
 
     return filtered, filtered_ranking

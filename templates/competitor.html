@@ -10,6 +10,15 @@
             <div class="card-body">
                 <h3>Team {{ competitor['nationality'] }}
                 <img src="{{ url_for('static', filename='css/blank.gif') }}" class="flag flag-{{ flags[competitor['nationality']].lower() }}" alt="{{ competitor['nationality'] }}" /></h3>
+                {# Kdo změnil zemi, má u profilu i tu původní - jinak by
+                   vlajka u starých výsledků vypadala jako chyba. #}
+                {% for country, valid_from, valid_to in competitor.get('nat_history', []) if country != competitor['nationality'] %}
+                <p class="text-muted">
+                    Represented {{ country }}
+                    <img src="{{ url_for('static', filename='css/blank.gif') }}" class="flag flag-{{ flags[country].lower() }}" alt="{{ country }}" />
+                    {{ valid_from }}{% if valid_to and valid_to != valid_from %}&ndash;{{ valid_to }}{% elif not valid_to %}&ndash;present{% endif %}
+                </p>
+                {% endfor %}
                 <p>Born {{ birth }}</p>
                 <p><a href="https://eventor.orienteering.org/Athletes/Details/{{ competitor['competitor_id'] }}">IOF Eventor profile</a></p>        
             </div>

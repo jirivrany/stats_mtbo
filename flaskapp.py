@@ -67,6 +67,9 @@ WCUP_COUNTED = {
 }
 
 
+app.add_template_filter(tools.format_place, "place")
+
+
 @app.context_processor
 def inject_events():
     """
@@ -78,6 +81,9 @@ def inject_events():
         "ELITE": tools.ELITE,
         "JUNIOR_CODES": tools.non_elite_codes(),
         "CAREER_PATHS": tools.CAREER_PATHS,
+        # Vlajka u výsledku musí ukazovat zemi, za kterou se ten závod jel,
+        # ne dnešní registraci - viz tools.nationality_in.
+        "nationality_in": tools.nationality_in,
     }
 
 
@@ -562,20 +568,54 @@ def medals_table(event="WMTBOC", country=None):
 
     # Pruh vlajek nad tabulkou - jen země, které mají aspoň jednu medaili,
     # s celkovým počtem, takže slouží i jako rychlé srovnání národů.
-    all_countries = tools.medal_countries(together, COMPETITORS)
-    country_totals = tools.aggregate_medals_by_country(together, COMPETITORS)
+    # Počítá se podle doby, kdy medaile padla, ať sedí s tabulkami pod ním.
+    indiv_year_lines = [
+        model.get_place_count_by_year(place, event.upper()) for place in range(1, 4)
+    ]
+    indiv_totals = tools.aggregate_medals_by_country_and_year(
+        tools.merge_medal_lines_by_year(*indiv_year_lines), COMPETITORS
+    )
+    # Štafety po závodnících, ne po týmech - tabulky pod pruhem počítají
+    # jednotlivce, takže součet u vlajky musí sedět se součtem řádků.
+    relay_team_lines_all = [
+        model.get_relay_place_count_by_team(place, event.upper()) for place in range(1, 4)
+    ]
+    relay_totals = tools.aggregate_relay_medals_by_team(relay_team_lines_all)
+    country_totals = tools.merge_medal_dicts(indiv_totals, relay_totals)
+    all_countries = sorted(country_totals)
 
     if country is not None:
         country = country.upper()
         if country not in all_countries:
             flask.abort(404)
 
-    converted, ranking = tools.filter_medal_table(converted, ranking, COMPETITORS, country)
+    # Při filtru na zemi se počty staví znovu podle doby, kdy medaile padla -
+    # kdo zemi změnil, patří do obou tabulek, ale pokaždé jen s částí medailí.
+    # Individuál potřebuje rok, štafety mají zemi přímo u výsledku.
+    indiv_by_country = relay_by_country = together_by_country = None
+    if country is not None:
+        indiv_lines = [
+            model.get_place_count_by_year(place, event.upper()) for place in range(1, 4)
+        ]
+        indiv_by_country = tools.medals_for_country(
+            tools.merge_medal_lines_by_year(*indiv_lines), COMPETITORS, country
+        )
+
+        relay_team_lines = [
+            model.get_relay_place_count_by_team(place, event.upper()) for place in range(1, 4)
+        ]
+        relay_by_country = tools.relay_medals_for_country(relay_team_lines, country)
+
+        together_by_country = tools.merge_medal_dicts(indiv_by_country, relay_by_country)
+
+    converted, ranking = tools.filter_medal_table(
+        converted, ranking, COMPETITORS, country, indiv_by_country
+    )
     converted_relay, ranking_relay = tools.filter_medal_table(
-        converted_relay, ranking_relay, COMPETITORS, country
+        converted_relay, ranking_relay, COMPETITORS, country, relay_by_country
     )
     together, ranking_together = tools.filter_medal_table(
-        together, ranking_together, COMPETITORS, country
+        together, ranking_together, COMPETITORS, country, together_by_country
     )
 
     disclaimer = ""
@@ -637,8 +677,16 @@ def team_medals_table(event="WMTBOC"):
     countries = {COMPETITORS[com_id]["nationality"] for com_id in converted.keys()}
     rel_countries = {com_id for com_id in converted_relay_by_country.keys()}
 
-    # converted grouped by country
-    converted_by_country = tools.aggregate_medals_by_country(converted, COMPETITORS)
+    # Individuální medaile po zemích se musí počítat s rokem - kdo přestoupil,
+    # má starší výsledky pod jinou vlajkou. Štafety to řeší samy, tam zemi drží
+    # competitor_relay.team.
+    medal_lines_by_year = [
+        model.get_place_count_by_year(place, event.upper()) for place in range(1, 4)
+    ]
+    converted_by_year = tools.merge_medal_lines_by_year(*medal_lines_by_year)
+    converted_by_country = tools.aggregate_medals_by_country_and_year(
+        converted_by_year, COMPETITORS
+    )
 
     ranking_by_country = tools.sort_medal_table(converted_by_country)
     ranking_relay_by_country = tools.sort_medal_table(converted_relay_by_country)
