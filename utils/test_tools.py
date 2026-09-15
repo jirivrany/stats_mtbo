@@ -779,6 +779,38 @@ def test_nationality_in_handles_year_as_string_and_junk():
     assert tools.nationality_in(GARDE, "nesmysl") == "FRA"
 
 
+# Ruská federace 2021 - kvůli dopingu start pod vlajkou IOF jako neutrálové.
+# Foliforov má kariéru přes celý ten zlom, Shvedov začal až v neutrálním roce.
+FOLIFOROV = {"nationality": "RUS", "nat_history": [("RUS", 2005, 2020), ("NEU", 2021, 2021)]}
+SHVEDOV = {"nationality": "RUS", "nat_history": [("NEU", 2021, 2021)]}
+
+
+def test_nationality_in_neutral_year_is_only_2021():
+    """
+    Neutrální je opravdu jen ten jeden rok - medaile z dřívějška
+    zůstávají Rusku, jinak by se přepsala celá kariéra.
+    """
+    assert tools.nationality_in(FOLIFOROV, 2005) == "RUS"
+    assert tools.nationality_in(FOLIFOROV, 2020) == "RUS"
+    assert tools.nationality_in(FOLIFOROV, 2021) == "NEU"
+
+
+def test_nationality_in_neutral_only_career():
+    """
+    Kdo poprvé startoval až 2021, za Rusko nezávodil nikdy - dnešní
+    registrace v Eventoru (RUS) se na výsledky propsat nesmí.
+    """
+    assert tools.nationality_in(SHVEDOV, 2021) == "NEU"
+
+
+def test_neutral_code_has_a_flag():
+    """
+    Šablony sahají na IOC_INDEX[kód] bez ošetření, takže chybějící NEU
+    by shodilo každou stránku s výsledkem z roku 2021.
+    """
+    assert "NEU" in tools.IOC_INDEX
+
+
 SWITCHER = {
     270: {"nationality": "FRA", "nat_history": [("SVK", 2005, 2012), ("FRA", 2014, None)]},
     99: {"nationality": "CZE"},

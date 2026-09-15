@@ -210,6 +210,13 @@ IOC_INDEX = {
     "ARM": "AM",
     "NRU": "NR",
     "CUB": "CU",
+    # Není to stát, ale neutrální status - závodníci bez vlajky vlastní země.
+    # Ruská federace 2021 (doping) startovala pod vlajkou IOF. NEU je volný
+    # kód, žádná země ho nepoužívá. Mapuje se sám na sebe, protože vlajka
+    # není ve sprite flags.png, ale ve vlastním souboru - viz .flag-neu
+    # ve flags.css. Šablony sahají na IOC_INDEX[kód] bez ošetření, takže
+    # tenhle řádek je to jediné, co je drží nad vodou.
+    "NEU": "NEU",
 }
 
 # Věkové kategorie. Youth se zavede, až budou data - registr s ním počítá,

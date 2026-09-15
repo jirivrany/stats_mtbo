@@ -4,6 +4,20 @@
 	background:url(flags.png) no-repeat
 }
 
+/* Neutrální status - závodníci, kteří nestartovali pod vlajkou vlastní země.
+   Ruská federace 2021: doping, start pod vlajkou IOF (viz competitor_nationality).
+
+   Sprite flags.png je zaplněný přesně do posledního políčka (240 slotů,
+   zw je to úplně poslední), takže se sem nový stát nevejde. Vlastní obrázek
+   je proto mimo sprite - přebíjí se i background-position, aby se nepropsal
+   posun z .flag-* pravidla. Zdroj je data/IOF_logo.jpg, oříznutý na červenou
+   vlnu s "I", protože celý nápis je na 25x15 px nečitelný. */
+.flag.flag-neu {
+	background-image: url(flag-neu.png);
+	background-position: 0 0;
+	background-size: 25px 15px
+}
+
 .flag.flag-ad {background-position: -25px 0}
 .flag.flag-ae {background-position: -50px 0}
 .flag.flag-af {background-position: -75px 0}

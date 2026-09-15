@@ -14,9 +14,12 @@
                    vlajka u starých výsledků vypadala jako chyba. #}
                 {% for country, valid_from, valid_to in competitor.get('nat_history', []) if country != competitor['nationality'] %}
                 <p class="text-muted">
-                    Represented {{ country }}
+                    {# NEU není země, ale neutrální status - samotná zkratka
+                       nikomu nic neřekne, tak se u ní říká i důvod. #}
+                    {% if country == 'NEU' %}Competed as a neutral athlete{% else %}Represented {{ country }}{% endif %}
                     <img src="{{ url_for('static', filename='css/blank.gif') }}" class="flag flag-{{ flags[country].lower() }}" alt="{{ country }}" />
                     {{ valid_from }}{% if valid_to and valid_to != valid_from %}&ndash;{{ valid_to }}{% elif not valid_to %}&ndash;present{% endif %}
+                    {% if country == 'NEU' %}<small>(under the IOF flag)</small>{% endif %}
                 </p>
                 {% endfor %}
                 <p>Born {{ birth }}</p>
