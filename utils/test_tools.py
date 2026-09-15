@@ -411,12 +411,20 @@ def test_build_race_history_skips_unknown_competitor():
 WORLD = tools.CAREER_PATHS["world"]["groups"]
 FULL = tools.CAREER_PATHS["full"]["groups"]
 
+# Datum narození je tu proto, že se podle věku řadí. Ročníky jsou
+# nastavené tak, aby medaile v testech vycházely na rozumný věk
+# (junior 16-20, elita 19+).
 RIDERS = {
-    1: {"first": "Krystof", "last": "Bogar", "nationality": "CZE", "gender": "M"},
-    2: {"first": "Susanna", "last": "Laurila", "nationality": "FIN", "gender": "F"},
-    3: {"first": "Jen", "last": "Junior", "nationality": "SWE", "gender": "F"},
-    4: {"first": "Jen", "last": "Elita", "nationality": "NOR", "gender": "M"},
-    5: {"first": "Kaarina", "last": "Nurminen", "nationality": "FIN", "gender": "F"},
+    1: {"first": "Krystof", "last": "Bogar", "nationality": "CZE", "gender": "M",
+        "born": "1994-01-01"},
+    2: {"first": "Susanna", "last": "Laurila", "nationality": "FIN", "gender": "F",
+        "born": "1991-01-01"},
+    3: {"first": "Jen", "last": "Junior", "nationality": "SWE", "gender": "F",
+        "born": "1993-01-01"},
+    4: {"first": "Jen", "last": "Elita", "nationality": "NOR", "gender": "M",
+        "born": "1993-01-01"},
+    5: {"first": "Kaarina", "last": "Nurminen", "nationality": "FIN", "gender": "F",
+        "born": "2002-01-01"},
 }
 
 
@@ -466,7 +474,7 @@ def test_build_progression_first_medal_is_oldest():
 
     first = tools.build_progression(medals, RIDERS, WORLD)[0]["stages"]["Junior"]["first"]
 
-    assert first == (2011, 11, "sprint", 1)
+    assert first == (2011, 11, "sprint", 1, "JWMTBOC")
 
 
 def test_build_progression_place_filter_makes_champions():
@@ -487,43 +495,78 @@ def test_build_progression_place_filter_makes_champions():
     assert [row["competitor_id"] for row in champions] == [1]
 
 
-def test_build_progression_sorted_by_gap_not_by_year():
+def test_build_progression_sorted_by_age_not_by_year():
     """
-    Nejrychlejší přechod první.
+    Nejmladší elitní medailista první.
 
     Řazení podle roku první elitní medaile by zvýhodňovalo starší jezdce -
     nahoru by se dostal ten, kdo závodil dřív, ne ten, kdo to zvládl
-    nejrychleji. Tady má jezdec 2 starší medaile, ale delší rozestup,
-    takže musí být až druhý.
+    nejmladší.
     """
     medals = [
         (1, "JWMTBOC", 2011, 10, "long", 1),
-        (1, "WMTBOC", 2013, 20, "sprint", 1),   # gap 2, elita 2013
-        (2, "JWMTBOC", 2005, 12, "sprint", 1),
-        (2, "WMTBOC", 2012, 22, "middle", 1),   # gap 7, elita 2012
+        (1, "WMTBOC", 2013, 20, "sprint", 1),   # Bogar *1994 -> elita v 19
+        (2, "JWMTBOC", 2009, 12, "sprint", 1),
+        (2, "WMTBOC", 2012, 22, "middle", 1),   # Laurila *1991 -> elita v 21
     ]
 
     rows = tools.build_progression(medals, RIDERS, WORLD)
 
     assert [row["competitor_id"] for row in rows] == [1, 2]
-    assert [row["gap"] for row in rows] == [2, 7]
+    assert [row["elite_age"] for row in rows] == [19, 21]
 
 
-def test_build_progression_same_gap_orders_by_year():
+def test_build_progression_age_beats_short_gap():
     """
-    při shodném rozestupu jde první ten starší - pořadí musí být úplné
+    Klíčový případ, kvůli kterému se od rozestupu odešlo.
+
+    Kdo vezme juniorskou medaili až ve 20, tedy v nejsilnějším ročníku
+    kategorie, a elitní ve 22, má rozestup jen 2 roky. Kdo prorazí v 17
+    a pak čeká, než ho federace pustí do elity, má rozestup 5 let - ale
+    elitní medaili má ve stejném věku. Kratší rozestup tady nesmí vyhrát.
     """
     medals = [
-        (1, "JWMTBOC", 2011, 10, "long", 1),
-        (1, "WMTBOC", 2013, 20, "sprint", 1),
-        (2, "JWMTBOC", 2009, 12, "sprint", 1),
-        (2, "WMTBOC", 2011, 22, "middle", 1),
+        (2, "JWMTBOC", 2011, 10, "long", 1),    # Laurila *1991 -> junior ve 20
+        (2, "WMTBOC", 2013, 20, "sprint", 1),   # elita ve 22, rozestup 2
+        (1, "JWMTBOC", 2011, 12, "sprint", 1),  # Bogar *1994 -> junior v 17
+        (1, "WMTBOC", 2016, 22, "middle", 1),   # elita ve 22, rozestup 5
     ]
 
     rows = tools.build_progression(medals, RIDERS, WORLD)
 
-    assert [row["competitor_id"] for row in rows] == [2, 1]
-    assert [row["gap"] for row in rows] == [2, 2]
+    assert [row["competitor_id"] for row in rows] == [1, 2]
+    assert [row["gap"] for row in rows] == [5, 2]
+    assert [row["first_age"] for row in rows] == [17, 20]
+
+
+def test_build_progression_missing_birth_goes_last():
+    """
+    bez data narození se věk spočítat nedá - řádek ale z tabulky
+    vypadnout nesmí, jen se propadne na konec
+    """
+    riders = dict(RIDERS)
+    riders[3] = {"first": "Jen", "last": "Junior", "nationality": "SWE", "gender": "F"}
+
+    medals = [
+        (3, "JWMTBOC", 2009, 10, "long", 1),
+        (3, "WMTBOC", 2011, 20, "sprint", 1),
+        (1, "JWMTBOC", 2011, 12, "sprint", 1),
+        (1, "WMTBOC", 2013, 22, "middle", 1),
+    ]
+
+    rows = tools.build_progression(medals, riders, WORLD)
+
+    assert [row["competitor_id"] for row in rows] == [1, 3]
+    assert rows[1]["elite_age"] is None
+
+
+def test_birth_year_handles_missing_and_junk():
+    assert tools.birth_year({"born": "1994-05-06"}) == 1994
+    assert tools.birth_year({"born": ""}) is None
+    assert tools.birth_year({"born": None}) is None
+    assert tools.birth_year({}) is None
+    assert tools.birth_year(None) is None
+    assert tools.birth_year({"born": "necoSpatne"}) is None
 
 
 def test_build_progression_three_stages():
@@ -544,6 +587,41 @@ def test_build_progression_three_stages():
     assert [row["competitor_id"] for row in rows] == [5]
     assert rows[0]["gap"] == 6
     assert set(rows[0]["stages"]) == {"Youth", "Junior", "Elite"}
+
+
+def test_build_progression_merged_stage_takes_either_event():
+    """
+    v celém oblouku stačí na juniorech i elitě medaile ze světa NEBO
+    z Evropy - jinak by vypadl každý, kdo vyjel z Evropy ven
+    """
+    medals = [
+        (5, "EYMTBOC", 2016, 30, "sprint", 1),
+        (5, "JWMTBOC", 2018, 31, "long", 1),  # světová, ne evropská
+        (5, "WMTBOC", 2024, 32, "mass-start", 1),
+    ]
+
+    rows = tools.build_progression(medals, RIDERS, FULL)
+
+    assert [row["competitor_id"] for row in rows] == [5]
+    assert rows[0]["gap"] == 8
+
+
+def test_build_progression_merged_stage_sums_both_events():
+    """
+    sloučená etapa sčítá medaile z obou soutěží a průlom je ta nejstarší
+    z nich - u sloučené etapy si `first` veze i kód, odkud medaile je
+    """
+    medals = [
+        (5, "EYMTBOC", 2016, 30, "sprint", 2),
+        (5, "JWMTBOC", 2018, 31, "long", 1),
+        (5, "EJMTBOC", 2019, 32, "middle", 1),
+        (5, "EMTBOC", 2023, 33, "long", 3),
+    ]
+
+    junior = tools.build_progression(medals, RIDERS, FULL)[0]["stages"]["Junior"]
+
+    assert junior["medals"] == [2, 0, 0]
+    assert junior["first"] == (2018, 31, "long", 1, "JWMTBOC")
 
 
 def test_build_progression_ignores_other_events():

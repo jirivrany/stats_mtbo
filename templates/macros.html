@@ -14,6 +14,18 @@
 {% endmacro %}
 
 
+{# Jedna konkrétní medaile, ne počet - k jednomu výsledku. Ikonky
+   m1/m2/m3 jsou stejné jako v hlavičkách medailových tabulek, takže
+   kov se pozná bez legendy. #}
+{% macro medal_icon(place) %}
+{% set names = {1: 'gold', 2: 'silver', 3: 'bronze'} %}
+{% if place in names %}
+<img src="{{ url_for('static', filename='img/m%d.png'|format(place)) }}"
+     alt="{{ names[place] }}" title="{{ names[place] }}" />
+{% endif %}
+{% endmacro %}
+
+
 {# Trojice odznaků do jedné buňky (G-S-B). Nuly se vynechávají, pořadí
    kovů je pořád stejné, takže se to dá číst i bez nich. #}
 {% macro medal_set(gold, silver, bronze) %}

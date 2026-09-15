@@ -142,34 +142,11 @@
                                 </li>
                                 {% endfor %}
                                 <li><hr class="dropdown-divider"></li>
-                                <li><h6 class="dropdown-header">By age</h6></li>
-                                {# Věkové žebříčky dávají smysl jen u elity - v juniorech
-                                   je věk daný kategorií. #}
-                                {% for code, ev in EVENTS.items() if ev.kind == ELITE and code != 'WCUP' %}
-                                <li>
-                                    <a class="dropdown-item" href="/young_stars/{{ ev.slug }}/">Young Stars - champions {{ code }}</a>
-                                </li>
-                                {% endfor %}
-                                {% for code, ev in EVENTS.items() if ev.kind == ELITE and code != 'WCUP' %}
-                                <li>
-                                    <a class="dropdown-item" href="/great_masters/{{ ev.slug }}/">Great Masters - champions {{ code }}</a>
-                                </li>
-                                {% endfor %}
-                                {% for code, ev in EVENTS.items() if ev.kind == ELITE and code != 'WCUP' %}
-                                <li>
-                                    <a class="dropdown-item" href="/young_stars/{{ ev.slug }}/3/">Young Medalists {{ code }}</a>
-                                </li>
-                                {% endfor %}
-                                {% for code, ev in EVENTS.items() if ev.kind == ELITE and code != 'WCUP' %}
-                                <li>
-                                    <a class="dropdown-item" href="/great_masters/{{ ev.slug }}/3/">Masters Medalists {{ code }}</a>
-                                </li>
-                                {% endfor %}
-                                <li><hr class="dropdown-divider"></li>
                                 <li><h6 class="dropdown-header">Career progression</h6></li>
                                 {# Světová a evropská větev zvlášť - tituly se nemíchají.
-                                   Celý oblouk (youth) je jen evropský, mistrovství světa
-                                   pro M17/W17 neexistuje. #}
+                                   Celý oblouk začíná u mládeže, a ta je jen evropská
+                                   (mistrovství světa pro M17/W17 neexistuje), takže
+                                   na juniorech a elitě bere obě soutěže - viz CAREER_PATHS. #}
                                 <li>
                                     <a class="dropdown-item" href="/progression/world/1/">Junior &rarr; Elite champions (World)</a>
                                 </li>
@@ -183,8 +160,48 @@
                                     <a class="dropdown-item" href="/progression/europe/">Junior &rarr; Elite medalists (Europe)</a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="/progression/full/">Youth &rarr; Junior &rarr; Elite (Europe)</a>
+                                    <a class="dropdown-item" href="/progression/full/1/">Youth &rarr; Junior &rarr; Elite gold</a>
                                 </li>
+                                <li>
+                                    <a class="dropdown-item" href="/progression/full/">Youth &rarr; Junior &rarr; Elite medals</a>
+                                </li>
+                            </ul>
+                        </li>
+                        {# Věkové žebříčky mají vlastní menu - v Achievements jich bylo
+                           osm z dvaceti položek a rozdíl mezi "vyhrál mladý" a "vyhrál
+                           starý" se v tom seznamu ztrácel. Název je schválně stejný jako
+                           na stránkách (Young Stars / Great Masters), aby šlo poznat,
+                           kam odkaz vede, ještě před kliknutím. #}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="/young_stars/wmtboc/" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Stars &amp; Masters
+                            </a>
+                            <ul class="dropdown-menu">
+                                {# Věkové žebříčky dávají smysl jen u elity - v juniorech
+                                   je věk daný kategorií. #}
+                                <li><h6 class="dropdown-header">Young Stars &ndash; youngest to win</h6></li>
+                                {% for code, ev in EVENTS.items() if ev.kind == ELITE and code != 'WCUP' %}
+                                <li>
+                                    <a class="dropdown-item" href="/young_stars/{{ ev.slug }}/">Champions - {{ code }}</a>
+                                </li>
+                                {% endfor %}
+                                {% for code, ev in EVENTS.items() if ev.kind == ELITE and code != 'WCUP' %}
+                                <li>
+                                    <a class="dropdown-item" href="/young_stars/{{ ev.slug }}/3/">Medalists - {{ code }}</a>
+                                </li>
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Great Masters &ndash; oldest to win</h6></li>
+                                {% for code, ev in EVENTS.items() if ev.kind == ELITE and code != 'WCUP' %}
+                                <li>
+                                    <a class="dropdown-item" href="/great_masters/{{ ev.slug }}/">Champions - {{ code }}</a>
+                                </li>
+                                {% endfor %}
+                                {% for code, ev in EVENTS.items() if ev.kind == ELITE and code != 'WCUP' %}
+                                <li>
+                                    <a class="dropdown-item" href="/great_masters/{{ ev.slug }}/3/">Medalists - {{ code }}</a>
+                                </li>
+                                {% endfor %}
                             </ul>
                         </li>
                         <li class="nav-item dropdown">

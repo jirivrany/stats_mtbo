@@ -1878,16 +1878,25 @@ def build_race_history(races, individual_winners, relay_winners, competitors):
 
 # --- Progression: z juniorů mezi elitu ---
 
-# Větve kariéry. Každá je uzavřená sama v sobě - světové a evropské
-# tituly se nemíchají, protože "juniorský mistr světa se stal mistrem
-# Evropy" je jiný příběh než postup uvnitř téže soutěže.
+# Větve kariéry. Dvoustupňové jsou uzavřené samy v sobě - světové
+# a evropské tituly se v nich nemíchají, protože "juniorský mistr světa
+# se stal mistrem Evropy" je jiný příběh než postup uvnitř téže soutěže.
 #
-# Youth má jen evropskou variantu, mistrovství světa pro M17/W17
-# neexistuje. WCUP tu není vůbec - juniorský ani mládežnický Světový
-# pohár se nejede, takže by nebylo co s čím párovat.
+# Celý oblouk (full) je výjimka a bere obě soutěže dohromady. Nejde
+# o nedůslednost: mistrovství světa pro M17/W17 neexistuje, takže oblouk
+# musí začít v Evropě, ať se chce nebo ne. Kdyby se pak na juniorech
+# a elitě trvalo taky na Evropě, tabulka by neukazovala "celou cestu",
+# ale "kdo za celou kariéru nevyjel z Evropy" - a vypadl by z ní třeba
+# Hasek (EYMTBOC 2016 a 2017, JWMTBOC 2018 a 2019, WMTBOC 2024), což je
+# přesně ten postup, kvůli kterému stránka vznikla.
+#
+# WCUP tu není vůbec - juniorský ani mládežnický Světový pohár se nejede,
+# takže by nebylo co s čím párovat. U23 taky ne: je to přečíslovaná
+# elitní výsledkovka (viz materializace), ne soutěž, ze které se
+# "postupuje" - a se čtvrtou etapou zbydou dva lidi.
 #
 # Kódy jsou vyjmenované schválně, ne odvozené z event_codes(kind) -
-# ten by slil JWMTBOC s EJMTBOC do jedné skupiny.
+# ten by slil JWMTBOC s EJMTBOC do jedné skupiny i tam, kde to vadí.
 CAREER_PATHS = {
     "world": {
         "name": "World",
@@ -1898,11 +1907,11 @@ CAREER_PATHS = {
         "groups": (("Junior", ("EJMTBOC",)), ("Elite", ("EMTBOC",))),
     },
     "full": {
-        "name": "European",
+        "name": "World and European",
         "groups": (
             ("Youth", ("EYMTBOC",)),
-            ("Junior", ("EJMTBOC",)),
-            ("Elite", ("EMTBOC",)),
+            ("Junior", ("EJMTBOC", "JWMTBOC")),
+            ("Elite", ("EMTBOC", "WMTBOC")),
         ),
     },
 }
@@ -1921,6 +1930,23 @@ def path_events(groups):
     return [code for _, codes in groups for code in codes]
 
 
+def birth_year(person):
+    """
+    Rok narození ze záznamu závodníka, nebo None.
+
+    `born` je řetězec "RRRR-MM-DD", ale u části lidí chybí úplně nebo
+    je prázdný - proto se nesmí spolehnout na formát. Vrací None,
+    ať se volající sám rozhodne, co s neznámým věkem.
+    """
+    if not person:
+        return None
+
+    try:
+        return int(str(person.get("born") or "").split("-")[0])
+    except (ValueError, TypeError):
+        return None
+
+
 def build_progression(medals, competitors, groups, place=3):
     """
     Závodníci, kteří získali medaili v KAŽDÉ etapě kariéry.
@@ -1934,6 +1960,11 @@ def build_progression(medals, competitors, groups, place=3):
     :param place: nejhorší započítané umístění; 1 dělá variantu "champions"
     :return: [{competitor_id, name, nationality, stages, gap}] seřazené
              podle roku první medaile v poslední etapě
+
+    Etapa může mít víc kódů (celý oblouk bere juniorské i elitní medaile
+    ze světa i z Evropy dohromady). Medaile se pak sčítají přes všechny
+    kódy etapy a průlom je ta nejstarší z nich - proto si `first` veze
+    i kód události, jinak by ve sloučené etapě nešlo poznat, odkud je.
     """
     # kód události -> jméno etapy
     stage_of = {code: stage for stage, codes in groups for code in codes}
@@ -1950,7 +1981,7 @@ def build_progression(medals, competitors, groups, place=3):
 
         # první medaile = nejstarší; při shodě roku lepší umístění
         current = entry["first"]
-        candidate = (year, race_id, distance, result)
+        candidate = (year, race_id, distance, result, event)
         if current is None or (year, result) < (current[0], current[3]):
             entry["first"] = candidate
 
@@ -1967,6 +1998,15 @@ def build_progression(medals, competitors, groups, place=3):
 
         first_year = stages[wanted[0]]["first"][0]
         last_year = stages[wanted[-1]]["first"][0]
+
+        # Věk u každého průlomu. Bez data narození zůstává None - řádek
+        # se nezahodí, jen se v řazení propadne na konec.
+        born = birth_year(person)
+        for stage in wanted:
+            stages[stage]["age"] = (
+                stages[stage]["first"][0] - born if born else None
+            )
+
         progression.append(
             {
                 "competitor_id": competitor_id,
@@ -1974,18 +2014,38 @@ def build_progression(medals, competitors, groups, place=3):
                 "nationality": person["nationality"],
                 "stages": stages,
                 "gap": last_year - first_year,
+                "elite_age": stages[wanted[-1]]["age"],
+                "first_age": stages[wanted[0]]["age"],
             }
         )
 
-    # Řadí se podle počtu let, za které to jezdec zvládl - nejrychlejší
-    # přechod první. Původně to bylo podle roku první elitní medaile, jenže
-    # to nebyl žebříček, ale časová osa: nahoru se dostal ten, kdo závodil
-    # dřív, ne ten, komu se to povedlo nejlíp. Gap je srovnatelný napříč
-    # generacemi. Při shodě rozhoduje starší přechod.
+    # Řadí se podle VĚKU u poslední medaile, při shodě podle věku u té
+    # první. Nejmladší nahoře.
+    #
+    # Dvě předchozí varianty a proč nestačily:
+    #
+    # 1. Rok první elitní medaile - to nebyl žebříček, ale časová osa:
+    #    nahoru se dostal ten, kdo závodil dřív.
+    # 2. Gap (roky mezi první a poslední medailí) - ten odměňuje pozdní
+    #    juniorskou medaili. Kdo ji vezme ve dvaceti, tedy v nejsilnějším
+    #    ročníku kategorie, má krátký gap; kdo prorazí v sedmnácti a pak
+    #    čeká, než ho federace pustí do elity, má gap dlouhý, i když je
+    #    to větší výkon. V datech to sedí: čtyři jezdci s juniorskou
+    #    medailí ve 20 a elitní ve 23 měli gap 3 a byli nahoře, zatímco
+    #    Foliforova (juniorka v 15) se s gapem 6 propadla dolů.
+    #
+    # Součet věků (17+21) dělá totéž, ale mění je 1:1 - ranější juniorská
+    # medaile pak vykoupí pozdější elitní, a to nejsou stejně těžké věci.
+    # Proto rozhoduje věk u elitní medaile a juniorský je až druhé
+    # kritérium.
+    #
+    # Kdo nemá datum narození, jde na konec (None se nedá porovnat) -
+    # ale z tabulky nevypadne.
     progression.sort(
         key=lambda row: (
-            row["gap"],
-            row["stages"][wanted[-1]]["first"][0],
+            row["elite_age"] is None,
+            row["elite_age"] or 0,
+            row["first_age"] or 0,
             row["name"],
         )
     )

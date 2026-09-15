@@ -1,5 +1,5 @@
 {% extends "default.html" %}
-{% from "macros.html" import medal_badge %}
+{% from "macros.html" import medal_badge, medal_icon %}
 {% block content %}
 <h1>{{ title }}</h1>
 
@@ -8,8 +8,20 @@
        vypadá chybějící jezdec jako chyba dat. #}
     Only <strong>individual</strong> medals count &mdash; a relay medal is
     a team achievement, and the step up from juniors is a personal one.
+    {# Dvoustupňové větve drží jednu soutěž, celý oblouk ne - a je potřeba
+       říct proč, jinak to vypadá jako nedůslednost. #}
+    {% if meta['groups']|length > 2 %}
+    The arc has to start in Europe &mdash; there is no world championship for
+    the youth category &mdash; so at the junior and elite stage
+    {% if place == 1 %}a title{% else %}a medal{% endif %} from
+    <strong>either</strong> the World or the European championship counts.
+    The Junior and Elite {{ 'title' if place == 1 else 'medal' }} counts are
+    therefore <strong>combined</strong> from both championships; the code next
+    to each breakthrough says which one the rider broke through at.
+    {% else %}
     World and European titles are tracked separately, so each table follows
     one competition.
+    {% endif %}
     {% if 'EYMTBOC' in meta['groups'][0][1] %}
     The European Youth championship has only been held since 2016, so riders
     from earlier generations cannot appear here.
@@ -19,6 +31,22 @@
     {% endif %}
 </p>
 
+{# Zlatá a medailová varianta jsou dva různé žebříčky, ne jedna tabulka
+   s filtrem: jinému jezdci vyjde jiný průlom, a tedy i jiný počet let.
+   Hasek má zlatý oblouk 2016->2018->2024 (8 let), medailový
+   2016->2017->2022 (6 let). Bez přepínače to vypadá, že stránka jen
+   zapomněla, že někdo má samé zlato. #}
+<ul class="nav nav-pills mb-3">
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if place == 1 }}"
+           href="{{ url_for('progression', path=path, place=1) }}">Gold at every stage</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if place != 1 }}"
+           href="{{ url_for('progression', path=path) }}">Any medal counts</a>
+    </li>
+</ul>
+
 {% if table_data %}
 <p>
     {{ table_data|length }}
@@ -26,8 +54,21 @@
     {%- else %} rider{{ 's' if table_data|length != 1 }} medalled
     {%- endif %}
     at every stage: {{ stages|join(' &rarr; ')|safe }}.
-    Sorted by how long the step up took, fastest first &mdash; that way the
-    ranking compares riders from different eras.
+    {# Proč věk a ne roky mezi medailemi - viz komentář u řazení
+       v build_progression(). #}
+    Sorted by <strong>age at the {{ stages[-1]|lower }} breakthrough</strong>,
+    youngest first; an earlier {{ stages[0]|lower }} medal breaks a tie.
+    Ranking by the years in between would reward a rider who took the
+    {{ stages[0]|lower }} medal in their last year in the category, when
+    they are the oldest in it.
+    {% if place != 1 %}
+    {# Řadí se podle věku, ne podle lesku medaile - bronz v 19 je výš
+       než zlato ve 23, a to je potřeba říct dopředu. #}
+    Medal colour does not affect the order, so a rider who took bronze at
+    every stage can outrank one with three golds. For the strictest version
+    see <a href="{{ url_for('progression', path=path, place=1) }}">gold
+    at every stage</a>.
+    {% endif %}
 </p>
 
 <div class="container-fluid">
@@ -38,9 +79,9 @@
                 <th>Competitor</th>
                 {% for stage in stages %}
                 <th>{{ stage }} breakthrough</th>
+                <th title="Age at that breakthrough">Age</th>
                 <th>{{ stage }} {{ 'titles' if place == 1 else 'medals' }}</th>
                 {% endfor %}
-                {# Podle tohohle sloupce se řadí - proto je zvýrazněný #}
                 <th title="Years from the first to the last breakthrough">Years taken</th>
             </tr>
         </thead>
@@ -56,11 +97,34 @@
                 </td>
                 {% for stage in stages %}
                 {% set entry = row['stages'][stage] %}
-                {% set year, race_id, distance, result = entry['first'] %}
+                {% set year, race_id, distance, result, event = entry['first'] %}
                 <td>
+                    {# Kov průlomu, ne souhrn - ten je ve vedlejším sloupci.
+                       Bez něj nejde poznat, čím přesně závodník prorazil:
+                       u Ruska Saarela sedí u průlomu 2012 souhrn 1-1-3,
+                       ale ta první medaile byl bronz, a z pořadí odznaků
+                       to vypadá na zlato. Ve zlaté variantě je každý průlom
+                       zlatý, takže by ikonka jen opakovala nadpis. #}
+                    {% if place != 1 %}{{ medal_icon(result) }}{% endif %}
                     <a href="{{ url_for('race', race_id=race_id) }}">
                         {{ year }} {{ distance_names[distance] }}
                     </a>
+                    {# Kde etapa slučuje dvě soutěže, musí být vidět, ze které
+                       medaile je - jinak sloučený počet medailí nedává smysl. #}
+                    {% if meta['groups'][loop.index0][1]|length > 1 %}
+                    <small class="text-muted">{{ event }}</small>
+                    {% endif %}
+                </td>
+                {# Podle věku u poslední etapy se řadí, proto je zvýrazněný.
+                   Chybějící datum narození se pozná, ať to nevypadá na nulu. #}
+                <td class="text-center">
+                    {% if entry['age'] is none %}
+                    <span class="text-muted" title="Date of birth unknown">&ndash;</span>
+                    {% elif not loop.last %}
+                    {{ entry['age'] }}
+                    {% else %}
+                    <strong>{{ entry['age'] }}</strong>
+                    {% endif %}
                 </td>
                 <td>
                     {# zlato se ukazuje vždy - nula tu nese informaci
@@ -70,7 +134,7 @@
                     {{ medal_badge(entry['medals'][2], 'bronze', zero='hide') }}
                 </td>
                 {% endfor %}
-                <td><strong>{{ row['gap'] }}</strong></td>
+                <td class="text-center text-muted">{{ row['gap'] }}</td>
             </tr>
             {% endfor %}
         </tbody>
