@@ -15,8 +15,9 @@
                         <img src="{{ url_for('static', filename='css/blank.gif') }}"
                             class="flag flag-{{ flags[details[6]].lower() }}"
                             alt="{{ details[6] }}" />
-                        {% if details[4] in JUNIOR_CODES %}
-                        <span class="badge text-bg-info">Junior</span>
+                        {% set badge = category_badge(details[4]) %}
+                        {% if badge %}
+                        <span class="badge {{ badge.css }}">{{ badge.label }}</span>
                         {% endif %}
                     </a>
                 </li>
@@ -113,7 +114,9 @@
                         <ul class="list-unstyled mb-0">
                             <li><a href="/races/{{ ev.slug }}/">All races and champions</a></li>
                             {% if ev.needs_organizer %}
-                            <li><a href="/worldcup/">Year-by-year standings</a></li>
+                            {# Dvě různé tabulky - U23 se počítá nad jinými závody
+                               než elitní, viz wcup_u23. Rozhoduje registr, ne kód. #}
+                            <li><a href="{{ '/worldcup/u23/' if ev.scores_u23_wcup else '/worldcup/' }}">Year-by-year standings</a></li>
                             {% else %}
                             <li><a href="/events/{{ ev.slug }}/">Year-by-year summaries</a></li>
                             {% endif %}

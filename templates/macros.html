@@ -39,10 +39,13 @@
                         <tr>
                             <th><a href="{{ url_for('wcup', year=year) }}">{{year}}</a></th>
                             {% for comp_id, place in row %}
+                                {# Vlajka podle ročníku Poháru, ne podle dnešní
+                                   registrace - viz nationality_in. #}
+                                {% set nat = nationality_in(competitors[comp_id], year) %}
                                 <td>
                                     <img src="{{ url_for('static', filename='css/blank.gif') }}"
-                                    class="flag flag-{{ flags[competitors[comp_id]['nationality']].lower() }}"
-                                    alt="{{ competitors[comp_id]['nationality'] }}" />
+                                    class="flag flag-{{ flags[nat].lower() }}"
+                                    alt="{{ nat }}" />
                                     <a href="{{ url_for('competitor', competitor_id=comp_id) }}">
                                         {{ competitors[comp_id]['first'] }}
                                         {{ competitors[comp_id]['last'] }}
@@ -147,7 +150,11 @@
 {% endif %}
 {% endmacro %}
 
-{% macro event_summary_table(table_data, race_ids, competitors, flags) %}
+{# Shrnutí ročníku. Rok je potřeba kvůli vlajkám - musí ukazovat zemi,
+   za kterou se tehdy jelo, ne dnešní registraci (Emily Benham Kvale
+   vyhrála 2019 za GBR, dnes je vedená jako NOR). Detail závodu to dělá
+   stejně, takže bez roku si obě stránky odporovaly. #}
+{% macro event_summary_table(table_data, race_ids, competitors, flags, year) %}
     {% for race_type, results in table_data.items() %}
         {% set race_id = race_ids.get(race_type) %}
         <tr>
@@ -157,14 +164,15 @@
                 </a>
             </td>
             {% for competitor_id, place in results %}
+                {% set nat = nationality_in(competitors[competitor_id], year) %}
                 <td>
                 <a href="/competitor/{{ competitor_id }}/">
                     {{ competitors[competitor_id]["first"] }}
                     {{ competitors[competitor_id]["last"] }}</a>
                 <img src="{{ url_for('static', filename='css/blank.gif') }}"
-                    class="flag flag-{{ flags[competitors[competitor_id]['nationality']].lower() }}"
-                    alt="{{ competitors[competitor_id]['nationality'] }}" />
-                {{ competitors[competitor_id]["nationality"] }}
+                    class="flag flag-{{ flags[nat].lower() }}"
+                    alt="{{ nat }}" />
+                {{ nat }}
                 </td>
             {% endfor %}
         </tr>

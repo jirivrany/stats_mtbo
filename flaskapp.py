@@ -81,6 +81,7 @@ def inject_events():
         "ELITE": tools.ELITE,
         "JUNIOR_CODES": tools.non_elite_codes(),
         "CAREER_PATHS": tools.CAREER_PATHS,
+        "category_badge": tools.category_badge,
         # Vlajka u výsledku musí ukazovat zemi, za kterou se ten závod jel,
         # ne dnešní registraci - viz tools.nationality_in.
         "nationality_in": tools.nationality_in,
@@ -1033,7 +1034,6 @@ def event_summary(event: str = "WMTBOC", year: int = YEAR, organizer: str = ""):
     team_results = []
     for relay in data_relays:
         race_id, race_distance = relay
-        print(race_id, race_distance)
         team_men = []
         team_women = []
         team_mix = []
@@ -1056,7 +1056,16 @@ def event_summary(event: str = "WMTBOC", year: int = YEAR, organizer: str = ""):
             result_list = result_list[:9]
             team_mix, _ = tools.prepare_relay_output(result_list)
 
-        team_results.append({"men": team_men, "women": team_women, "mix": team_mix})
+        # race_id putuje do šablony kvůli odkazu na celé výsledky - ve shrnutí
+        # jsou jen medailové týmy, kdo skončil čtvrtý se dozví až tam.
+        team_results.append(
+            {
+                "race_id": race_id,
+                "men": team_men,
+                "women": team_women,
+                "mix": team_mix,
+            }
+        )
 
     race_ids = mrace_ids | wrace_ids
     venues = [item[1] for item in races_info]
@@ -1128,7 +1137,12 @@ def grand_slam(event="WMTBOC"):
 
     A Grand Slam winner is someone who won all distances that existed
     during any year they competed (career-based), with a minimum of 3 wins.
+
+    Světový pohár tu Grand Slam nemá - viz tools.grand_slam_codes().
     """
+    if not tools.has_grand_slam(event):
+        flask.abort(404)
+
     event_upper = event.upper()
     result_model = Results(mysql)
     races_model = Races(mysql)
@@ -1179,6 +1193,77 @@ def grand_slam(event="WMTBOC"):
         competitors=COMPETITORS,
         flags=tools.IOC_INDEX,
         medal_names=MEDAL_NAMES,
+    )
+
+
+@lru_cache()
+@app.route("/perfect_championship/<event>/")
+def perfect_championship(event="WMTBOC"):
+    """
+    Nejlepší jednotlivé šampionáty - kdo nasbíral nejvíc zlata v jednom
+    ročníku.
+
+    Grand Slam se dívá na celou kariéru, tohle na jeden ročník. Pořadí je
+    olympijské: rozhoduje zlato, při shodě stříbro, pak bronz.
+
+    Sloupce jsou tři jako v medailové tabulce - individuální závody,
+    štafety a součet. Štafetové zlato závisí na týmu, takže si čtenář
+    vybere, co ho zajímá, a nemusíme za něj rozhodovat.
+
+    Světový pohár tu není - viz tools.perfect_championship_codes().
+    """
+    if not tools.has_perfect_championship(event):
+        flask.abort(404)
+
+    meta = tools.get_event(event)
+    event_upper = event.upper()
+    model = Results(mysql)
+
+    # Medaile po (závodník, rok) - stejné dotazy jako medailová tabulka,
+    # jen se nesčítají přes roky.
+    indiv_lines = [model.get_place_count_by_year(place, event_upper) for place in range(1, 4)]
+    relay_lines = [
+        model.get_place_count_by_year(place, event_upper, "relay") for place in range(1, 4)
+    ]
+
+    individual = tools.merge_medal_lines_by_year(*indiv_lines)
+    relay = tools.merge_medal_lines_by_year(*relay_lines)
+    together = tools.merge_medal_dicts(individual, relay)
+
+    # Kolik závodů se ten který rok jelo - kontext k počtu zlat, každý
+    # sloupec má svého jmenovatele (individuál nepočítá štafetu). V roce
+    # 2026 povolila IOF na WMTBOC jen tři individuální závody, takže
+    # dokonalý ročník je tam menší číslo než jinde. Do pořadí to nevstupuje.
+    distances_by_year = Races(mysql).get_distances_by_year(event_upper)
+    races_by_year = tools.races_by_year_and_kind(distances_by_year)
+
+    # Každý sloupec se poměřuje se svým počtem závodů - kdo vyhrál všechno,
+    # co se ten rok jelo, jde při shodě medailí napřed.
+    table_content = {
+        "individual": tools.perfect_championship_table(
+            individual, COMPETITORS, races_by_year=races_by_year["individual"]
+        ),
+        "combined": tools.perfect_championship_table(
+            together, COMPETITORS, races_by_year=races_by_year["combined"]
+        ),
+    }
+
+    # Štafetový sloupec jen tam, kde se dá získat víc než jedno zlato -
+    # jinak by to byl žebříček jedniček. Viz max_relays_in_one_year.
+    if tools.max_relays_in_one_year(distances_by_year) > 1:
+        table_content["relay"] = tools.perfect_championship_table(
+            relay, COMPETITORS, races_by_year=races_by_year["relay"]
+        )
+
+    return flask.render_template(
+        "perfect_championship.html",
+        title=f"Perfect Championship - {meta['name']}",
+        event=event_upper,
+        table_content=table_content,
+        min_gold=tools.PERFECT_CHAMPIONSHIP_MIN_GOLD,
+        races_by_year=races_by_year,
+        competitors=COMPETITORS,
+        flags=tools.IOC_INDEX,
     )
 
 

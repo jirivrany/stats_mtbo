@@ -143,6 +143,96 @@ def test_is_junior():
     assert not tools.is_junior("nonsense")
 
 
+def test_category_badge():
+    """
+    Odznak se odvozuje z kind, ne z výčtu kódů - jinak by nová událost
+    na rozcestí zůstala bez odznaku a nikdo by si toho nevšiml.
+    """
+    assert tools.category_badge("EYMTBOC")["label"] == "Youth"
+    assert tools.category_badge("ejmtboc")["label"] == "Junior"
+    assert tools.category_badge("U23WCUP")["label"] == "U23"
+    assert tools.category_badge("nonsense") is None
+
+
+def test_elite_has_no_badge():
+    """
+    Elita je výchozí stav, ne výjimka - odznak by nesla většina řádků
+    a přestal by být vidět. Chybějící odznak tedy znamená elitu.
+    """
+    for code in tools.event_codes(tools.ELITE):
+        assert tools.category_badge(code) is None, code
+
+
+def test_every_non_elite_event_has_a_badge():
+    """
+    Každá neelitní událost musí mít odznak. Až přibude další kategorie,
+    tenhle test spadne dřív, než se na rozcestí objeví řádek bez odznaku.
+    """
+    for code in tools.event_codes():
+        if tools.get_event(code)["kind"] == tools.ELITE:
+            continue
+        assert tools.category_badge(code), code
+
+
+def test_world_cup_has_no_grand_slam():
+    """
+    Pohár Grand Slam nemá. Věcně to není cíl - program seriálu se mění
+    ročník od ročníku. Datově to navíc vycházelo špatně: do Poháru se
+    počítají i závody WMTBOC a EMTBOC, takže se vítězství z mistrovství
+    míchala do seriálu.
+    """
+    assert not tools.has_grand_slam("WCUP")
+    assert not tools.has_grand_slam("wcup")
+    assert not tools.has_grand_slam("U23WCUP")
+    assert "WCUP" not in tools.grand_slam_codes()
+    assert "U23WCUP" not in tools.grand_slam_codes()
+
+
+def test_championships_keep_grand_slam():
+    """mistrovství mají stálý program, takže tam Grand Slam zůstává"""
+    assert tools.has_grand_slam("WMTBOC")
+    assert tools.has_grand_slam("emtboc")
+    assert tools.has_grand_slam("JWMTBOC")
+    assert not tools.has_grand_slam("nonsense")
+
+
+def test_grand_slam_menu_is_world_championships_only():
+    """
+    V menu jsou jen světová mistrovství a EMTBOC. Evropské juniorské
+    a mládežnické se počítají a stránku mají, ale do menu nejdou -
+    šest položek Grand Slamu by v něm to podstatné utopilo.
+    """
+    assert tools.grand_slam_menu_codes() == ["WMTBOC", "EMTBOC", "JWMTBOC"]
+    assert "EJMTBOC" not in tools.grand_slam_menu_codes()
+    assert "EYMTBOC" not in tools.grand_slam_menu_codes()
+
+
+def test_grand_slam_menu_only_links_to_pages_that_exist():
+    """
+    Do menu nesmí přijít soutěž bez Grand Slamu - odkaz by vedl na 404.
+    Menu je podmnožina toho, co se počítá.
+    """
+    for code in tools.grand_slam_menu_codes():
+        assert tools.has_grand_slam(code), code
+
+    assert set(tools.grand_slam_menu_codes()) <= set(tools.grand_slam_codes())
+
+
+def test_grand_slam_never_covers_a_wcup_scoring_series():
+    """
+    Grand Slam nesmí být u soutěže, do které bodují jiné soutěže -
+    přesně tím byl Pohár rozbitý. Kdyby takový seriál přibyl, spadne
+    to tady, ne až v tabulce.
+    """
+    scoring = set(tools.wcup_scoring_events()) | set(tools.u23_scoring_events())
+
+    for code in tools.grand_slam_codes():
+        meta = tools.EVENTS[code]
+        # Vadí jen seriál, do kterého přispívají cizí závody, ne to,
+        # že mistrovství samo někam boduje.
+        assert not meta["needs_organizer"] or code not in scoring, code
+
+
 def test_wcup_scoring_excludes_juniors():
     """
     juniorské závody se jedou ve stejné roky jako elitní, ale do
@@ -882,6 +972,26 @@ def test_u23_scoring_events_are_separate_from_elite():
     assert not set(elite) & set(u23)
 
 
+def test_standings_link_can_be_derived_from_registry():
+    """
+    Rozcestí na hlavní straně vybírá odkaz na průběžné pořadí podle
+    needs_organizer a scores_u23_wcup. Dřív tam byl natvrdo /worldcup/,
+    takže karta U23WCUP odkazovala na elitní Pohár.
+
+    Každá událost s needs_organizer musí patřit právě do jednoho Poháru,
+    jinak by se z registru nedalo poznat, kam odkázat.
+    """
+    for code in tools.event_codes():
+        meta = tools.EVENTS[code]
+        if not meta["needs_organizer"]:
+            continue
+
+        elite = bool(meta.get("scores_wcup"))
+        u23 = bool(meta.get("scores_u23_wcup"))
+
+        assert elite != u23, code
+
+
 def test_u23_counted_is_one_below_elite():
     """
     Do U23 Poháru se počítá o jeden výsledek míň, protože dlouhá trať
@@ -895,3 +1005,409 @@ def test_scores_for_u23_excludes_only_wmtboc_long():
     assert tools.scores_for_u23("WMTBOC", "sprint") is True
     assert tools.scores_for_u23("WCUP", "long") is True
     assert tools.scores_for_u23("EMTBOC", "long") is True
+
+
+# --- Perfect Championship: nejlepší jednotlivý šampionát ---
+
+PERFECT_COMPETITORS = {
+    1: {"first": "Anna", "last": "Alpha", "nationality": "CZE"},
+    2: {"first": "Bela", "last": "Beta", "nationality": "FIN"},
+    3: {"first": "Cyril", "last": "Gamma", "nationality": "SWE"},
+}
+
+
+def test_perfect_championship_olympic_order():
+    """
+    Rozhoduje zlato, při shodě stříbro, pak bronz. Tři zlata a stříbro
+    jsou víc než tři zlata a dva bronzy - kvůli tomuhle pravidlu to
+    nejde řadit podle součtu medailí.
+    """
+    by_year = {
+        (1, 2019): [3, 0, 2],
+        (2, 2021): [3, 1, 0],
+        (3, 2024): [4, 0, 0],
+    }
+
+    table = tools.perfect_championship_table(by_year, PERFECT_COMPETITORS)
+
+    assert [key for _, key, _, _ in table] == [(3, 2024), (2, 2021), (1, 2019)]
+
+
+def test_perfect_championship_shares_rank_and_skips():
+    """
+    Stejná bilance = stejné pořadí, další v řadě přeskočí. Po dvou
+    druhých je čtvrtý, ne třetí.
+    """
+    by_year = {
+        (1, 2019): [4, 0, 0],
+        (2, 2021): [3, 1, 0],
+        (3, 2024): [3, 1, 0],
+        (1, 2022): [2, 0, 0],
+    }
+
+    table = tools.perfect_championship_table(by_year, PERFECT_COMPETITORS)
+
+    assert [rank for rank, _, _, _ in table] == [0, 1, 1, 3]
+
+
+def test_perfect_championship_years_are_not_summed():
+    """
+    Jednotkou je jeden šampionát, ne kariéra. Čtyři zlata ze dvou ročníků
+    zůstávají dvěma řádky po dvou - jinak by to byl Grand Slam a vyšlo
+    by z toho jedno čtyřzlaté mistrovství, které se nikdy nekonalo.
+    """
+    by_year = {
+        (1, 2019): [2, 0, 0],
+        (1, 2021): [2, 0, 0],
+    }
+
+    table = tools.perfect_championship_table(by_year, PERFECT_COMPETITORS)
+
+    assert len(table) == 2
+    assert all(medals == [2, 0, 0] for _, _, medals, _ in table)
+
+
+def test_perfect_championship_hides_rows_without_gold():
+    """bez zlata se řádek nezobrazuje - tabulka je o vítězstvích"""
+    by_year = {
+        (1, 2019): [0, 3, 1],
+        (2, 2021): [2, 0, 0],
+    }
+
+    table = tools.perfect_championship_table(by_year, PERFECT_COMPETITORS)
+
+    assert [key for _, key, _, _ in table] == [(2, 2021)]
+
+
+def test_perfect_championship_hides_single_gold_years():
+    """
+    Jedno zlato je skvělý výsledek, ale k dokonalému šampionátu daleko -
+    a je jich tolik, že tabulku utopí. Na WMTBOC končilo přes sto jmen
+    na jednom děleném místě úplně dole.
+    """
+    by_year = {
+        (1, 2019): [1, 2, 0],
+        (2, 2021): [1, 0, 0],
+        (3, 2024): [2, 0, 0],
+    }
+
+    table = tools.perfect_championship_table(by_year, PERFECT_COMPETITORS)
+
+    assert [key for _, key, _, _ in table] == [(3, 2024)]
+    # ani hromada stříbra jedno zlato nevytáhne - rozhoduje zlato
+    assert (1, 2019) not in [key for _, key, _, _ in table]
+
+
+def test_perfect_championship_default_threshold_is_two():
+    """
+    Práh je vlastnost dashboardu, ne volba volajícího - drží se v konstantě,
+    aby ho šablona mohla napsat do textu a nerozešel se s realitou.
+    """
+    assert tools.PERFECT_CHAMPIONSHIP_MIN_GOLD == 2
+
+    by_year = {(1, 2019): [1, 0, 0]}
+
+    assert tools.perfect_championship_table(by_year, PERFECT_COMPETITORS) == []
+    # práh jde přebít, když by ho někdy chtěl někdo jiný
+    assert len(tools.perfect_championship_table(by_year, PERFECT_COMPETITORS, min_gold=1)) == 1
+
+
+def test_perfect_championship_min_gold_is_configurable():
+    by_year = {
+        (1, 2019): [1, 0, 0],
+        (2, 2021): [3, 0, 0],
+    }
+
+    table = tools.perfect_championship_table(by_year, PERFECT_COMPETITORS, min_gold=3)
+
+    assert [key for _, key, _, _ in table] == [(2, 2021)]
+
+
+def test_perfect_championship_ties_are_stable():
+    """
+    Naprostá shoda se řadí podle roku a pak abecedně, ne podle pořadí
+    v dictu - jinak by se tabulka mezi requesty přeskupovala.
+    """
+    by_year = {
+        (3, 2024): [2, 0, 0],
+        (1, 2019): [2, 0, 0],
+        (2, 2019): [2, 0, 0],
+    }
+
+    table = tools.perfect_championship_table(by_year, PERFECT_COMPETITORS)
+
+    assert [key for _, key, _, _ in table] == [(1, 2019), (2, 2019), (3, 2024)]
+    # všichni mají stejnou bilanci, takže i stejné pořadí
+    assert [rank for rank, _, _, _ in table] == [0, 0, 0]
+
+
+def test_perfect_championship_works_without_competitors():
+    """registr je jen pro abecední řazení, bez něj to musí projít taky"""
+    by_year = {(1, 2019): [2, 0, 0], (2, 2021): [3, 0, 0]}
+
+    table = tools.perfect_championship_table(by_year)
+
+    assert [key for _, key, _, _ in table] == [(2, 2021), (1, 2019)]
+
+
+def test_perfect_championship_empty_input():
+    assert tools.perfect_championship_table({}) == []
+
+
+def test_assign_shared_ranks_matches_medal_table_rule():
+    """
+    Dělená místa se počítají stejně jako v medailové tabulce - tenhle
+    test hlídá, že se obě pravidla nerozejdou.
+    """
+    medals = {"a": [3, 0, 0], "b": [2, 0, 0], "c": [2, 0, 0], "d": [1, 0, 0]}
+
+    ranking = tools.assign_shared_ranks(["a", "b", "c", "d"], medals.get)
+
+    assert ranking == [(0, "a"), (1, "b"), (1, "c"), (3, "d")]
+
+
+def test_perfect_championship_skips_the_world_cup():
+    """
+    Jeden ročník Poháru není jedna akce, ale seriál přes sezónu - a boduje
+    do něj i WMTBOC a EMTBOC. Stejný důvod jako u Grand Slamu.
+    """
+    assert not tools.has_perfect_championship("WCUP")
+    assert not tools.has_perfect_championship("u23wcup")
+    assert not tools.has_perfect_championship("nonsense")
+    assert "WCUP" not in tools.perfect_championship_codes()
+    assert "U23WCUP" not in tools.perfect_championship_codes()
+
+
+def test_perfect_championship_covers_championships():
+    assert tools.has_perfect_championship("WMTBOC")
+    assert tools.has_perfect_championship("emtboc")
+    assert tools.has_perfect_championship("JWMTBOC")
+    assert tools.has_perfect_championship("EYMTBOC")
+
+
+def test_perfect_championship_menu_matches_grand_slam():
+    """
+    Stejná trojice jako u Grand Slamu - ostatní stránku mají, ale menu
+    by se jimi zaplnilo.
+    """
+    assert tools.perfect_championship_menu_codes() == ["WMTBOC", "EMTBOC", "JWMTBOC"]
+
+
+def test_perfect_championship_menu_only_links_to_pages_that_exist():
+    """do menu nesmí přijít soutěž bez stránky - odkaz by vedl na 404"""
+    for code in tools.perfect_championship_menu_codes():
+        assert tools.has_perfect_championship(code), code
+
+    assert set(tools.perfect_championship_menu_codes()) <= set(
+        tools.perfect_championship_codes()
+    )
+
+
+def test_perfect_championship_never_covers_a_series():
+    """
+    Perfect Championship nesmí být u seriálu, do kterého bodují jiné
+    soutěže - jeden "ročník" by pak nebyl jeden šampionát.
+    """
+    scoring = set(tools.wcup_scoring_events()) | set(tools.u23_scoring_events())
+
+    for code in tools.perfect_championship_codes():
+        meta = tools.EVENTS[code]
+        assert not meta["needs_organizer"] or code not in scoring, code
+
+
+def test_merge_medal_dicts_works_on_competitor_year_keys():
+    """
+    Sloupec "combined" sčítá individuální a štafetové medaile přes klíč
+    (závodník, rok). merge_medal_dicts vzniklo nad samotným ID, takže
+    tohle hlídá, že mu složený klíč nevadí - a že řádek, který je jen
+    ve štafetách, nezmizí.
+    """
+    individual = {(1, 2019): [2, 0, 0], (2, 2021): [1, 1, 0]}
+    relay = {(1, 2019): [1, 0, 0], (3, 2024): [0, 1, 0]}
+
+    together = tools.merge_medal_dicts(individual, relay)
+
+    assert together == {
+        (1, 2019): [3, 0, 0],
+        (2, 2021): [1, 1, 0],
+        (3, 2024): [0, 1, 0],
+    }
+
+
+def test_max_relays_in_one_year():
+    """
+    Rozhoduje nejvyšší počet štafet v jednom ročníku, ne součet přes roky.
+    Když se mix štafeta jela jindy než klasická, samostatný sloupec nemá
+    co řadit.
+    """
+    # WMTBOC - jediná štafeta každý rok
+    assert tools.max_relays_in_one_year({2019: ["sprint", "middle", "relay"]}) == 1
+
+    # dvě štafety v jednom roce
+    assert tools.max_relays_in_one_year({2019: ["sprint", "relay", "mix_relay"]}) == 2
+
+    # dvě štafety, ale každá v jiném roce - pořád jen jedna naráz
+    assert tools.max_relays_in_one_year({2018: ["relay"], 2019: ["mix_relay"]}) == 1
+
+
+def test_max_relays_without_any_relay():
+    assert tools.max_relays_in_one_year({2019: ["sprint", "middle"]}) == 0
+    assert tools.max_relays_in_one_year({}) == 0
+
+
+def test_max_relays_counts_sprint_relay():
+    """sprint_relay je taky štafeta - jméno disciplíny ji nesmí vyřadit"""
+    assert tools.max_relays_in_one_year({2019: ["relay", "sprint_relay"]}) == 2
+
+
+def test_races_by_year_and_kind_splits_relay_out():
+    """
+    Emily Benham Kvale vyhrála 2019 všechny čtyři individuální závody.
+    Pátý závod toho roku byla štafeta, takže v individuálním sloupci
+    musí být "4 ze 4" - "4 z 5" by vypadalo jako ztráta.
+    """
+    counts = tools.races_by_year_and_kind(
+        {2019: ["sprint", "middle", "long", "mass_start", "relay"]}
+    )
+
+    assert counts["individual"][2019] == 4
+    assert counts["relay"][2019] == 1
+    # v součtu pětka zůstává - je z ní vidět, že štafetová medaile chybí
+    assert counts["combined"][2019] == 5
+
+
+def test_races_by_year_and_kind_is_not_minus_one():
+    """
+    Nejde odečíst natvrdo jedničku. Ročník bez štafety žádnou nemá
+    a EMTBOC jich může mít v programu víc.
+    """
+    counts = tools.races_by_year_and_kind(
+        {
+            2020: ["sprint", "middle"],
+            2021: ["sprint", "relay", "mix_relay"],
+        }
+    )
+
+    assert counts["individual"][2020] == 2
+    assert counts["relay"][2020] == 0
+    assert counts["individual"][2021] == 1
+    assert counts["relay"][2021] == 2
+
+
+def test_races_by_year_and_kind_counts_every_year():
+    """každý ročník musí být ve všech třech sloupcích, ať se nekouká do prázdna"""
+    counts = tools.races_by_year_and_kind({2019: ["sprint"], 2021: ["relay"]})
+
+    for kind in ("individual", "relay", "combined"):
+        assert set(counts[kind]) == {2019, 2021}, kind
+
+
+def test_races_by_year_and_kind_empty():
+    assert tools.races_by_year_and_kind({}) == {
+        "individual": {},
+        "relay": {},
+        "combined": {},
+    }
+
+
+def test_perfect_championship_rows_carry_the_year_for_flags():
+    """
+    Šablona bere z řádku rok a podle něj hledá vlajku (nationality_in) i
+    odkaz na ročník. Rok tedy musí zůstat použitelný jako rok - Emily
+    Benham Kvale jela 2019 za GBR, dnes je vedená jako NOR.
+    """
+    emily = {
+        "nationality": "NOR",
+        "nat_history": [("GBR", 2000, 2021), ("NOR", 2022, None)],
+    }
+    by_year = {(1, 2019): [4, 0, 0], (1, 2024): [2, 0, 0]}
+
+    table = tools.perfect_championship_table(by_year, {1: emily})
+    flags = {year: tools.nationality_in(emily, year) for _, (_, year), _, _ in table}
+
+    assert flags == {2019: "GBR", 2024: "NOR"}
+
+
+def test_perfect_championship_survives_incomplete_competitor_record():
+    """
+    Jméno se používá jen jako tiebreak při naprosté shodě medailí.
+    Záznam bez first/last kvůli tomu nesmí shodit celou stránku.
+    """
+    partial = {1: {"nationality": "NOR"}, 2: {"first": "B", "last": "B", "nationality": "CZE"}}
+    by_year = {(1, 2019): [2, 0, 0], (2, 2019): [2, 0, 0]}
+
+    table = tools.perfect_championship_table(by_year, partial)
+
+    assert len(table) == 2
+
+
+def test_perfect_championship_complete_year_wins_a_tie():
+    """
+    Hnilica má z EMTBOC 2026 čtyři zlata ze čtyř závodů, Laurila z 2013
+    čtyři z pěti. Stejná bilance, ale Hnilica víc získat nemohl - jde
+    tedy napřed a dostane vlastní místo, ne dělené.
+    """
+    by_year = {(1, 2026): [4, 0, 0], (2, 2013): [4, 0, 0]}
+    races = {2026: 4, 2013: 5}
+
+    table = tools.perfect_championship_table(
+        by_year, PERFECT_COMPETITORS, races_by_year=races
+    )
+
+    assert [key for _, key, _, _ in table] == [(1, 2026), (2, 2013)]
+    assert [rank for rank, _, _, _ in table] == [0, 1]
+    assert [swept for _, _, _, swept in table] == [True, False]
+
+
+def test_perfect_championship_completeness_never_beats_medals():
+    """
+    Kompletnost se řeší až po medailích. Dvě zlata ze dvou závodů jsou
+    hezká, ale čtyři z pěti jsou pořád víc - jinak by tabulku vyhrávaly
+    ročníky, kde se skoro nic nejelo.
+    """
+    by_year = {(1, 2019): [4, 0, 0], (2, 2021): [2, 0, 0]}
+    races = {2019: 5, 2021: 2}
+
+    table = tools.perfect_championship_table(
+        by_year, PERFECT_COMPETITORS, races_by_year=races
+    )
+
+    assert [key for _, key, _, _ in table] == [(1, 2019), (2, 2021)]
+    # ten menší ročník je kompletní, ale to ho nahoru nevytáhne
+    assert [swept for _, _, _, swept in table] == [False, True]
+
+
+def test_perfect_championship_sweep_flag_needs_race_counts():
+    """bez počtu závodů se kompletnost neřeší a nic se nerozbije"""
+    by_year = {(1, 2019): [4, 0, 0]}
+
+    table = tools.perfect_championship_table(by_year, PERFECT_COMPETITORS)
+
+    assert [swept for _, _, _, swept in table] == [False]
+
+
+def test_perfect_championship_sweep_with_unknown_year():
+    """rok, který v počtech závodů chybí, se nepovažuje za kompletní"""
+    by_year = {(1, 1999): [4, 0, 0]}
+
+    table = tools.perfect_championship_table(
+        by_year, PERFECT_COMPETITORS, races_by_year={2019: 5}
+    )
+
+    assert [swept for _, _, _, swept in table] == [False]
+
+
+def test_perfect_championship_equal_sweeps_still_share_rank():
+    """
+    Dva kompletní ročníky se stejnou bilancí jsou si pořád rovné -
+    kompletnost dělené místo neruší, jen ho neuděluje přes ni.
+    """
+    by_year = {(1, 2019): [3, 0, 0], (2, 2021): [3, 0, 0]}
+    races = {2019: 3, 2021: 3}
+
+    table = tools.perfect_championship_table(
+        by_year, PERFECT_COMPETITORS, races_by_year=races
+    )
+
+    assert [rank for rank, _, _, _ in table] == [0, 0]
+    assert all(swept for _, _, _, swept in table)

@@ -125,9 +125,20 @@
                                 Achievements
                             </a>
                             <ul class="dropdown-menu">
-                                {% for code, ev in EVENTS.items() if ev.kind == ELITE %}
+                                {# Pohár tu není schválně (grand_slam_codes()) a evropské
+                                   juniorské ani mládežnické taky ne - stránku mají, ale
+                                   menu by se jimi zaplnilo. Viz grand_slam_menu_codes(). #}
+                                {% for code, ev in EVENTS.items() if ev.grand_slam_in_menu %}
                                 <li>
                                     <a class="dropdown-item" href="/grand_slam/{{ ev.slug }}/">Grand Slam - {{ code }}</a>
+                                </li>
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
+                                {# Nejvíc zlata z jednoho ročníku - proti Grand Slamu,
+                                   který se dívá na celou kariéru. #}
+                                {% for code, ev in EVENTS.items() if ev.perfect_championship_in_menu %}
+                                <li>
+                                    <a class="dropdown-item" href="/perfect_championship/{{ ev.slug }}/">Perfect Championship - {{ code }}</a>
                                 </li>
                                 {% endfor %}
                                 <li><hr class="dropdown-divider"></li>

@@ -144,7 +144,7 @@ class Races(object):
         Get a dictionary mapping years to distances held for a given event.
 
         Args:
-            event: Event type (WMTBOC, EMTBOC, WCUP)
+            event: Event type (kód z tools.EVENTS)
 
         Returns:
             dict: {year: [list of distances]}

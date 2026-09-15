@@ -104,15 +104,18 @@
                 {% for code, meta in EVENTS.items() %}
                 {% if event_stats[code]['total_distances_competed'] > 0 or eligible[code] %}
                 <h6>{{ code }}
-                    {% if event_stats[code]['is_grand_slam_winner'] %}
+                    {% if meta.has_grand_slam and event_stats[code]['is_grand_slam_winner'] %}
                         <span title="{{ code }} Grand Slam Winner!">&#127942;</span>
                     {% endif %}
                 </h6>
                 {% if event_stats[code]['total_distances_competed'] > 0 %}
+                {# U Poháru se Grand Slam nepočítá - viz grand_slam_codes(). #}
+                {% if meta.has_grand_slam %}
                 <p>
                     Grand Slam: {{ "%.0f"|format(event_stats[code]['completion_percentage']) }}%
                     ({{ event_stats[code]['won_distances']|length }}/{{ event_stats[code]['available_distances']|length }} distances won)
                 </p>
+                {% endif %}
                 <table class="table table-bordered table-condensed">
                     <tr>
                         <th>Distance</th>
