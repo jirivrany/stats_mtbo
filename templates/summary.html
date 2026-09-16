@@ -1,5 +1,7 @@
 {% extends "default.html" %}
-{% from 'macros.html' import  event_summary_table,  relay_table_row %}
+{# "with context" kvůli nationality_in v event_summary_table - makro
+   importované bez něj kontextové funkce nevidí. #}
+{% from 'macros.html' import  event_summary_table,  relay_table_row with context %}
 
 
 {% block content %}
@@ -49,7 +51,7 @@
         </tr>
         </thead>
         <tbody>
-            {{ event_summary_table(data_women, race_ids, competitors, flags) }}
+            {{ event_summary_table(data_women, race_ids, competitors, flags, current_year) }}
         </table>
         </tbody>
     </div>    
@@ -65,7 +67,7 @@
         </tr>
         </thead>
         <tbody>
-            {{ event_summary_table(data_men, race_ids, competitors, flags) }}
+            {{ event_summary_table(data_men, race_ids, competitors, flags, current_year) }}
         </table>
         </tbody>
     </div>    
@@ -74,16 +76,21 @@
     <h2>Team races</h2>
     {% if team_results %}
         {% for one_race in team_results %}
-            {% for klasa, single in one_race.items() %}
+            {# Ve shrnutí jsou jen medailové týmy - kdo skončil čtvrtý a dál
+               je vidět až v celých výsledcích, proto ten odkaz u nadpisu. #}
+            {% for klasa in ['men', 'women', 'mix'] %}
+                {% set single = one_race[klasa] %}
                 {% if single %}
-                    <h3>{{ klasa|capitalize }}</h3>
+                    <h3>
+                        <a href="{{ url_for('race', race_id=one_race['race_id']) }}">{{ klasa|capitalize }}</a>
+                    </h3>
                     <table class="table-condensed">
                         {% for code, team in single.items() %}
                             {{ relay_table_row(team, competitors, flags) }}
                         {% endfor %}
                     </table>
                 {% endif %}
-            {% endfor %}    
+            {% endfor %}
         {% endfor %}
     {% endif %}
 </div>    

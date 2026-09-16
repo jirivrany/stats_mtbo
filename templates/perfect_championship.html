@@ -1,0 +1,86 @@
+{% extends "default.html" %}
+{% from "macros.html" import medal_badge %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p>
+    The best single championships ever - who collected most gold medals in one year.
+    Unlike the <a href="/grand_slam/{{ event|lower }}/">Grand Slam</a>, which looks at a
+    whole career, every row here is a single year.
+    At least <strong>{{ min_gold }} gold medals</strong> in that year are required to be
+    listed - a single title is a fine result, but a long way from a perfect championship.
+</p>
+<p>
+    Ranked the olympic way: gold decides first, silver breaks a tie, then bronze.
+    Three golds and a silver therefore beat three golds and two bronzes.
+    The <em>Races</em> column shows how many races of that kind were held that year -
+    the individual table does not count the relay. Among rows with the same medals,
+    winning every race held that year (&#127942;) comes first: there was simply nothing
+    more to win.
+</p>
+<p>
+    <em>Individual</em> counts individual races only; <em>Combined</em> adds the relay
+    medals to them.
+    {%- if "relay" not in table_content %}
+    A separate relay column would say little here - only one relay gold per year is
+    available, so it is included in <em>Combined</em> instead.
+    {%- endif %}
+</p>
+
+{# Sloupce jsou dva nebo tři podle toho, jestli se u téhle soutěže dá
+   získat víc štafetových zlat v jednom roce - viz max_relays_in_one_year. #}
+<div class="row">
+    {% for col, rows in table_content.items() %}
+    <div class="col-lg-{{ 12 // table_content|length }}">
+        <h3>{{ col|capitalize }}</h3>
+        {% if rows %}
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr class="table-info">
+                    <th>#</th>
+                    <th>Competitor</th>
+                    <th>Year</th>
+                    <th>Gold</th>
+                    <th>Silver</th>
+                    <th>Bronze</th>
+                    <th title="races held that year">Races</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rank, key, medals, swept in rows %}
+                {% set competitor_id, year = key %}
+                <tr>
+                    <td>{{ rank + 1 }}</td>
+                    <td>
+                        <a href="/competitor/{{ competitor_id }}/">
+                            {{ competitors[competitor_id]["first"] }}
+                            {{ competitors[competitor_id]["last"] }}</a>
+                        {# Vlajka podle roku závodu, ne podle dnešní registrace -
+                           Emily Benham Kvale jela 2019 za GBR. Viz nationality_in. #}
+                        {% set nat = nationality_in(competitors[competitor_id], year) %}
+                        <img src="{{ url_for('static', filename='css/blank.gif') }}"
+                             class="flag flag-{{ flags[nat].lower() }}"
+                             alt="{{ nat }}" />
+                    </td>
+                    <td><a href="/events/{{ event|lower }}/{{ year }}/">{{ year }}</a></td>
+                    <td>{{ medal_badge(medals[0], 'gold') }}</td>
+                    <td>{{ medal_badge(medals[1], 'silver') }}</td>
+                    <td>{{ medal_badge(medals[2], 'bronze') }}</td>
+                    <td class="text-muted">
+                        {{ races_by_year[col].get(year, '?') }}
+                        {%- if swept %}
+                        <span title="won every race held that year">&#127942;</span>
+                        {%- endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        {# Štafetový sloupec může být prázdný - mládežnické šampionáty
+           se nejely každý rok se štafetou. Prázdno musí vypadat záměrně. #}
+        <p class="text-muted"><em>No {{ col }} gold medals recorded.</em></p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

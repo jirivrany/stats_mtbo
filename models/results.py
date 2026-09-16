@@ -119,32 +119,53 @@ class Results(object):
 
         return self.cursor.fetchall()
 
-    def get_worldcup_points(self, year, gender="M"):
+    @staticmethod
+    def _event_filter(events):
+        """
+        Podmínka IN pro typy událostí a její parametry.
+
+        Juniorské závody se jedou ve stejné roky jako elitní, takže výběr
+        jen podle roku by je do Světového poháru zatáhl taky.
+        """
+        if not events:
+            return "", []
+
+        return f" AND event IN ({', '.join(['%s'] * len(events))})", list(events)
+
+    def get_worldcup_points(self, year, gender="M", events=None):
         """
         get results for inidividual wcup and year and category
+        :param events - omezení na typy událostí bodující do Světového poháru
         """
+        condition, extra = self._event_filter(events)
 
-        query = "SELECT competitor_id, race_id, wcup\
-                FROM competitor_race\
-                WHERE race_id IN (SELECT id FROM races WHERE year=%s AND team=0 ORDER BY date)\
-                AND competitor_id IN (SELECT id FROM competitors WHERE gender = %s)\
-                ORDER BY competitor_id;"
+        query = (
+            "SELECT competitor_id, race_id, wcup"
+            " FROM competitor_race"
+            f" WHERE race_id IN (SELECT id FROM races WHERE year=%s AND team=0{condition})"
+            " AND competitor_id IN (SELECT id FROM competitors WHERE gender = %s)"
+            " ORDER BY competitor_id;"
+        )
 
-        self.cursor.execute(query, (year, gender))
+        self.cursor.execute(query, (year, *extra, gender))
         return self.cursor.fetchall()
 
-    def get_teamworldcup_points(self, year, category="M"):
+    def get_teamworldcup_points(self, year, category="M", events=None):
         """
         get results for team wcup and year
+        :param events - omezení na typy událostí bodující do Světového poháru
         """
+        condition, extra = self._event_filter(events)
 
-        query = "SELECT competitor_id, race_id, team, wcup\
-                FROM competitor_relay\
-                WHERE race_id IN (SELECT id FROM races WHERE year=%s AND team=1 ORDER BY date)\
-                AND class=%s\
-                ORDER BY competitor_id;"
+        query = (
+            "SELECT competitor_id, race_id, team, wcup"
+            " FROM competitor_relay"
+            f" WHERE race_id IN (SELECT id FROM races WHERE year=%s AND team=1{condition})"
+            " AND class=%s"
+            " ORDER BY competitor_id;"
+        )
 
-        self.cursor.execute(query, (year, category))
+        self.cursor.execute(query, (year, *extra, category))
         return self.cursor.fetchall()
 
     def get_race_results(self, race_id):
@@ -155,6 +176,81 @@ class Results(object):
         """
         query = "SELECT * from competitor_race WHERE race_id = %s ORDER BY place"
         self.cursor.execute(query, (race_id,))
+        return self.cursor.fetchall()
+
+    def get_event_race_winners(self, event):
+        """
+        Vítězové všech individuálních závodů jedné události.
+
+        Jedním dotazem pro celou historii - přehled závodů jich má i sto
+        a dotaz na každý zvlášť by stránku zbytečně zdržel.
+
+        Na závod vycházejí dva řádky (muž a žena, protože pohlaví je
+        u závodníka, ne u závodu), při dělených prvních místech i víc.
+
+        :return list of (race_id, competitor_id)
+        """
+        query = (
+            "SELECT cr.race_id, cr.competitor_id"
+            " FROM competitor_race cr"
+            " JOIN races r ON cr.race_id = r.id"
+            " WHERE r.event = %s AND r.team = 0 AND cr.place = 1"
+        )
+
+        self.cursor.execute(query, (event,))
+        return self.cursor.fetchall()
+
+    def get_event_relay_winners(self, event):
+        """
+        Vítězné štafety jedné události.
+
+        U štafet vyhrává tým, ne jednotlivec, takže se vrací všichni členové
+        a volající je složí podle (race_id, class, team). Řazení podle leg
+        drží jezdce v pořadí, ve kterém jeli.
+
+        :return list of (race_id, class, team, competitor_id)
+        """
+        query = (
+            "SELECT crel.race_id, crel.class, crel.team, crel.competitor_id"
+            " FROM competitor_relay crel"
+            " JOIN races r ON crel.race_id = r.id"
+            " WHERE r.event = %s AND r.team = 1 AND crel.place = 1"
+            " ORDER BY crel.class, crel.team, crel.leg"
+        )
+
+        self.cursor.execute(query, (event,))
+        return self.cursor.fetchall()
+
+    def get_individual_medals(self, place=3, events=None):
+        """
+        Medailová umístění v individuálních závodech.
+
+        Jedním dotazem pro celou historii - progression dashboard staví
+        celou tabulku z tohohle, takže se nesmí ptát po závodnících.
+
+        Štafety schválně nejsou. Postup z juniorů mezi elitu je
+        individuální výkon a stejně to berou i ostatní žebříčky
+        (young_stars, great_masters, grand_slam) - kdyby se tu štafety
+        počítaly, znamenala by "medaile" na každé stránce něco jiného.
+
+        :param place: nejhorší započítané umístění (3 = medaile, 1 = zlato)
+        :param events: kódy událostí, None = všechny
+        :return list of (competitor_id, event, year, race_id, distance, place)
+        """
+        # _event_filter vrací nekvalifikované "event", což by v JOINu bylo
+        # dvojznačné, kdyby sloupec přibyl i do competitor_race
+        condition, extra = self._event_filter(events)
+        condition = condition.replace(" event IN", " r.event IN")
+
+        query = (
+            "SELECT cr.competitor_id, r.event, r.year, r.id, r.distance, cr.place"
+            " FROM competitor_race cr"
+            " JOIN races r ON cr.race_id = r.id"
+            f" WHERE r.team = 0 AND cr.place BETWEEN 1 AND %s{condition}"
+            " ORDER BY r.year, cr.place"
+        )
+
+        self.cursor.execute(query, (place, *extra))
         return self.cursor.fetchall()
 
     def get_relay_results(self, race_id, klasa):
@@ -296,11 +392,64 @@ class Results(object):
         self.cursor.execute(query, (place, event))
         return self.cursor.fetchall()
 
+    def get_place_count_by_year(self, place, event, table="race"):
+        """
+        Jako get_place_count, ale s rokem závodu u každé medaile.
+
+        Tabulka medailí po zemích potřebuje vědět, ve kterém roce medaile
+        padla - závodník mohl mezitím změnit zemi a starý výsledek patří té
+        tehdejší. Bez roku by se nedalo rozhodnout.
+
+        :param place: umístění (1 zlato, 2 stříbro, 3 bronz)
+        :param event: kód události
+        :param table: "race" nebo "relay"
+        :return list of (competitor_id, year, count)
+        """
+        if table not in ("race", "relay"):
+            raise ValueError(f"Invalid table parameter: {table}")
+
+        query = (
+            "SELECT t1.competitor_id, t2.year, COUNT(t1.place)"
+            f" FROM competitor_{table} AS t1"
+            " LEFT JOIN races AS t2 ON t1.race_id = t2.id"
+            " WHERE t1.place = %s AND t2.event = %s"
+            " GROUP BY t1.competitor_id, t2.year"
+        )
+
+        self.cursor.execute(query, (place, event))
+        return self.cursor.fetchall()
+
+    def get_relay_place_count_by_team(self, place, event):
+        """
+        Štafetové medaile jednotlivců i se zemí, za kterou se jelo.
+
+        Na rozdíl od individuálních závodů se rok dohledávat nemusí -
+        competitor_relay.team drží stát přímo u výsledku.
+
+        :param place: umístění (1 zlato, 2 stříbro, 3 bronz)
+        :param event: kód události
+        :return list of (competitor_id, team, count)
+        """
+        query = (
+            "SELECT crel.competitor_id, crel.team, COUNT(crel.place)"
+            " FROM competitor_relay crel"
+            " JOIN races r ON crel.race_id = r.id"
+            " WHERE crel.place = %s AND r.event = %s"
+            " GROUP BY crel.competitor_id, crel.team"
+        )
+
+        self.cursor.execute(query, (place, event))
+        return self.cursor.fetchall()
+
     def get_relay_country_place_count(self, place, event):
         """
         Counts how many times each country finished at a given place in relay events.
-        Since relay teams are always from a single country, we can get the nationality
-        from any team member.
+
+        Země se bere z competitor_relay.team, ne z competitors.nationality -
+        team drží stát, za který se ten závod jel, kdežto nationality jen to,
+        kde je závodník registrovaný dnes. Kdo během kariéry přestoupil (nebo
+        si po ní změnil občanství), by jinak vozil staré medaile nové zemi:
+        Garde jela 2011 a 2012 bronz za Slovensko, ale dnes je vedená jako FRA.
 
         :param place: int - the place to count (1 for gold, 2 for silver, 3 for bronze)
         :param event: string - the event name
@@ -308,15 +457,14 @@ class Results(object):
         """
 
         query = """
-            SELECT 
-                c.nationality,
+            SELECT
+                cr.team,
                 COUNT(DISTINCT cr.race_id, cr.team) as medal_count
             FROM competitor_relay cr
             JOIN races r ON cr.race_id = r.id
-            JOIN competitors c ON cr.competitor_id = c.id
-            WHERE cr.place = %s 
+            WHERE cr.place = %s
                 AND r.event = %s
-            GROUP BY c.nationality
+            GROUP BY cr.team
             ORDER BY medal_count DESC
         """
 

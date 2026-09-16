@@ -40,6 +40,36 @@
     margin-top: 20px;
 }
 
+/* Název stránky přes fotku v hlavičce. Fotka se náhodně střídá a je
+   různě světlá, takže samotná bílá nestačí - proto stín i tmavý
+   přechod pod textem. */
+.banner {
+    position: relative;
+}
+
+.banner-title {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    padding: 1.5rem 1rem 0.6rem;
+    color: #fff;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+    pointer-events: none;
+}
+
+/* Na mobilu by dvourem velký nadpis zabral půl fotky */
+@media (max-width: 576px) {
+    .banner-title {
+        font-size: 1.25rem;
+        padding: 1rem 0.75rem 0.4rem;
+    }
+}
+
 .event-list {
     font-size: 15px;
     list-style: none;
@@ -70,4 +100,10 @@ td.marked {
     border-color: #86b7fe;
     outline: 0;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Juniorské a youth výsledky v tabulce kariéry - odlišené, ale čitelné.
+   Bootstrap 5 zvýrazňuje řádky přes --bs-table-bg, jinak by to table-hover přebil. */
+.junior-result {
+    --bs-table-bg: #eef7fb;
 }

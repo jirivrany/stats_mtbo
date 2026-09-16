@@ -1,5 +1,6 @@
 {% extends "default.html" %} {% block content %}
-{% from 'macros.html' import wcup_overall_table %}
+{# "with context" kvůli nationality_in uvnitř makra. #}
+{% from 'macros.html' import wcup_overall_table with context %}
 <div class="container-fluid">
     <div class="row">
         <h2>World Cup overall winners</h2>

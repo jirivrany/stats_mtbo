@@ -210,13 +210,572 @@ IOC_INDEX = {
     "ARM": "AM",
     "NRU": "NR",
     "CUB": "CU",
+    # Není to stát, ale neutrální status - závodníci bez vlajky vlastní země.
+    # Ruská federace 2021 (doping) startovala pod vlajkou IOF. NEU je volný
+    # kód, žádná země ho nepoužívá. Mapuje se sám na sebe, protože vlajka
+    # není ve sprite flags.png, ale ve vlastním souboru - viz .flag-neu
+    # ve flags.css. Šablony sahají na IOC_INDEX[kód] bez ošetření, takže
+    # tenhle řádek je to jediné, co je drží nad vodou.
+    "NEU": "NEU",
 }
 
-EVENT_NAMES = {
-    "WMTBOC": "World MTBO championship",
-    "EMTBOC": "European MTBO championship",
-    "WCUP": "MTBO World Cup",
+# Věkové kategorie. Youth se zavede, až budou data - registr s ním počítá,
+# aby přidání znamenalo jeden záznam a nic víc.
+ELITE = "elite"
+JUNIOR = "junior"
+YOUTH = "youth"
+
+# U23 stojí stranou: jezdí se uvnitř elitních závodů (jezdec startuje
+# normálně v elitě a teprve z výsledku se vyfiltruje), takže to není
+# věková kategorie ve stejném smyslu jako junioři. Vlastní druh ji drží
+# mimo elitní medailové tabulky - titul U23 mistra světa je jiný titul
+# než ten elitní - a zároveň mimo non_elite_codes(), kde jsou junioři.
+U23 = "u23"
+
+# Disciplíny, které se u dané události mohly jet. WMTBOC nikdy nemělo
+# smíšenou ani sprintovou štafetu, ostatní ano.
+WMTBOC_DISTANCES = ["sprint", "middle", "long", "mass_start", "relay"]
+ALL_DISTANCES = [
+    "relay",
+    "mix_relay",
+    "sprint_relay",
+    "sprint",
+    "middle",
+    "long",
+    "mass_start",
+]
+
+# Jediný seznam událostí v aplikaci. Pořadí klíčů je zároveň pořadím
+# zobrazení - dict si ho v Pythonu drží, takže není druhý seznam, který by
+# se mohl rozejít. Přesně tím se to dřív rozbíjelo.
+#
+#   kind            věková kategorie, rozhoduje o oddělení medailí
+#   scores_wcup     počítá se do Světového poháru (junioři ne)
+#   needs_organizer shrnutí ročníku potřebuje i pořadatele (jen WCUP)
+#   title_noun      jak se jmenuje vítěz, do textů na stránce závodníka
+#   since           první ročník, do hlášky "nikdy se nezúčastnil"
+#   max_age         horní hranice kategorie (jen mládež), viz could_have_competed
+#   has_grand_slam  dává u téhle soutěže smysl Grand Slam, viz has_grand_slam()
+#   grand_slam_in_menu  patří Grand Slam téhle soutěže do menu, viz
+#                   grand_slam_menu_codes() - stránka existuje i bez toho
+#   has_perfect_championship / perfect_championship_in_menu
+#                   totéž pro Perfect Championship (nejvíc zlata z jednoho
+#                   ročníku), viz perfect_championship_codes()
+EVENTS = {
+    "WMTBOC": {
+        "name": "World MTBO championship",
+        "kind": ELITE,
+        "slug": "wmtboc",
+        "has_perfect_championship": True,
+        "perfect_championship_in_menu": True,
+        "grand_slam_in_menu": True,
+        "has_grand_slam": True,
+        "scores_wcup": True,
+        "needs_organizer": False,
+        "title_noun": "World Champion",
+        "since": 2002,
+        "distances": WMTBOC_DISTANCES,
+    },
+    "EMTBOC": {
+        "name": "European MTBO championship",
+        "kind": ELITE,
+        "slug": "emtboc",
+        "has_perfect_championship": True,
+        "perfect_championship_in_menu": True,
+        "grand_slam_in_menu": True,
+        "has_grand_slam": True,
+        "scores_wcup": True,
+        "needs_organizer": False,
+        "title_noun": "European Champion",
+        "since": 2006,
+        "distances": ALL_DISTANCES,
+    },
+    "WCUP": {
+        "name": "MTBO World Cup",
+        "kind": ELITE,
+        "slug": "wcup",
+        "has_perfect_championship": False,
+        "perfect_championship_in_menu": False,
+        "grand_slam_in_menu": False,
+        "has_grand_slam": False,
+        "scores_wcup": True,
+        "needs_organizer": True,
+        "title_noun": "World Cup winner",
+        "since": 2010,
+        "distances": ALL_DISTANCES,
+    },
+    "JWMTBOC": {
+        "name": "Junior World MTBO championship",
+        "kind": JUNIOR,
+        "slug": "jwmtboc",
+        "has_perfect_championship": True,
+        "perfect_championship_in_menu": True,
+        "grand_slam_in_menu": True,
+        "has_grand_slam": True,
+        "scores_wcup": False,
+        "needs_organizer": False,
+        "title_noun": "Junior World Champion",
+        "since": 2008,
+        "max_age": 20,
+        "distances": ALL_DISTANCES,
+    },
+    "EJMTBOC": {
+        "name": "European Junior MTBO championship",
+        "kind": JUNIOR,
+        "slug": "ejmtboc",
+        "has_perfect_championship": True,
+        "perfect_championship_in_menu": False,
+        "grand_slam_in_menu": False,
+        "has_grand_slam": True,
+        "scores_wcup": False,
+        "needs_organizer": False,
+        "title_noun": "European Junior Champion",
+        "since": 2018,
+        "max_age": 20,
+        "distances": ALL_DISTANCES,
+    },
+    # Mistrovství světa pro kategorii M17/W17 neexistuje, jezdí se jen
+    # evropské. Nekonalo se 2018 (výsledky nejsou v Eventoru) a 2020 (covid).
+    "EYMTBOC": {
+        "name": "European Youth MTBO championship",
+        "kind": YOUTH,
+        "slug": "eymtboc",
+        "has_perfect_championship": True,
+        "perfect_championship_in_menu": False,
+        "grand_slam_in_menu": False,
+        "has_grand_slam": True,
+        "scores_wcup": False,
+        "needs_organizer": False,
+        "title_noun": "European Youth Champion",
+        "since": 2016,
+        "max_age": 17,
+        "distances": ALL_DISTANCES,
+    },
+    # Od 2022. Vlastní závody nemá - jezdci startují v elitním závodě
+    # a výsledek U23 vznikne odfiltrováním jezdců do 23 let a přečíslováním.
+    # Tituly se udělují jen ve dvou závodech ročně (U23_CHAMPIONSHIP_RACES),
+    # proto jsou kódy dva: medaile a šampioni patří sem, ostatní kola
+    # Světového poháru pod U23WCUP. Kdyby byl kód jeden, medailové tabulky
+    # by počítaly "tituly" i za obyčejná kola.
+    "U23WMTBOC": {
+        "name": "U23 World MTBO championship",
+        "kind": U23,
+        "slug": "u23wmtboc",
+        "has_perfect_championship": True,
+        "perfect_championship_in_menu": False,
+        "grand_slam_in_menu": False,
+        "has_grand_slam": True,
+        "scores_wcup": False,
+        "scores_u23_wcup": True,
+        "needs_organizer": False,
+        "title_noun": "U23 World Champion",
+        "since": 2022,
+        "max_age": 23,
+        "distances": ALL_DISTANCES,
+    },
+    # Kola Světového poháru, kde se U23 vyhodnocuje, ale titul se neuděluje.
+    # IOF pořadí U23 z těchhle závodů nikde nepublikuje a pořadatelé jen
+    # někdy - tohle je tedy jediné místo, kde si jezdec svoje průběžné
+    # pořadí přečte, aniž by si ho počítal ručně.
+    "U23WCUP": {
+        "name": "U23 MTBO World Cup",
+        "kind": U23,
+        "slug": "u23wcup",
+        "has_perfect_championship": False,
+        "perfect_championship_in_menu": False,
+        "grand_slam_in_menu": False,
+        "has_grand_slam": False,
+        "scores_wcup": False,
+        "scores_u23_wcup": True,
+        "needs_organizer": True,
+        "title_noun": "U23 World Cup winner",
+        "since": 2022,
+        "max_age": 23,
+        "distances": ALL_DISTANCES,
+    },
 }
+
+# Kódy, ze kterých se skládá sezóna U23 Světového poháru.
+U23_EVENTS = ("U23WMTBOC", "U23WCUP")
+
+# Zpětná kompatibilita - spousta míst hledá jen název události.
+EVENT_NAMES = {code: meta["name"] for code, meta in EVENTS.items()}
+
+
+def get_event(code):
+    """
+    Popis události podle kódu, nebo None. Kód je case-insensitive, protože
+    v URL chodí malými písmeny.
+    """
+    if not code:
+        return None
+
+    return EVENTS.get(code.upper())
+
+
+def event_codes(kind=None):
+    """
+    Kódy událostí v pořadí registru.
+
+    :param kind: jedna kategorie ("elite") nebo víc ({"junior", "youth"});
+                 None vrátí všechny
+    """
+    if kind is None:
+        return list(EVENTS)
+
+    wanted = {kind} if isinstance(kind, str) else set(kind)
+
+    return [code for code, meta in EVENTS.items() if meta["kind"] in wanted]
+
+
+def non_elite_codes():
+    """
+    Všechno, co není elita. Až přibude youth, spadne sem sám - proto se
+    nikde neptáme "je to junior", ale "není to elita".
+    """
+    return event_codes({JUNIOR, YOUTH})
+
+
+def is_junior(code):
+    """Je to mládežnická kategorie (junioři nebo youth)?"""
+    meta = get_event(code)
+
+    return bool(meta) and meta["kind"] in (JUNIOR, YOUTH)
+
+
+# Odznak u závodu podle věkové kategorie - popisek a bootstrapí třída.
+# Drží se to tady u EVENTS, aby další kategorie znamenala jeden záznam
+# i v šabloně: ta se ptá jen na kind, nevyjmenovává kódy.
+#
+# Elita schválně chybí. Odznak je výjimka od běžného závodu - kdyby ho
+# nesly i elitní řádky, byla by jím většina seznamu a přestal by fungovat
+# jako upozornění. Chybějící odznak tedy znamená elitu.
+CATEGORY_BADGES = {
+    YOUTH: {"label": "Youth", "css": "text-bg-success"},
+    JUNIOR: {"label": "Junior", "css": "text-bg-info"},
+    U23: {"label": "U23", "css": "text-bg-warning"},
+}
+
+
+def category_badge(code):
+    """
+    Odznak pro kód události, nebo None u elity a neznámého kódu.
+
+    :param code: kód události, case-insensitive
+    """
+    meta = get_event(code)
+
+    return CATEGORY_BADGES.get(meta["kind"]) if meta else None
+
+
+def grand_slam_codes():
+    """
+    Soutěže, u kterých se Grand Slam počítá a zobrazuje.
+
+    Světový pohár (elitní i U23) mezi ně nepatří ze dvou důvodů. Věcně:
+    vyhrát všechny formáty seriálu není uznávaný cíl - program se ročník
+    od ročníku mění, takže "všechny disciplíny" neznamená pokaždé totéž.
+    Datově: do Poháru se počítají i závody WMTBOC a EMTBOC
+    (wcup_scoring_events()), takže Grand Slam Poháru míchal vítězství
+    z mistrovství do seriálu a vycházel špatně.
+
+    Mistrovství mají naopak program stálý - WMTBOC čtyři individuální
+    závody a štafeta - takže tam Grand Slam smysl dává.
+    """
+    return [code for code, meta in EVENTS.items() if meta["has_grand_slam"]]
+
+
+def has_grand_slam(code):
+    """Má tahle soutěž Grand Slam? Neznámý kód nemá."""
+    meta = get_event(code)
+
+    return bool(meta) and meta["has_grand_slam"]
+
+
+def grand_slam_menu_codes():
+    """
+    Soutěže, jejichž Grand Slam se nabízí v menu.
+
+    Užší než grand_slam_codes(): počítá se i tam, kde se neodkazuje.
+    Evropské juniorské a mládežnické mistrovství stránku mají, ale do
+    menu nejdou - jinak by v něm bylo šest položek Grand Slamu a to
+    podstatné (světová mistrovství) by se v nich ztratilo.
+
+    Menu je tedy volba, co nabídnout, ne co umíme spočítat. Proto je to
+    vlastní příznak a ne podmínka na kind.
+    """
+    return [code for code, meta in EVENTS.items() if meta["grand_slam_in_menu"]]
+
+
+def perfect_championship_codes():
+    """
+    Soutěže, u kterých se počítá Perfect Championship - nejvíc zlata
+    z jednoho ročníku.
+
+    Stejně jako u Grand Slamu tu není Světový pohár. Jeden ročník Poháru
+    není jedna akce, ale seriál přes celou sezónu, a boduje do něj i
+    WMTBOC a EMTBOC (wcup_scoring_events()) - "zlato v ročníku Poháru"
+    by tak míchalo tituly z mistrovství dohromady se závody seriálu.
+    """
+    return [code for code, meta in EVENTS.items() if meta["has_perfect_championship"]]
+
+
+def has_perfect_championship(code):
+    """Má tahle soutěž Perfect Championship? Neznámý kód nemá."""
+    meta = get_event(code)
+
+    return bool(meta) and meta["has_perfect_championship"]
+
+
+def perfect_championship_menu_codes():
+    """
+    Soutěže, jejichž Perfect Championship se nabízí v menu. Užší než
+    perfect_championship_codes(), stejně jako u Grand Slamu.
+    """
+    return [code for code, meta in EVENTS.items() if meta["perfect_championship_in_menu"]]
+
+
+def could_have_competed(meta, birth_year):
+    """
+    Mohl se závodník narozený v daném roce vůbec zúčastnit?
+
+    Elita horní věkovou hranici nemá, takže vždycky ano. U mládeže musí
+    poslední rok v kategorii padnout nejdřív do prvního ročníku soutěže -
+    kdo z kategorie vyrostl dřív, než vznikla, neměl šanci. Bogar (1994)
+    tak na JWMTBOC jet mohl a jel, na EJMTBOC (od 2018) už byl dospělý.
+
+    Neznámý nebo nesmyslný rok narození bere jako "mohl" - pětina jezdců
+    ho v databázi nemá a zamlčet kvůli tomu reálnou možnost by bylo horší
+    než ukázat řádek navíc.
+
+    :param meta: záznam události z EVENTS
+    :param birth_year: rok narození, None/nesmysl = nevíme
+    """
+    max_age = meta.get("max_age")
+    if not max_age:
+        return True
+
+    try:
+        birth_year = int(birth_year)
+    except (TypeError, ValueError):
+        return True
+
+    if birth_year < 1900:
+        return True
+
+    return birth_year + max_age >= meta["since"]
+
+
+# Nedokončené závody nemají v databázi umístění, ale číslo - sloupec je
+# integer. Devítky jsou dvojí jen kvůli historii importu (9999 do 2014,
+# 99999 od 2015), význam mají stejný. Nejvyšší skutečné umístění je 120.
+NO_PLACE_FROM = 999
+
+
+def format_place(place, status=None):
+    """
+    Umístění pro čtenáře - z devítek udělá zkratku.
+
+    Skutečný důvod (nedokončil, diskvalifikace) je v databázi ve sloupci
+    s časem, takže se použije, když je po ruce. Bez něj zbude obecné "nc".
+
+    :param place: hodnota z competitor_race.place
+    :param status: competitor_race.time, kde bývá "NC" nebo "DSQ"
+    :return číslo jako string, nebo zkratka
+    """
+    try:
+        place = int(place)
+    except (TypeError, ValueError):
+        return ""
+
+    if place < NO_PLACE_FROM:
+        return str(place)
+
+    status = (status or "").strip().upper()
+
+    return status if status in ("NC", "DSQ") else "nc"
+
+
+def nationality_in(competitor, year):
+    """
+    Zemi, kterou závodník reprezentoval v daném roce.
+
+    competitors.nationality drží jen dnešní registraci v Eventoru. Kdo
+    během kariéry přestoupil (Garde 2013 Slovensko -> Francie) nebo si
+    zemi změnil až po ní (Ballot jela za Francii, dnes je vedená jako
+    Švýcarsko), by jinak měl staré výsledky pod novou vlajkou.
+
+    Drtivá většina závodníků historii nemá a rovnou dostane nationality -
+    dohledávání se týká jen těch pár, co ji mají.
+
+    Rok mimo všechny úseky (Garde 2013, kdy nezávodila) spadne na nejbližší
+    úsek, takže funkce vrátí vždycky nějakou zemi.
+
+    :param competitor: záznam závodníka z COMPETITORS
+    :param year: rok závodu
+    """
+    history = competitor.get("nat_history")
+    if not history:
+        return competitor["nationality"]
+
+    try:
+        year = int(year)
+    except (TypeError, ValueError):
+        return competitor["nationality"]
+
+    for country, valid_from, valid_to in history:
+        if year >= valid_from and (valid_to is None or year <= valid_to):
+            return country
+
+    # Rok v mezeře mezi úseky nebo před prvním z nich - vezme se ten
+    # časově nejbližší, ať zůstane vidět historická země a ne dnešní.
+    if year < history[0][1]:
+        return history[0][0]
+
+    return history[-1][0]
+
+
+# Závody, ve kterých se udělují tituly U23 mistra světa. Pravidla je
+# vyjmenovávají ročník po ročníku a odvodit se nedají: 2026 má kolo
+# v Maďarsku tři individuální závody, ale titul se jede jen ve sprintu
+# a na dlouhé trati, middle ne. Klíč je rok, hodnota id elitních závodů,
+# ze kterých se výsledek filtruje.
+U23_CHAMPIONSHIP_RACES = {
+    2022: (7484, 7485),
+    2023: (7860, 7861),
+    2024: (8085, 8086),
+    2025: (8500, 8509),
+    2026: (8937, 8936),
+}
+
+U23_MAX_AGE = 23
+
+# Kolik nejlepších výsledků se počítá do celkového pořadí U23 Poháru.
+# Vždycky o jeden míň než u elity (WCUP_COUNTED ve flaskapp.py), protože
+# dlouhá trať na WMTBOC do U23 Poháru nepatří - pravidla ji každý ročník
+# výslovně vyjímají ("not a scoring event for the U23 World Cup").
+U23_WCUP_COUNTED = {
+    2022: 5,
+    2023: 6,
+    2024: 6,
+    2025: 6,
+    2026: 6,
+}
+
+
+def u23_scoring_events():
+    """Události, ze kterých se skládá pořadí U23 Světového poháru."""
+    return [code for code, meta in EVENTS.items() if meta.get("scores_u23_wcup")]
+
+
+def scores_for_u23(event, distance):
+    """
+    Boduje tenhle elitní závod do U23 Světového poháru?
+
+    Jediná výjimka je dlouhá trať na mistrovství světa - pravidla ji
+    vyjímají každý ročník 2022-2026 a kvůli ní je i U23_WCUP_COUNTED
+    o jedničku nižší než u elity.
+    """
+    return not (event == "WMTBOC" and distance == "long")
+
+
+def is_u23(birth_year, season_year):
+    """
+    Patří jezdec v dané sezóně do U23?
+
+    Pravidla: "up to the end of the calendar year in which they have their
+    23rd birthday" - rozhoduje tedy ročník, ne datum závodu, a jezdec je
+    U23 celou sezónu.
+
+    Na rozdíl od could_have_competed() se neznámý rok narození bere jako
+    "nepatří". Tam jde o to, jestli jezdec vůbec mohl startovat, a pustit
+    ho dál je bezpečnější; tady by se dostal do oficiálního pořadí, kam
+    možná nepatří. Mlčet je horší než jednoho jezdce vynechat.
+
+    :param birth_year: rok narození, None/nesmysl = nepatří
+    :param season_year: ročník sezóny
+    """
+    try:
+        birth_year = int(birth_year)
+    except (TypeError, ValueError):
+        return False
+
+    if birth_year < 1900:
+        return False
+
+    return season_year - birth_year <= U23_MAX_AGE
+
+
+def u23_places(results):
+    """
+    Přečísluje elitní výsledek na pořadí U23.
+
+    Sdílená místa musí zůstat sdílená: pravidla říkají "if two or more
+    competitors share a place, they all receive the higher point score",
+    takže když jsou dva osmí, další je desátý, ne devátý. Prosté
+    očíslování 1..n by všechny pod nimi posunulo o příčku a body by
+    nesouhlasily s oficiální tabulkou IOF - přesně na tom se to dalo
+    poznat (Racansky 2026: 233 místo 234).
+
+    :param results: [(place, cokoliv...), ...] - elitní umístění, už
+                    profiltrovaná na U23 jezdce jednoho pohlaví
+    :return [(u23_place, původní řádek), ...] seřazené podle umístění
+    """
+    places = [row[0] for row in results]
+
+    return sorted(
+        ((sum(1 for other in places if other < row[0]) + 1, row) for row in results),
+        key=lambda pair: pair[0],
+    )
+
+
+def u23_race_results(results, competitors, season_year):
+    """
+    Z elitního výsledku závodu udělá výsledek U23.
+
+    Závody U23WMTBOC nemají v databázi vlastní řádky - jezdci startují
+    v elitním závodě a teprve tady se vyberou ti do 23 let a přečíslují.
+    Vrací se řádky ve stejném tvaru, jaký dává get_race_results(), jen
+    s přepsaným umístěním, takže šablona závodu je nepozná.
+
+    Nedokončené (place >= NO_PLACE_FROM) se nepřečíslovávají - zůstávají
+    se svým příznakem na konci, stejně jako v elitním výsledku.
+
+    :param results: řádky z get_race_results() elitního závodu
+    :param competitors: registr závodníků (kvůli roku narození a pohlaví)
+    :param season_year: ročník, podle kterého se počítá věk
+    """
+    starters = []
+    unplaced = []
+    for row in results:
+        rider = competitors.get(row[0])
+        if not rider:
+            continue
+
+        born = (rider.get("born") or "").split("-")[0]
+        if not is_u23(born, season_year):
+            continue
+
+        (unplaced if row[2] >= NO_PLACE_FROM else starters).append(row)
+
+    output = []
+    for gender in ("F", "M"):
+        same = [row for row in starters if competitors[row[0]]["gender"] == gender]
+        for place, (_, row) in u23_places([(row[2], row) for row in same]):
+            output.append((row[0], row[1], place, row[3], row[4], row[5]))
+
+    return output + unplaced
+
+
+def wcup_scoring_events():
+    """
+    Události, které se počítají do Světového poháru.
+
+    Juniorské závody se jezdí ve stejných letech jako elitní, takže bez
+    tohohle filtru by se dostaly do tabulek Světového poháru jako prázdné
+    sloupce.
+    """
+    return [code for code, meta in EVENTS.items() if meta["scores_wcup"]]
 
 
 def prepare_relay_output(source_list):
@@ -254,13 +813,18 @@ def prepare_relay_output(source_list):
     return classified, others
 
 
-def prepare_medal_table(model, competitor_id, table="race"):
-    if table == "relay":
-        mkeys = ["WMTBOC", "EMTBOC", "WCUP"]
-    else:
-        mkeys = ["WMTBOC", "EMTBOC", "WCUP"]
+def prepare_medal_table(model, competitor_id, table="race", events=None):
+    """
+    Medaile závodníka po událostech.
 
-    medal_table = dict.fromkeys(mkeys, [])
+    :param events: které události počítat; None vezme všechny z registru.
+                   Elitní a juniorské se zobrazují odděleně, takže si volající
+                   řekne o jednu skupinu.
+    :return: {kód události: [zlaté, stříbrné, bronzové]} v pořadí registru
+    """
+    mkeys = list(events) if events else event_codes()
+
+    medal_table = {event: [0, 0, 0] for event in mkeys}
     for event in mkeys:
         medal_lines = [
             model.get_competitor_place_count(competitor_id, place, event.upper(), table) for place in range(1, 4)
@@ -373,7 +937,10 @@ def format_competitor_row(row, races):
     return {
         "race_id": row[1],
         "date": daystr,
+        # result zůstává číslo kvůli řazení v tabulce, na zobrazení je
+        # result_label - nedokončené závody mají v databázi devítky.
         "result": row[2],
+        "result_label": format_place(row[2], row[3]),
         "dist": races[row[1]]["distance"].lower().replace("-", "_"),
         "event": races[row[1]]["event"],
         "rtime": row[3],
@@ -420,21 +987,29 @@ def sort_full_results(results):
 def make_team_worldup_results_base(results, category="M"):
     """
     create sorted team worlcup results list
-    :param races: list of races in year
-    :param results: tuple of (comp_id, race_id, place) from db
-    :param competitors: dictionary with competitors
+
+    Federace může v jednom závodě postavit víc týmů (druhý jede jako
+    `reduced`, bez místa a bez bodů). Body do Poháru se podle pravidel
+    IOF počítají jen nejlepšímu týmu federace, takže se tu z řádků jedné
+    federace bere maximum - dřív o výsledku rozhodovalo pořadí řádků
+    z databáze a nulový tým běžně přepsal ten bodující.
+
+    :param results: tuple of (comp_id, race_id, team, score) from db
+    :param category: M/W/X, jede se do klíče závodu
     """
     results_basic = defaultdict(dict)
     all_races = set()
     for comp_id, race_id, team, score in results:
         key = f"{race_id}-{category}"
-        results_basic[team][key] = {"members": [], "points": 0}
+        race = results_basic[team].setdefault(key, {"members": [], "points": 0})
         all_races.add(key)
 
-    for comp_id, race_id, team, score in results:
-        key = f"{race_id}-{category}"
-        results_basic[team][key]["points"] = score
-        results_basic[team][key]["members"].append(comp_id)
+        if score > race["points"]:
+            # lepší tým federace přebíjí ten dosavadní i se sestavou
+            race["members"] = [comp_id]
+            race["points"] = score
+        elif score == race["points"]:
+            race["members"].append(comp_id)
 
     return results_basic, all_races
 
@@ -481,6 +1056,43 @@ def flatten(data: list):
     return [item for sublist in data for item in sublist]
 
 
+def merge_medal_lines_by_year(line_a, line_b, line_c):
+    """
+    Jako merge_medal_lines, ale vstupem jsou řádky s rokem.
+
+    :param line_*: [(competitor_id, year, count), ...] pro zlato/stříbro/bronz
+    :return {(competitor_id, year): [zlato, stříbro, bronz]}
+    """
+    result = {}
+    for pos, line in enumerate((line_a, line_b, line_c)):
+        for com_id, year, count in line:
+            result.setdefault((com_id, year), [0, 0, 0])[pos] = count
+
+    return result
+
+
+def aggregate_medals_by_country_and_year(by_year, competitors):
+    """
+    Medaile po zemích, s ohledem na to, za koho se v daném roce jelo.
+
+    Garde má individuální medaile z let 2006-2009 za Slovensko a jednu
+    z 2015 za Francii - bez roku by všech sedm spadlo pod dnešní FRA.
+
+    :param by_year: {(competitor_id, year): [zlato, stříbro, bronz]}
+    :param competitors: registr závodníků
+    :return {country: [zlato, stříbro, bronz]}
+    """
+    by_country = defaultdict(lambda: [0, 0, 0])
+    for (com_id, year), medals in by_year.items():
+        if com_id not in competitors:
+            continue
+
+        country = nationality_in(competitors[com_id], year)
+        by_country[country] = [sum(x) for x in zip(by_country[country], medals)]
+
+    return dict(by_country)
+
+
 def aggregate_medals_by_country(converted, competitors):
     converted_by_country = defaultdict(list)
     for com_id, medals in converted.items():
@@ -493,6 +1105,145 @@ def aggregate_medals_by_country(converted, competitors):
             converted_by_country[country] = [sum(x) for x in zip(current, medals)]
 
     return converted_by_country
+
+
+def medal_countries(converted, competitors):
+    """
+    Kódy zemí, které mají v tabulce aspoň jednu medaili.
+
+    Staví se ze sloučené tabulky (individuál + štafety), aby žádná vlajka
+    nevedla na prázdnou stránku - SVK má třeba na WMTBOC jen štafetové
+    medaile, ale filtr pro něj smysl má.
+    """
+    return sorted({competitors[com_id]["nationality"] for com_id in converted if com_id in competitors})
+
+
+def medals_for_country(by_year, competitors, country):
+    """
+    Medaile jednoho státu po závodnících, počítané podle roku.
+
+    Kdo změnil zemi, přispívá každému státu jen medailemi z té doby -
+    Garde má šest individuálních medailí z WMTBOC za Slovensko (2006-2009)
+    a jednu z EMTBOC za Francii (2015), takže v slovenské tabulce musí být
+    se šesti a ve francouzské s jednou.
+
+    :param by_year: {(competitor_id, year): [zlato, stříbro, bronz]}
+    :param competitors: registr závodníků
+    :param country: kód země
+    :return {competitor_id: [zlato, stříbro, bronz]} jen za tu zemi
+    """
+    result = {}
+    for (com_id, year), medals in by_year.items():
+        if com_id not in competitors:
+            continue
+
+        if nationality_in(competitors[com_id], year) != country:
+            continue
+
+        current = result.setdefault(com_id, [0, 0, 0])
+        result[com_id] = [sum(x) for x in zip(current, medals)]
+
+    return {com_id: medals for com_id, medals in result.items() if any(medals)}
+
+
+def aggregate_relay_medals_by_team(lines):
+    """
+    Štafetové medaile po zemích, počítané po závodnících.
+
+    Pruh vlajek musí sedět se součtem řádků v tabulce, a ta je po
+    jednotlivcích - jeden štafetový bronz jsou tedy tři medaile.
+
+    :param lines: trojice seznamů [(competitor_id, team, count), ...]
+    :return {country: [zlato, stříbro, bronz]}
+    """
+    result = defaultdict(lambda: [0, 0, 0])
+    for pos, line in enumerate(lines):
+        for _, team, count in line:
+            result[team][pos] += count
+
+    return dict(result)
+
+
+def relay_medals_for_country(lines, country):
+    """
+    Štafetové medaile jednoho státu po závodnících.
+
+    Zemi tu netřeba dohledávat podle roku - competitor_relay.team ji drží
+    přímo, takže Garde přispěje Slovensku štafetami do 2012 a Francii těmi
+    od 2014 úplně sama od sebe.
+
+    :param lines: trojice seznamů [(competitor_id, team, count), ...]
+                  pro zlato, stříbro a bronz
+    :param country: kód země
+    :return {competitor_id: [zlato, stříbro, bronz]}
+    """
+    result = {}
+    for pos, line in enumerate(lines):
+        for com_id, team, count in line:
+            if team != country:
+                continue
+
+            result.setdefault(com_id, [0, 0, 0])[pos] += count
+
+    return {com_id: medals for com_id, medals in result.items() if any(medals)}
+
+
+def filter_medal_table(converted, ranking, competitors, country=None, by_country=None):
+    """
+    Podmnožina medailové tabulky pro jednu zemi.
+
+    Globální pořadí se nepočítá znovu - bere se z už hotového žebříčku nad
+    celým polem, takže i po odfiltrování sedí včetně dělených míst.
+
+    :param converted: {competitor_id: [zlato, stříbro, bronz]}
+    :param ranking: [(globální_pořadí, competitor_id), ...] nad celým polem
+    :param competitors: registr závodníků kvůli národnosti
+    :param country: kód země, None nechá tabulku beze změny
+    :param by_country: hotové počty za tu zemi z medals_for_country - použije
+                       se místo dnešní národnosti, takže závodník, který zemi
+                       změnil, přispěje jen medailemi z příslušné doby
+    :return: (filtrovaný dict, [(lokální_pořadí, globální_pořadí, competitor_id), ...])
+
+    Bez filtru je lokální pořadí rovno globálnímu - šablona tak má pořád
+    stejný tvar řádku a nemusí se ptát, jestli se filtruje.
+    """
+    if country is None:
+        return converted, [(rank, rank, com_id) for rank, com_id in ranking]
+
+    if by_country is not None:
+        filtered = dict(by_country)
+    else:
+        filtered = {
+            com_id: medals
+            for com_id, medals in converted.items()
+            if com_id in competitors and competitors[com_id]["nationality"] == country
+        }
+
+    # Globální pořadí se drží u závodníka, ať je řádek kdekoliv.
+    global_ranks = {com_id: rank for rank, com_id in ranking}
+
+    # Řadit se musí podle počtů za tu zemi, ne podle globálního pořadí:
+    # kdo zemi změnil, má v národní tabulce jen část medailí a v celkovém
+    # žebříčku by seděl jinde, než kam v ní patří.
+    order = [com_id for _, com_id in sort_medal_table(filtered)]
+
+    filtered_ranking = []
+    local = -1
+    skip = 1
+    prev = None
+    for com_id in order:
+        # Stejný počet medailí = stejné místo i v národní tabulce.
+        current = filtered[com_id]
+        if current == prev:
+            skip += 1
+        else:
+            local += skip
+            skip = 1
+
+        filtered_ranking.append((local, global_ranks.get(com_id, 0), com_id))
+        prev = current
+
+    return filtered, filtered_ranking
 
 
 def get_career_best_by_event_and_distance(competitor_results, races):
@@ -520,11 +1271,7 @@ def get_career_best_by_event_and_distance(competitor_results, races):
     RELAY_DISTANCES = ["relay", "mix_relay", "sprint_relay"]
 
     # Initialize result structure
-    career_best = {
-        "WMTBOC": {"individual": {}, "relay": {}},
-        "EMTBOC": {"individual": {}, "relay": {}},
-        "WCUP": {"individual": {}, "relay": {}},
-    }
+    career_best = {code: {"individual": {}, "relay": {}} for code in event_codes()}
 
     # Process each result
     for result in competitor_results:
@@ -589,11 +1336,7 @@ def process_career_best_from_db(individual_results, relay_results):
             'WCUP': {'individual': {}, 'relay': {}}
         }
     """
-    career_best = {
-        "WMTBOC": {"individual": {}, "relay": {}},
-        "EMTBOC": {"individual": {}, "relay": {}},
-        "WCUP": {"individual": {}, "relay": {}},
-    }
+    career_best = {code: {"individual": {}, "relay": {}} for code in event_codes()}
 
     # Process individual results
     for row in individual_results:
@@ -666,12 +1409,6 @@ def analyze_event_completeness(career_best_data, event="WMTBOC"):
             'distances_best': {'sprint': 1, 'middle': 3, 'long': 5, ...}
         }
     """
-    # Define all possible distances
-    WMTBOC_DISTANCES = ["sprint", "middle", "long", "mass_start", "relay"]
-    ALL_DISTANCES = ["relay", "mix_relay", "sprint_relay", "sprint", "middle", "long", "mass_start"]
-
-    distance_mapping = {"WMTBOC": WMTBOC_DISTANCES, "EMTBOC": ALL_DISTANCES, "WCUP": ALL_DISTANCES}
-
     event_data = career_best_data.get(event, {"individual": {}, "relay": {}})
 
     individual = event_data.get("individual", {})
@@ -690,7 +1427,8 @@ def analyze_event_completeness(career_best_data, event="WMTBOC"):
     distances_best = {}
 
     # Fill in best places for each distance competed, pass if not competed
-    for distance in distance_mapping.get(event, []):
+    meta = get_event(event)
+    for distance in meta["distances"] if meta else ALL_DISTANCES:
         if distance in individual:
             distances_best[distance] = individual[distance]["place"]
         elif distance in relay:
@@ -727,7 +1465,7 @@ def calculate_grand_slam_score(career_best_data, distances_by_year, event="WMTBO
     Args:
         career_best_data: Output from process_career_best_from_db()
         distances_by_year: Dict mapping years to list of distances, from Races.get_distances_by_year()
-        event: Event type (WMTBOC, EMTBOC, WCUP)
+        event: Event type (kód z EVENTS, viz grand_slam_codes())
 
     Returns:
         Dictionary with:
@@ -839,3 +1577,477 @@ def count_medals_by_event(individual_results, relay_results, event):
         "bronze": bronze,
         "medals_str": f"{gold}-{silver}-{bronze}",
     }
+
+
+def assign_shared_ranks(ordered, medals_of):
+    """
+    Pořadí s dělenými místy pro už seřazený seznam.
+
+    Stejná medailová bilance dostane stejné pořadí a další v řadě o tolik
+    míst přeskočí - po dvou druhých je čtvrtý, ne třetí. Stejné pravidlo
+    má medailová tabulka (sort_medal_table), jen nad jiným klíčem.
+
+    :param ordered: klíče seřazené od nejlepšího
+    :param medals_of: funkce klíč -> [zlato, stříbro, bronz]
+    :return [(pořadí od nuly, klíč), ...]
+    """
+    rank = -1
+    skip = 1
+    ranking = []
+    previous = None
+
+    for key in ordered:
+        current = medals_of(key)
+        if current == previous:
+            skip += 1
+        else:
+            rank += skip
+            skip = 1
+
+        ranking.append((rank, key))
+        previous = current
+
+    return ranking
+
+
+def races_by_year_and_kind(distances_by_year):
+    """
+    Počty závodů v ročníku zvlášť pro individuál, štafety a dohromady.
+
+    Každý sloupec Perfect Championship potřebuje svého jmenovatele.
+    Emily Benham Kvale vyhrála v roce 2019 všechny čtyři individuální
+    závody - "4 z 5" by vypadalo jako ztráta, přitom pátý závod byla
+    štafeta, kterou v individuálním sloupci nemá co dohánět. Ve sloupci
+    "combined" naopak pětka sedí a je z ní vidět, že štafetová medaile
+    tam chybí.
+
+    Nejde to spočítat jako "všechny minus jedna" - štafeta nemusela být
+    žádná nebo jich mohlo být víc (EMTBOC má v programu i mix a sprint).
+
+    :param distances_by_year: {rok: [disciplíny]}, z get_distances_by_year()
+    :return {"individual": {rok: počet}, "relay": {...}, "combined": {...}}
+    """
+    counts = {"individual": {}, "relay": {}, "combined": {}}
+
+    for year, dists in distances_by_year.items():
+        relays = len([dist for dist in dists if "relay" in dist])
+        counts["relay"][year] = relays
+        counts["individual"][year] = len(dists) - relays
+        counts["combined"][year] = len(dists)
+
+    return counts
+
+
+def max_relays_in_one_year(distances_by_year):
+    """
+    Nejvíc štafet v jednom ročníku.
+
+    Rozhoduje, jestli má smysl samostatný štafetový sloupec v Perfect
+    Championship. Na WMTBOC se jede jediná štafeta, takže by ve sloupci
+    byla jen jednička vedle jedničky - žebříček, kde se nedá nic vyhrát.
+    Do součtu ve sloupci "combined" se ta medaile započítá tak jako tak.
+
+    Počítá se ze skutečně odjetých ročníků, ne ze seznamu povolených
+    disciplín - EMTBOC mix i sprintovou štafetu v programu má, ale
+    záleží na tom, jestli se někdy sešly v jednom roce.
+
+    :param distances_by_year: {rok: [disciplíny]}, z get_distances_by_year()
+    :return nejvyšší počet štafet v jednom ročníku (0, když žádná nebyla)
+    """
+    counts = [
+        len([dist for dist in dists if "relay" in dist])
+        for dists in distances_by_year.values()
+    ]
+
+    return max(counts, default=0)
+
+
+# Kolik zlata musí ročník mít, aby se v tabulce objevil. Jedno zlato je
+# skvělý výsledek, ale k "dokonalému šampionátu" má daleko - a je jich
+# tolik, že tabulku utopí: na WMTBOC končilo přes sto jmen na jednom
+# děleném místě úplně dole.
+PERFECT_CHAMPIONSHIP_MIN_GOLD = 2
+
+
+def perfect_championship_table(
+    by_year, competitors=None, min_gold=PERFECT_CHAMPIONSHIP_MIN_GOLD, races_by_year=None
+):
+    """
+    Nejlepší jednotlivé šampionáty - kdo nasbíral nejvíc zlata v jednom
+    ročníku jedné soutěže.
+
+    Na rozdíl od Grand Slamu (calculate_grand_slam_score), který se dívá
+    na celou kariéru, je tady jednotkou dvojice závodník+rok. Roky se
+    nesčítají: čtyři zlata z jednoho mistrovství jsou něco jiného než
+    čtyři posbíraná za deset let.
+
+    Pořadí je olympijské - rozhoduje zlato, při shodě stříbro, pak bronz.
+    Tři zlata a stříbro jsou tedy víc než tři zlata a dva bronzy.
+
+    Při naprosté shodě medailí jde napřed ten, kdo vyhrál všechno, co se
+    ten rok jelo. Hnilica má z EMTBOC 2026 čtyři zlata ze čtyř závodů,
+    Laurila z 2013 čtyři z pěti - stejná bilance, ale Hnilica víc získat
+    nemohl. Rozhoduje se až po medailích, takže dvě zlata ze dvou závodů
+    nikdy nepředběhnou čtyři z pěti.
+
+    :param by_year: {(competitor_id, year): [zlato, stříbro, bronz]},
+                    z merge_medal_lines_by_year
+    :param competitors: registr závodníků; jen kvůli abecednímu řazení
+                        při naprosté shodě, None ho vypne
+    :param min_gold: kolik zlata musí mít, aby se řádek zobrazil;
+                     viz PERFECT_CHAMPIONSHIP_MIN_GOLD
+    :param races_by_year: {rok: počet závodů} pro tenhle sloupec, kvůli
+                          kompletnímu ročníku; None ho vypne
+    :return [(pořadí od nuly, (competitor_id, year), [zlato, stříbro, bronz],
+              vyhrál všechno?), ...]
+    """
+    rows = {key: medals for key, medals in by_year.items() if medals[0] >= min_gold}
+
+    def name_of(competitor_id):
+        # Jméno je jen tiebreak pro úplnou shodu medailí, takže když chybí,
+        # řadí se podle zbytku klíče - rozhodně kvůli němu nesmí spadnout
+        # celá stránka.
+        if not competitors or competitor_id not in competitors:
+            return ""
+
+        competitor = competitors[competitor_id]
+
+        return f"{competitor.get('last', '')} {competitor.get('first', '')}".lower()
+
+    def swept(key):
+        """Vyhrál všechno, co se ten rok jelo?"""
+        if not races_by_year:
+            return False
+
+        held = races_by_year.get(key[1])
+
+        return bool(held) and rows[key][0] >= held
+
+    # Zlato/stříbro/bronz sestupně, pak kompletní ročník, při naprosté shodě
+    # starší ročník napřed a nakonec abecedně. Bez posledních dvou by se
+    # pořadí stejných řádků měnilo mezi requesty podle pořadí v dictu.
+    ordered = sorted(
+        rows,
+        key=lambda key: (
+            -rows[key][0],
+            -rows[key][1],
+            -rows[key][2],
+            not swept(key),
+            key[1],
+            name_of(key[0]),
+        ),
+    )
+
+    # Dělené místo dostanou jen řádky, které se shodují i v kompletnosti -
+    # jinak by Hnilica a Laurila sdíleli první místo a bylo by to zpátky tam,
+    # odkud jsme vyšli.
+    def rank_key(key):
+        return (rows[key], swept(key))
+
+    return [
+        (rank, key, rows[key], swept(key))
+        for rank, key in assign_shared_ranks(ordered, rank_key)
+    ]
+
+
+# Práh mezi ID z IOF archivu a ID z Eventoru. Archivní ID jsou v datech
+# 0-457, eventorová od 3868 výš, takže se rozsahy nepřekrývají.
+IOF_ARCHIVE_MAX_ID = 1000
+
+IOF_ARCHIVE_URL = "https://old.orienteering.sport/events/{}/"
+EVENTOR_EVENT_URL = "https://eventor.orienteering.sport/Events/Show/{}"
+
+
+def results_link(race):
+    """
+    Odkaz na oficiální výsledky závodu.
+
+    Zdroj se pozná podle hodnoty iofurl:
+        < 1000  ID v IOF archivu (staré závody, dnes na old.orienteering.sport)
+        >= 1000 Eventor ID, když se liší od primárního klíče
+        None    Eventor ID je zároveň primární klíč závodu
+
+    Staré štafety (id 1-23) jsou v databázi od začátku a v Eventoru nejsou
+    vůbec - jejich id není eventorové, takže odkaz nevzniká.
+
+    :param race: dict závodu z models.races
+    :return: (text odkazu, url) nebo None, když odkaz sestavit nejde
+    """
+    iofurl = race.get("iofurl")
+
+    if iofurl is None:
+        race_id = race.get("race_id")
+        if not race_id or race_id < IOF_ARCHIVE_MAX_ID:
+            return None
+        return ("Eventor results page", EVENTOR_EVENT_URL.format(race_id))
+
+    if iofurl < IOF_ARCHIVE_MAX_ID:
+        return ("IOF results page", IOF_ARCHIVE_URL.format(iofurl))
+
+    return ("Eventor results page", EVENTOR_EVENT_URL.format(iofurl))
+
+
+# Kategorie vítězů v přehledu závodů. Pohlaví je u závodníka jako F/M,
+# štafetové třídy jsou W/M/X - sjednocuje se na W/M/X, aby stačil jeden
+# slovník názvů (RELAY_FORMATS ve flaskapp).
+WINNER_GROUP_ORDER = ("W", "M", "X")
+
+
+def _champion(group, members, team=False):
+    """Jeden vítěz do přehledu - jednotlivec i štafeta vypadají stejně."""
+    return {"group": group, "team": team, "members": members}
+
+
+def build_race_history(races, individual_winners, relay_winners, competitors):
+    """
+    Závody jedné události spolu s vítězi, připravené pro šablonu.
+
+    Individuální vítěz je člověk (dva na závod - muž a žena), štafetový je
+    tým. Šablona to nesmí rozlišovat, proto mají oba stejný tvar: seznam
+    členů, kde každý nese i svou zemi. Jednotlivec je tedy tým o jednom,
+    dělené první místo tým o dvou, štafeta o třech.
+
+    Země je u každého člena zvlášť, protože dělená první místa bývají
+    napříč státy - u štafety se jen třikrát zopakuje ta samá.
+
+    :param races: řádky z Races.get_by_event
+    :param individual_winners: (race_id, competitor_id) z Results
+    :param relay_winners: (race_id, class, team, competitor_id) z Results
+    :param competitors: slovník závodníků (flaskapp.COMPETITORS)
+    :return: seznam dictů, nejnovější závod první
+    """
+    def named(competitor_id):
+        person = competitors.get(competitor_id)
+        if not person:
+            return None
+
+        return (competitor_id, f"{person['first']} {person['last']}", person["nationality"])
+
+    # individuálové: nejdřív podle závodu, pak podle pohlaví
+    by_race = {}
+    for race_id, competitor_id in individual_winners:
+        person = competitors.get(competitor_id)
+        entry = named(competitor_id)
+        if not person or not entry:
+            continue
+        group = "W" if person["gender"] == "F" else "M"
+        by_race.setdefault(race_id, {}).setdefault(group, []).append(entry)
+
+    # štafety: podle závodu, třídy a týmu
+    by_relay = {}
+    for race_id, klasa, team, competitor_id in relay_winners:
+        entry = named(competitor_id)
+        if not entry:
+            continue
+        by_relay.setdefault(race_id, {}).setdefault((klasa, team), []).append(entry)
+
+    history = []
+    for row in races:
+        race_id = row[0]
+        champions = []
+
+        for group in WINNER_GROUP_ORDER:
+            members = by_race.get(race_id, {}).get(group)
+            if members:
+                champions.append(_champion(group, members))
+
+        relays = by_relay.get(race_id, {})
+        for klasa, team in sorted(
+            relays, key=lambda key: (WINNER_GROUP_ORDER.index(key[0]), key[1])
+        ):
+            champions.append(_champion(klasa, relays[(klasa, team)], team=True))
+
+        history.append(
+            {
+                "race_id": race_id,
+                "year": row[1],
+                "date": row[2],
+                "distance": row[3],
+                "venue": row[5],
+                "country": row[6],
+                "champions": champions,
+            }
+        )
+
+    # nejnovější první; datum a id dělají řazení jednoznačné, protože
+    # v jeden den se jede víc závodů
+    history.sort(key=lambda race: (race["year"], race["date"], race["race_id"]), reverse=True)
+
+    return history
+
+
+# --- Progression: z juniorů mezi elitu ---
+
+# Větve kariéry. Dvoustupňové jsou uzavřené samy v sobě - světové
+# a evropské tituly se v nich nemíchají, protože "juniorský mistr světa
+# se stal mistrem Evropy" je jiný příběh než postup uvnitř téže soutěže.
+#
+# Celý oblouk (full) je výjimka a bere obě soutěže dohromady. Nejde
+# o nedůslednost: mistrovství světa pro M17/W17 neexistuje, takže oblouk
+# musí začít v Evropě, ať se chce nebo ne. Kdyby se pak na juniorech
+# a elitě trvalo taky na Evropě, tabulka by neukazovala "celou cestu",
+# ale "kdo za celou kariéru nevyjel z Evropy" - a vypadl by z ní třeba
+# Hasek (EYMTBOC 2016 a 2017, JWMTBOC 2018 a 2019, WMTBOC 2024), což je
+# přesně ten postup, kvůli kterému stránka vznikla.
+#
+# WCUP tu není vůbec - juniorský ani mládežnický Světový pohár se nejede,
+# takže by nebylo co s čím párovat. U23 taky ne: je to přečíslovaná
+# elitní výsledkovka (viz materializace), ne soutěž, ze které se
+# "postupuje" - a se čtvrtou etapou zbydou dva lidi.
+#
+# Kódy jsou vyjmenované schválně, ne odvozené z event_codes(kind) -
+# ten by slil JWMTBOC s EJMTBOC do jedné skupiny i tam, kde to vadí.
+CAREER_PATHS = {
+    "world": {
+        "name": "World",
+        "groups": (("Junior", ("JWMTBOC",)), ("Elite", ("WMTBOC",))),
+    },
+    "europe": {
+        "name": "European",
+        "groups": (("Junior", ("EJMTBOC",)), ("Elite", ("EMTBOC",))),
+    },
+    "full": {
+        "name": "World and European",
+        "groups": (
+            ("Youth", ("EYMTBOC",)),
+            ("Junior", ("EJMTBOC", "JWMTBOC")),
+            ("Elite", ("EMTBOC", "WMTBOC")),
+        ),
+    },
+}
+
+
+def career_path(path):
+    """Popis větve podle klíče z URL, nebo None."""
+    if not path:
+        return None
+
+    return CAREER_PATHS.get(path.lower())
+
+
+def path_events(groups):
+    """Všechny kódy událostí větve - na filtr dotazu do databáze."""
+    return [code for _, codes in groups for code in codes]
+
+
+def birth_year(person):
+    """
+    Rok narození ze záznamu závodníka, nebo None.
+
+    `born` je řetězec "RRRR-MM-DD", ale u části lidí chybí úplně nebo
+    je prázdný - proto se nesmí spolehnout na formát. Vrací None,
+    ať se volající sám rozhodne, co s neznámým věkem.
+    """
+    if not person:
+        return None
+
+    try:
+        return int(str(person.get("born") or "").split("-")[0])
+    except (ValueError, TypeError):
+        return None
+
+
+def build_progression(medals, competitors, groups, place=3):
+    """
+    Závodníci, kteří získali medaili v KAŽDÉ etapě kariéry.
+
+    Čistá funkce nad výstupem Results.get_individual_medals(), aby šla
+    testovat bez databáze.
+
+    :param medals: (competitor_id, event, year, race_id, distance, place)
+    :param competitors: mapa id -> závodník (COMPETITORS)
+    :param groups: ((jméno, (kódy událostí, ...)), ...) v pořadí kariéry
+    :param place: nejhorší započítané umístění; 1 dělá variantu "champions"
+    :return: [{competitor_id, name, nationality, stages, gap}] seřazené
+             podle roku první medaile v poslední etapě
+
+    Etapa může mít víc kódů (celý oblouk bere juniorské i elitní medaile
+    ze světa i z Evropy dohromady). Medaile se pak sčítají přes všechny
+    kódy etapy a průlom je ta nejstarší z nich - proto si `first` veze
+    i kód události, jinak by ve sloučené etapě nešlo poznat, odkud je.
+    """
+    # kód události -> jméno etapy
+    stage_of = {code: stage for stage, codes in groups for code in codes}
+
+    collected = {}
+    for competitor_id, event, year, race_id, distance, result in medals:
+        stage = stage_of.get(event)
+        if stage is None or not result or result > place:
+            continue
+
+        stages = collected.setdefault(competitor_id, {})
+        entry = stages.setdefault(stage, {"first": None, "medals": [0, 0, 0]})
+        entry["medals"][result - 1] += 1
+
+        # první medaile = nejstarší; při shodě roku lepší umístění
+        current = entry["first"]
+        candidate = (year, race_id, distance, result, event)
+        if current is None or (year, result) < (current[0], current[3]):
+            entry["first"] = candidate
+
+    wanted = [stage for stage, _ in groups]
+
+    progression = []
+    for competitor_id, stages in collected.items():
+        if not all(stage in stages for stage in wanted):
+            continue
+
+        person = competitors.get(competitor_id)
+        if person is None:
+            continue
+
+        first_year = stages[wanted[0]]["first"][0]
+        last_year = stages[wanted[-1]]["first"][0]
+
+        # Věk u každého průlomu. Bez data narození zůstává None - řádek
+        # se nezahodí, jen se v řazení propadne na konec.
+        born = birth_year(person)
+        for stage in wanted:
+            stages[stage]["age"] = (
+                stages[stage]["first"][0] - born if born else None
+            )
+
+        progression.append(
+            {
+                "competitor_id": competitor_id,
+                "name": f"{person['first']} {person['last']}",
+                "nationality": person["nationality"],
+                "stages": stages,
+                "gap": last_year - first_year,
+                "elite_age": stages[wanted[-1]]["age"],
+                "first_age": stages[wanted[0]]["age"],
+            }
+        )
+
+    # Řadí se podle VĚKU u poslední medaile, při shodě podle věku u té
+    # první. Nejmladší nahoře.
+    #
+    # Dvě předchozí varianty a proč nestačily:
+    #
+    # 1. Rok první elitní medaile - to nebyl žebříček, ale časová osa:
+    #    nahoru se dostal ten, kdo závodil dřív.
+    # 2. Gap (roky mezi první a poslední medailí) - ten odměňuje pozdní
+    #    juniorskou medaili. Kdo ji vezme ve dvaceti, tedy v nejsilnějším
+    #    ročníku kategorie, má krátký gap; kdo prorazí v sedmnácti a pak
+    #    čeká, než ho federace pustí do elity, má gap dlouhý, i když je
+    #    to větší výkon. V datech to sedí: čtyři jezdci s juniorskou
+    #    medailí ve 20 a elitní ve 23 měli gap 3 a byli nahoře, zatímco
+    #    Foliforova (juniorka v 15) se s gapem 6 propadla dolů.
+    #
+    # Součet věků (17+21) dělá totéž, ale mění je 1:1 - ranější juniorská
+    # medaile pak vykoupí pozdější elitní, a to nejsou stejně těžké věci.
+    # Proto rozhoduje věk u elitní medaile a juniorský je až druhé
+    # kritérium.
+    #
+    # Kdo nemá datum narození, jde na konec (None se nedá porovnat) -
+    # ale z tabulky nevypadne.
+    progression.sort(
+        key=lambda row: (
+            row["elite_age"] is None,
+            row["elite_age"] or 0,
+            row["first_age"] or 0,
+            row["name"],
+        )
+    )
+
+    return progression

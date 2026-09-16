@@ -1,4 +1,5 @@
 {% extends "default.html" %}
+{% from "macros.html" import medal_badge %}
 {% block content %}
 <h1>{{ title }}</h1>
 <p>
@@ -35,13 +36,13 @@
                     {{ team }}
                     </td>
                     <td>
-                        {{ content[0][team][0] }}
+                        {{ medal_badge(content[0][team][0], 'gold') }}
                     </td>
                     <td>
-                        {{ content[0][team][1] }}
+                        {{ medal_badge(content[0][team][1], 'silver') }}
                     </td>
                     <td>
-                        {{ content[0][team][2] }}
+                        {{ medal_badge(content[0][team][2], 'bronze') }}
                     </td>
                 </tr>
             {% endfor %}

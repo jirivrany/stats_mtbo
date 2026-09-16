@@ -8,7 +8,7 @@
                 {% for row in women %}
                 <tr>
                     <th>
-                    {{ row[2] }}
+                    {{ row[2]|place(row[3]) }}
                     </th>
                     <th>
                     <a href="/competitor/{{ row[0] }}/">
@@ -18,10 +18,11 @@
                     </a>
                     </th>
                     <td>
+                    {% set nat = nationality_in(competitors[row[0]], race["year"]) %}
                     <img src="{{ url_for('static', filename='css/blank.gif') }}"
-                        class="flag flag-{{ flags[competitors[row[0]]["nationality"]].lower() }}"
-                        alt="{{ competitors[row[0]]["nationality"] }}" />
-                    {{ competitors[row[0]]["nationality"] }}
+                        class="flag flag-{{ flags[nat].lower() }}"
+                        alt="{{ nat }}" />
+                    {{ nat }}
                     </td>
                     <td>
                     {{ row[3] }}
@@ -36,7 +37,7 @@
                 {% for row in men %}
                 <tr>
                     <th>
-                    {{ row[2] }}
+                    {{ row[2]|place(row[3]) }}
                     </th>
                     <th>
                     <a href="/competitor/{{ row[0] }}/">
@@ -45,10 +46,11 @@
                     </a>
                     </th>
                     <td>
+                    {% set nat = nationality_in(competitors[row[0]], race["year"]) %}
                     <img src="{{ url_for('static', filename='css/blank.gif') }}"
-                        class="flag flag-{{ flags[competitors[row[0]]["nationality"]].lower() }}"
-                        alt="{{ competitors[row[0]]["nationality"] }}" />
-                    {{ competitors[row[0]]["nationality"] }}
+                        class="flag flag-{{ flags[nat].lower() }}"
+                        alt="{{ nat }}" />
+                    {{ nat }}
                     </td>
                     <td>
                     {{ row[3] }}

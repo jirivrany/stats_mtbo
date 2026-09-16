@@ -1,3 +1,40 @@
+{# Medaile jako barevný odznak - zlatá, stříbrná, bronzová. Používá se
+   na všech žebříčcích, aby "3" znamenala všude totéž.
+
+   zero='muted' pro tabulky se sloupcem na každý kov (nula musí zůstat
+   vidět, jinak vypadá buňka rozbitě), zero='hide' tam, kde jsou medaile
+   v jedné buňce vedle sebe. #}
+{% macro medal_badge(count, kind, zero='muted') %}
+{% set colors = {'gold': 'warning', 'silver': 'secondary', 'bronze': 'danger'} %}
+{% if count %}
+<span class="badge text-bg-{{ colors[kind] }}" title="{{ kind }}">{{ count }}</span>
+{% elif zero == 'muted' %}
+<span class="badge text-bg-light text-muted" title="{{ kind }}">0</span>
+{% endif %}
+{% endmacro %}
+
+
+{# Jedna konkrétní medaile, ne počet - k jednomu výsledku. Ikonky
+   m1/m2/m3 jsou stejné jako v hlavičkách medailových tabulek, takže
+   kov se pozná bez legendy. #}
+{% macro medal_icon(place) %}
+{% set names = {1: 'gold', 2: 'silver', 3: 'bronze'} %}
+{% if place in names %}
+<img src="{{ url_for('static', filename='img/m%d.png'|format(place)) }}"
+     alt="{{ names[place] }}" title="{{ names[place] }}" />
+{% endif %}
+{% endmacro %}
+
+
+{# Trojice odznaků do jedné buňky (G-S-B). Nuly se vynechávají, pořadí
+   kovů je pořád stejné, takže se to dá číst i bez nich. #}
+{% macro medal_set(gold, silver, bronze) %}
+{{ medal_badge(gold, 'gold', zero='hide') }}
+{{ medal_badge(silver, 'silver', zero='hide') }}
+{{ medal_badge(bronze, 'bronze', zero='hide') }}
+{% endmacro %}
+
+
 {% macro wcup_overall_table(table_title, table_data, flags, competitors) %}
     <h2>{{ table_title }}</h2>
             <table class="table table-sm">
@@ -14,10 +51,13 @@
                         <tr>
                             <th><a href="{{ url_for('wcup', year=year) }}">{{year}}</a></th>
                             {% for comp_id, place in row %}
+                                {# Vlajka podle ročníku Poháru, ne podle dnešní
+                                   registrace - viz nationality_in. #}
+                                {% set nat = nationality_in(competitors[comp_id], year) %}
                                 <td>
                                     <img src="{{ url_for('static', filename='css/blank.gif') }}"
-                                    class="flag flag-{{ flags[competitors[comp_id]['nationality']].lower() }}"
-                                    alt="{{ competitors[comp_id]['nationality'] }}" />
+                                    class="flag flag-{{ flags[nat].lower() }}"
+                                    alt="{{ nat }}" />
                                     <a href="{{ url_for('competitor', competitor_id=comp_id) }}">
                                         {{ competitors[comp_id]['first'] }}
                                         {{ competitors[comp_id]['last'] }}
@@ -122,7 +162,11 @@
 {% endif %}
 {% endmacro %}
 
-{% macro event_summary_table(table_data, race_ids, competitors, flags) %}
+{# Shrnutí ročníku. Rok je potřeba kvůli vlajkám - musí ukazovat zemi,
+   za kterou se tehdy jelo, ne dnešní registraci (Emily Benham Kvale
+   vyhrála 2019 za GBR, dnes je vedená jako NOR). Detail závodu to dělá
+   stejně, takže bez roku si obě stránky odporovaly. #}
+{% macro event_summary_table(table_data, race_ids, competitors, flags, year) %}
     {% for race_type, results in table_data.items() %}
         {% set race_id = race_ids.get(race_type) %}
         <tr>
@@ -132,16 +176,66 @@
                 </a>
             </td>
             {% for competitor_id, place in results %}
+                {% set nat = nationality_in(competitors[competitor_id], year) %}
                 <td>
                 <a href="/competitor/{{ competitor_id }}/">
                     {{ competitors[competitor_id]["first"] }}
                     {{ competitors[competitor_id]["last"] }}</a>
                 <img src="{{ url_for('static', filename='css/blank.gif') }}"
-                    class="flag flag-{{ flags[competitors[competitor_id]['nationality']].lower() }}"
-                    alt="{{ competitors[competitor_id]['nationality'] }}" />
-                {{ competitors[competitor_id]["nationality"] }}
+                    class="flag flag-{{ flags[nat].lower() }}"
+                    alt="{{ nat }}" />
+                {{ nat }}
                 </td>
             {% endfor %}
         </tr>
     {% endfor %}
+{% endmacro %}
+
+{# Medailová tabulka závodníka. Volá se zvlášť pro elitu a zvlášť pro
+   mládežnické kategorie - juniorské medaile se s elitními nesčítají. #}
+{% macro competitor_medals(medal_table) %}
+<table class="table table-bordered table-condensed">
+    <tr>
+        <th>Event</th>
+        <th class="text-center">
+            <img src="{{ url_for('static', filename='img/m1.png') }}" alt="gold" title="gold" />
+        </th>
+        <th class="text-center">
+            <img src="{{ url_for('static', filename='img/m2.png') }}" alt="silver" title="silver" />
+        </th>
+        <th class="text-center">
+            <img src="{{ url_for('static', filename='img/m3.png') }}" alt="bronze" title="bronze" />
+        </th>
+    </tr>
+    {% for event, medals in medal_table.items() %}
+    <tr>
+        <td>{{ event }}</td>
+        <td class="text-center">{{ medals[0] }}</td>
+        <td class="text-center">{{ medals[1] }}</td>
+        <td class="text-center">{{ medals[2] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endmacro %}
+
+
+{# "První medaile / titul". Text se liší podle události (title_noun
+   z registru tools.EVENTS) a podle toho, jestli jde o individuál nebo štafetu. #}
+{% macro first_medal_note(entry, code, kind, scope, medal_names, birth) %}
+    {% if entry %}
+    {% set meta = EVENTS[code] %}
+    <p>
+        {% if kind == 'title' %}
+            First {{ scope }} {{ meta['title_noun'] }} title
+        {% else %}
+            First {{ scope }} medal from {{ code }} {{ medal_names[entry[0][4]]|lower }}
+        {% endif %}
+        {% if scope == 'individual' %}
+            on <a href="/race/{{ entry[0][0] }}">{{ entry[0][2]|lower }} distance in {{ entry[0][1] }}</a>
+        {% else %}
+            <a href="/race/{{ entry[0][0] }}">in {{ entry[0][1] }}</a>
+        {% endif %}
+        {%- if birth|int > 0 %} / age {{ entry[0][1]|int - birth|int }}{% endif %}
+    </p>
+    {% endif %}
 {% endmacro %}

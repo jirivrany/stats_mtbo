@@ -99,18 +99,27 @@ class Races(object):
 
         return db_result
 
-    def get_individual_ids_by_year(self, year, team=False):
+    def get_individual_ids_by_year(self, year, team=False, events=None):
         """
         get team or individual races id held in given year
         :param year string
+        :param team bool - team races instead of individual ones
+        :param events - omezení na dané typy událostí; bez něj se vrátí
+            i juniorské závody, které se jedou ve stejných letech jako
+            elitní, ale do Světového poháru nepatří
         :return list
         """
-        if team:
-            query = "SELECT id FROM races WHERE year = %s AND team=1 ORDER BY date"
-        else:
-            query = "SELECT id FROM races WHERE year = %s AND team=0 ORDER BY date"
+        query = "SELECT id FROM races WHERE year = %s AND team = %s"
+        params = [year, 1 if team else 0]
 
-        self.cursor.execute(query, (year,))
+        if events:
+            # počet zástupných symbolů podle délky seznamu, hodnoty vážou %s
+            query += f" AND event IN ({', '.join(['%s'] * len(events))})"
+            params.extend(events)
+
+        query += " ORDER BY date"
+
+        self.cursor.execute(query, tuple(params))
 
         db_result = self.cursor.fetchall()
         res = [x[0] for x in db_result]
@@ -135,7 +144,7 @@ class Races(object):
         Get a dictionary mapping years to distances held for a given event.
 
         Args:
-            event: Event type (WMTBOC, EMTBOC, WCUP)
+            event: Event type (kód z tools.EVENTS)
 
         Returns:
             dict: {year: [list of distances]}

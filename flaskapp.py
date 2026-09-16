@@ -3,7 +3,6 @@
 Flask app for the www.mtbo.info website.
 """
 
-import sys
 from collections import defaultdict
 from functools import lru_cache
 
@@ -16,7 +15,6 @@ from models.competitors import Competitors
 from models.races import Races
 from models.results import Results
 from models.wcup import Wcup
-from loguru import logger
 
 mysql = MySQL()
 app = flask.Flask(__name__)
@@ -26,8 +24,12 @@ mysql.init_app(app)
 
 RACES = Races(mysql).get_all()
 COMPETITORS = Competitors(mysql).get_all_present()
-WMTBOC_NR = Races(mysql).get_count_by_event("WMTBOC")[0][0]
-EMTBOC_NR = Races(mysql).get_count_by_event("EMTBOC")[0][0]
+
+# Počet ročníků každé události - get_count_by_event vrací COUNT(DISTINCT year),
+# tedy kolikrát se šampionát konal, ne kolik bylo závodů.
+EVENT_RACE_COUNTS = {
+    code: Races(mysql).get_count_by_event(code)[0][0] for code in tools.event_codes()
+}
 MEDAL_NAMES = {1: "Gold", 2: "Silver", 3: "Bronze"}
 YEAR = 2026
 
@@ -65,22 +67,35 @@ WCUP_COUNTED = {
 }
 
 
+app.add_template_filter(tools.format_place, "place")
+
+
+@app.context_processor
+def inject_events():
+    """
+    Registr událostí do všech šablon - navigace i stránka závodníka z něj
+    staví seznamy, takže přidání další kategorie nevyžaduje zásah v HTML.
+    """
+    return {
+        "EVENTS": tools.EVENTS,
+        "ELITE": tools.ELITE,
+        "JUNIOR_CODES": tools.non_elite_codes(),
+        "CAREER_PATHS": tools.CAREER_PATHS,
+        "category_badge": tools.category_badge,
+        # Vlajka u výsledku musí ukazovat zemi, za kterou se ten závod jel,
+        # ne dnešní registraci - viz tools.nationality_in.
+        "nationality_in": tools.nationality_in,
+    }
+
+
 @lru_cache()
 @app.route("/")
 def home():
     """
     Main page
     """
-    wmtboc = Races(mysql).get_by_event("WMTBOC")
-    emtboc = Races(mysql).get_by_event("EMTBOC")
-    wmtboc_years = Races(mysql).get_event_years("WMTBOC")
-    emtboc_years = Races(mysql).get_event_years("EMTBOC")
-    wcup_years = Races(mysql).get_event_years("WCUP")
-
-    wmtboc = sorted(wmtboc, key=lambda x: x[1], reverse=True)
-    emtboc = sorted(emtboc, key=lambda x: x[1], reverse=True)
-
-    wcup_races = Races(mysql).get_by_event("WCUP")
+    # Seznamy závodů mají vlastní stránky (/races/<event>/) - na rozcestí
+    # jich bylo přes tři sta a stránka kvůli tomu vážila 200 kB.
     recent = Races(mysql).get_by_year(YEAR)
 
     res = Results(mysql)
@@ -94,12 +109,6 @@ def home():
 
     return flask.render_template(
         "index.html",
-        wmtboc=wmtboc,
-        emtboc=emtboc,
-        wmtboc_years=wmtboc_years,
-        emtboc_years=emtboc_years,
-        wcup_years=wcup_years,
-        wcup=wcup_races,
         recent=recent,
         flags=tools.IOC_INDEX,
         first=first,
@@ -226,16 +235,53 @@ def wcup(year):
     params:
         year: year
     """
+    return worldcup_standings(
+        year,
+        title=f"World Cup {year} individual overall standings",
+        scoring=tools.wcup_scoring_events(),
+        counted_by_year=WCUP_COUNTED,
+        year_url="/worldcup/",
+    )
+
+
+@lru_cache()
+@app.route("/worldcup/u23/", defaults={"year": YEAR})
+@app.route("/worldcup/u23/<int:year>/")
+def wcup_u23(year):
+    """
+    U23 world cup standings for a given year
+
+    Stejná tabulka jako elitní, jen nad jinými závody a s jiným počtem
+    započítaných výsledků - U23 se nejede dlouhá trať na MS, takže je
+    o jeden závod kratší. Body jsou v databázi (materialize_u23_results.py
+    + update_wcup_points.py), počítá se tu jen součet nejlepších.
+    """
+    return worldcup_standings(
+        year,
+        title=f"U23 World Cup {year} individual overall standings",
+        scoring=tools.u23_scoring_events(),
+        counted_by_year=tools.U23_WCUP_COUNTED,
+        year_url="/worldcup/u23/",
+    )
+
+
+def worldcup_standings(year, title, scoring, counted_by_year, year_url):
+    """
+    Celkové pořadí Světového poháru - elitního i U23.
+
+    Obě soutěže se počítají stejně (součet N nejlepších výsledků, při
+    shodě rozhoduje nejlepší jednotlivý), liší se jen závody a N. Kdyby
+    to byly dvě funkce, dřív nebo později se rozejdou.
+    """
     model = Results(mysql)
     races_model = Races(mysql)
-    title = f"World Cup {year} individual overall standings"
 
-    season_race = races_model.get_individual_ids_by_year(year)
-    totals_f = model.get_worldcup_points(year, gender="F")
-    totals_m = model.get_worldcup_points(year, gender="M")
+    season_race = races_model.get_individual_ids_by_year(year, events=scoring)
+    totals_f = model.get_worldcup_points(year, gender="F", events=scoring)
+    totals_m = model.get_worldcup_points(year, gender="M", events=scoring)
 
     try:
-        counted = WCUP_COUNTED[year]
+        counted = counted_by_year[year]
     except KeyError:
         flask.abort(404)
 
@@ -252,7 +298,7 @@ def wcup(year):
 
     country = {COMPETITORS[row["comp_id"]]["nationality"] for row in totals_m + totals_f}
 
-    years = sorted(WCUP_COUNTED.keys(), reverse=True)
+    years = sorted(counted_by_year.keys(), reverse=True)
 
     return flask.render_template(
         "wcup.html",
@@ -263,6 +309,7 @@ def wcup(year):
         men=totals_m,
         year=year,
         years=years,
+        year_url=year_url,
         stats={"men": len(totals_m), "women": len(totals_f), "country": len(country)},
         competitors=COMPETITORS,
         flags=tools.IOC_INDEX,
@@ -281,9 +328,10 @@ def team_wcup(year):
     model = Results(mysql)
     title = f"Team World Cup {year} overall standings"
 
-    totals_m = model.get_teamworldcup_points(year, "M")
-    totals_f = model.get_teamworldcup_points(year, "W")
-    totals_x = model.get_teamworldcup_points(year, "X")
+    scoring = tools.wcup_scoring_events()
+    totals_m = model.get_teamworldcup_points(year, "M", events=scoring)
+    totals_f = model.get_teamworldcup_points(year, "W", events=scoring)
+    totals_x = model.get_teamworldcup_points(year, "X", events=scoring)
     counted_text = "All team races are counted in overall standings each year."
 
     totals_m, races_m = tools.make_team_worldup_results_base(totals_m, "M")
@@ -329,8 +377,18 @@ def race(race_id):
     except KeyError:
         flask.abort(404)
 
-    data = model.get_race_results(race_id)
+    # Závody U23 vlastní výsledky nemají - jezdci startují v elitním
+    # závodě (jeho id je v iofurl) a pořadí U23 z něj vznikne až tady
+    # odfiltrováním jezdců do 23 let a přečíslováním.
+    if cur_race["event"] == "U23WMTBOC":
+        data = tools.u23_race_results(
+            model.get_race_results(cur_race["iofurl"]), COMPETITORS, cur_race["year"]
+        )
+    else:
+        data = model.get_race_results(race_id)
+
     title = f'{cur_race["event"]} {cur_race["year"]} {DISTANCE_NAMES[cur_race["distance"]]}'
+    race_results_link = tools.results_link(cur_race)
 
     if cur_race["distance"] == "relay":
         women_list = model.get_relay_results(race_id, "W")
@@ -356,6 +414,7 @@ def race(race_id):
             competitors=COMPETITORS,
             flags=tools.IOC_INDEX,
             race=cur_race,
+            results_link=race_results_link,
         )
 
     elif cur_race["distance"] in ("sprint-relay", "mix-relay"):
@@ -371,6 +430,7 @@ def race(race_id):
             competitors=COMPETITORS,
             flags=tools.IOC_INDEX,
             race=cur_race,
+            results_link=race_results_link,
         )
     else:
         women = [row for row in data if COMPETITORS[row[0]]["gender"] == "F"]
@@ -391,6 +451,7 @@ def race(race_id):
             competitors=COMPETITORS,
             flags=tools.IOC_INDEX,
             race=cur_race,
+            results_link=race_results_link,
         )
 
 
@@ -416,11 +477,24 @@ def competitor(competitor_id):
 
     distances = list({row["dist"] for row in data})
 
-    medal_table = tools.prepare_medal_table(model, competitor_id)
-    relay_medal_table = tools.prepare_medal_table(model, competitor_id, "relay")
+    # Každá věková kategorie má vlastní tabulku - jsou to jiné závody
+    # a sčítat je dohromady by bylo zavádějící. Youth se nesmí slít
+    # s juniory: jsou jezdci, kteří jeli youth a do juniorů nedorostli
+    # (nebo zatím nedorostli), ve sloučené tabulce by zmizeli.
+    elite_codes = tools.event_codes(tools.ELITE)
+    junior_codes = tools.event_codes(tools.JUNIOR)
+    youth_codes = tools.event_codes(tools.YOUTH)
 
-    my_wmtboc = model.get_event_competitor_participation(competitor_id, "WMTBOC")
-    my_emtboc = model.get_event_competitor_participation(competitor_id, "EMTBOC")
+    medal_table = tools.prepare_medal_table(model, competitor_id, events=elite_codes)
+    relay_medal_table = tools.prepare_medal_table(model, competitor_id, "relay", events=elite_codes)
+    junior_medal_table = tools.prepare_medal_table(model, competitor_id, events=junior_codes)
+    junior_relay_medal_table = tools.prepare_medal_table(
+        model, competitor_id, "relay", events=junior_codes
+    )
+    youth_medal_table = tools.prepare_medal_table(model, competitor_id, events=youth_codes)
+    youth_relay_medal_table = tools.prepare_medal_table(
+        model, competitor_id, "relay", events=youth_codes
+    )
 
     # Get raw data from database
     individual, relay = model.get_career_best_with_teams(competitor_id)
@@ -428,40 +502,44 @@ def competitor(competitor_id):
     # Process into career best structure
     career_best = tools.process_career_best_from_db(individual, relay)
 
-    # Analyze completeness for each event
-    wmtboc_stats = tools.analyze_event_completeness(career_best, "WMTBOC")
-    emtboc_stats = tools.analyze_event_completeness(career_best, "EMTBOC")
-    wcup_stats = tools.analyze_event_completeness(career_best, "WCUP")
-
-    # Calculate Grand Slam scores for each event
     races_model = Races(mysql)
-    wmtboc_distances_by_year = races_model.get_distances_by_year("WMTBOC")
-    emtboc_distances_by_year = races_model.get_distances_by_year("EMTBOC")
-    wcup_distances_by_year = races_model.get_distances_by_year("WCUP")
 
-    wmtboc_grand_slam = tools.calculate_grand_slam_score(career_best, wmtboc_distances_by_year, "WMTBOC")
-    emtboc_grand_slam = tools.calculate_grand_slam_score(career_best, emtboc_distances_by_year, "EMTBOC")
-    wcup_grand_slam = tools.calculate_grand_slam_score(career_best, wcup_distances_by_year, "WCUP")
+    # Statistiky, účast a první medaile pro každou událost v registru
+    event_stats = {}
+    participation = {}
+    first_medals = {}
+    for code in tools.event_codes():
+        stats = tools.analyze_event_completeness(career_best, code)
+        stats.update(
+            tools.calculate_grand_slam_score(
+                career_best, races_model.get_distances_by_year(code), code
+            )
+        )
+        event_stats[code] = stats
 
-    # Merge Grand Slam data into stats
-    wmtboc_stats.update(wmtboc_grand_slam)
-    emtboc_stats.update(emtboc_grand_slam)
-    wcup_stats.update(wcup_grand_slam)
+        years = model.get_event_competitor_participation(competitor_id, code)
+        participation[code] = {
+            "total": EVENT_RACE_COUNTS[code],
+            "mine": len(years),
+            "years": ", ".join(years),
+        }
 
-    logger.info(f"Competitor {competitor_id} - WMTBOC stats: {wmtboc_stats}")
-    logger.info(f"Competitor {competitor_id} - EMTBOC stats: {emtboc_stats}")
-    logger.info(f"Competitor {competitor_id} - WCUP stats: {wcup_stats}")
+        first_medals[code] = {
+            "medal": model.get_first_medal(competitor_id, code),
+            "title": model.get_first_medal(competitor_id, code, 1),
+            "relay_medal": model.get_first_medal(competitor_id, code, table="relay"),
+            "relay_title": model.get_first_medal(competitor_id, code, 1, table="relay"),
+        }
 
-    first_medals = {
-        "medal_wmtboc": model.get_first_medal(competitor_id, "WMTBOC"),
-        "medal_emtboc": model.get_first_medal(competitor_id, "EMTBOC"),
-        "title_wmtboc": model.get_first_medal(competitor_id, "WMTBOC", 1),
-        "title_emtboc": model.get_first_medal(competitor_id, "EMTBOC", 1),
-        "relay_medal_wmtboc": model.get_first_medal(competitor_id, "WMTBOC", table="relay"),
-        "relay_medal_emtboc": model.get_first_medal(competitor_id, "EMTBOC", table="relay"),
-        "relay_title_wmtboc": model.get_first_medal(competitor_id, "WMTBOC", 1, table="relay"),
-        "relay_title_emtboc": model.get_first_medal(competitor_id, "EMTBOC", 1, table="relay"),
-    }
+    # Karty se ukazují, jen když tam něco je - většina závodníků
+    # v juniorech ani v youth nestartovala.
+    def competed_in(codes, *tables):
+        return any(
+            any(table[code]) for table in tables for code in codes
+        ) or any(event_stats[code]["total_distances_competed"] for code in codes)
+
+    has_junior = competed_in(junior_codes, junior_medal_table, junior_relay_medal_table)
+    has_youth = competed_in(youth_codes, youth_medal_table, youth_relay_medal_table)
 
     title = " ".join([current["first"], current["last"]])
 
@@ -470,18 +548,28 @@ def competitor(competitor_id):
     except AttributeError:
         birth = None
 
+    # Soutěže, do kterých se závodník věkem vůbec nemohl dostat, se na
+    # kartě neukazují - "nikdy se nezúčastnil" u JWMTBOC v roce 2008
+    # u někoho narozeného 1975 nic neříká, soutěž vznikla dávno potom,
+    # co z juniorů vyrostl.
+    eligible = {code: tools.could_have_competed(meta, birth) for code, meta in tools.EVENTS.items()}
+
     return flask.render_template(
         "competitor.html",
         title=title,
         birth=birth,
         medal_table=medal_table,
         relay_medal_table=relay_medal_table,
-        wmtboc_total=WMTBOC_NR,
-        wmtboc_competitor=len(my_wmtboc),
-        wmtbo_years=", ".join(my_wmtboc),
-        emtboc_total=EMTBOC_NR,
-        emtboc_competitor=len(my_emtboc),
-        emtbo_years=", ".join(my_emtboc),
+        junior_medal_table=junior_medal_table,
+        junior_relay_medal_table=junior_relay_medal_table,
+        has_junior=has_junior,
+        youth_medal_table=youth_medal_table,
+        youth_relay_medal_table=youth_relay_medal_table,
+        has_youth=has_youth,
+        elite_codes=elite_codes,
+        junior_codes=junior_codes,
+        youth_codes=youth_codes,
+        participation=participation,
         first_medals=first_medals,
         medal_names=MEDAL_NAMES,
         races=RACES,
@@ -489,20 +577,25 @@ def competitor(competitor_id):
         data=data,
         distances=distances,
         flags=tools.IOC_INDEX,
-        wmtboc_stats=wmtboc_stats,
-        emtboc_stats=emtboc_stats,
-        wcup_stats=wcup_stats,
+        event_stats=event_stats,
+        eligible=eligible,
     )
 
 
-@lru_cache()
+@lru_cache(maxsize=256)
 @app.route("/medals_table/<event>/")
-def medals_table(event="WMTBOC"):
+@app.route("/medals_table/<event>/<country>/")
+def medals_table(event="WMTBOC", country=None):
     """
-    display medal table for given event type
+    display medal table for given event type, optionally for one country only
     params:
         event: event type
+        country: IOC country code, None shows the whole field
     """
+    meta = tools.get_event(event)
+    if meta is None:
+        flask.abort(404)
+
     model = Results(mysql)
     medal_lines = [model.get_place_count(place, event.upper()) for place in range(1, 4)]
     relay_lines = [model.get_place_count(place, event.upper(), "relay") for place in range(1, 4)]
@@ -511,12 +604,66 @@ def medals_table(event="WMTBOC"):
     converted_relay = tools.merge_medal_lines(*relay_lines)
     together = tools.merge_medal_dicts(converted, converted_relay)
 
+    # Žebříčky se počítají nad celým polem i při filtru - jen tak sedí
+    # globální pořadí včetně dělených míst.
     ranking = tools.sort_medal_table(converted)
     ranking_relay = tools.sort_medal_table(converted_relay)
     ranking_together = tools.sort_medal_table(together)
 
     countries = {COMPETITORS[com_id]["nationality"] for com_id in converted.keys()}
     rel_countries = {COMPETITORS[com_id]["nationality"] for com_id in converted_relay.keys()}
+
+    # Pruh vlajek nad tabulkou - jen země, které mají aspoň jednu medaili,
+    # s celkovým počtem, takže slouží i jako rychlé srovnání národů.
+    # Počítá se podle doby, kdy medaile padla, ať sedí s tabulkami pod ním.
+    indiv_year_lines = [
+        model.get_place_count_by_year(place, event.upper()) for place in range(1, 4)
+    ]
+    indiv_totals = tools.aggregate_medals_by_country_and_year(
+        tools.merge_medal_lines_by_year(*indiv_year_lines), COMPETITORS
+    )
+    # Štafety po závodnících, ne po týmech - tabulky pod pruhem počítají
+    # jednotlivce, takže součet u vlajky musí sedět se součtem řádků.
+    relay_team_lines_all = [
+        model.get_relay_place_count_by_team(place, event.upper()) for place in range(1, 4)
+    ]
+    relay_totals = tools.aggregate_relay_medals_by_team(relay_team_lines_all)
+    country_totals = tools.merge_medal_dicts(indiv_totals, relay_totals)
+    all_countries = sorted(country_totals)
+
+    if country is not None:
+        country = country.upper()
+        if country not in all_countries:
+            flask.abort(404)
+
+    # Při filtru na zemi se počty staví znovu podle doby, kdy medaile padla -
+    # kdo zemi změnil, patří do obou tabulek, ale pokaždé jen s částí medailí.
+    # Individuál potřebuje rok, štafety mají zemi přímo u výsledku.
+    indiv_by_country = relay_by_country = together_by_country = None
+    if country is not None:
+        indiv_lines = [
+            model.get_place_count_by_year(place, event.upper()) for place in range(1, 4)
+        ]
+        indiv_by_country = tools.medals_for_country(
+            tools.merge_medal_lines_by_year(*indiv_lines), COMPETITORS, country
+        )
+
+        relay_team_lines = [
+            model.get_relay_place_count_by_team(place, event.upper()) for place in range(1, 4)
+        ]
+        relay_by_country = tools.relay_medals_for_country(relay_team_lines, country)
+
+        together_by_country = tools.merge_medal_dicts(indiv_by_country, relay_by_country)
+
+    converted, ranking = tools.filter_medal_table(
+        converted, ranking, COMPETITORS, country, indiv_by_country
+    )
+    converted_relay, ranking_relay = tools.filter_medal_table(
+        converted_relay, ranking_relay, COMPETITORS, country, relay_by_country
+    )
+    together, ranking_together = tools.filter_medal_table(
+        together, ranking_together, COMPETITORS, country, together_by_country
+    )
 
     disclaimer = ""
     if event == "wcup":
@@ -536,7 +683,9 @@ def medals_table(event="WMTBOC"):
         "relay": (converted_relay, ranking_relay),
     }
 
-    title = f"Medals from {tools.EVENT_NAMES[event.upper()]}"
+    title = f"Medals from {meta['name']}"
+    if country:
+        title = f"{title} - {country}"
 
     return flask.render_template(
         "medals.html",
@@ -546,6 +695,10 @@ def medals_table(event="WMTBOC"):
         table_content=table_content,
         competitors=COMPETITORS,
         flags=tools.IOC_INDEX,
+        event_slug=meta["slug"],
+        country=country,
+        all_countries=all_countries,
+        country_totals=country_totals,
     )
 
 
@@ -557,6 +710,10 @@ def team_medals_table(event="WMTBOC"):
     params:
         event: event type
     """
+    meta = tools.get_event(event)
+    if meta is None:
+        flask.abort(404)
+
     model = Results(mysql)
     medal_lines = [model.get_place_count(place, event.upper()) for place in range(1, 4)]
     relay_lines = [model.get_relay_country_place_count(place, event.upper()) for place in range(1, 4)]
@@ -567,8 +724,16 @@ def team_medals_table(event="WMTBOC"):
     countries = {COMPETITORS[com_id]["nationality"] for com_id in converted.keys()}
     rel_countries = {com_id for com_id in converted_relay_by_country.keys()}
 
-    # converted grouped by country
-    converted_by_country = tools.aggregate_medals_by_country(converted, COMPETITORS)
+    # Individuální medaile po zemích se musí počítat s rokem - kdo přestoupil,
+    # má starší výsledky pod jinou vlajkou. Štafety to řeší samy, tam zemi drží
+    # competitor_relay.team.
+    medal_lines_by_year = [
+        model.get_place_count_by_year(place, event.upper()) for place in range(1, 4)
+    ]
+    converted_by_year = tools.merge_medal_lines_by_year(*medal_lines_by_year)
+    converted_by_country = tools.aggregate_medals_by_country_and_year(
+        converted_by_year, COMPETITORS
+    )
 
     ranking_by_country = tools.sort_medal_table(converted_by_country)
     ranking_relay_by_country = tools.sort_medal_table(converted_relay_by_country)
@@ -594,7 +759,7 @@ def team_medals_table(event="WMTBOC"):
         "relay": (converted_relay_by_country, ranking_relay_by_country),
     }
 
-    title = f"Medals from {tools.EVENT_NAMES[event.upper()]}"
+    title = f"Medals from {meta['name']}"
 
     return flask.render_template(
         "team_medals.html",
@@ -615,6 +780,10 @@ def participation_in_event(event="WMTBOC"):
     params:
         event: event type
     """
+    meta = tools.get_event(event)
+    if meta is None:
+        flask.abort(404)
+
     model = Results(mysql)
 
     at_last_one_participation = model.get_participation_years(event)
@@ -628,13 +797,10 @@ def participation_in_event(event="WMTBOC"):
 
     result = sorted(result.items(), key=lambda kv: len(kv[1]), reverse=True)
 
-    title = tools.EVENT_NAMES[event.upper()]
-    tname = f"{event.upper()}_NR"
-
     return flask.render_template(
         "participations.html",
-        title=title,
-        total=getattr(sys.modules[__name__], tname),
+        title=meta["name"],
+        total=EVENT_RACE_COUNTS[event.upper()],
         table_data=result,
         competitors=COMPETITORS,
         flags=tools.IOC_INDEX,
@@ -651,6 +817,12 @@ def young_stars(event="WMTBOC", place=None):
         event: event type
         place: medal place
     """
+    # Jen elita - u juniorů je věkové rozpětí dané kategorií, takže
+    # "nejmladší mistr" nic neříká.
+    meta = tools.get_event(event)
+    if meta is None or meta["kind"] != tools.ELITE:
+        flask.abort(404)
+
     model = Results(mysql)
 
     at_last_one_participation = model.get_participation_years(event)
@@ -678,13 +850,13 @@ def young_stars(event="WMTBOC", place=None):
     result = sorted(result.items(), key=lambda kv: kv[1][0])
     result = [res for res in result if res[1][0] <= 23]
 
-    title = f"Young stars on {tools.EVENT_NAMES[event.upper()]}"
+    title = f"Young stars on {meta['name']}"
     if place:
         disclaimer = f"Competitors who got a \
-            {tools.EVENT_NAMES[event.upper()]} medal in age 24 or younger."
+            {meta['name']} medal in age 24 or younger."
     else:
         disclaimer = f"Competitors who got their first \
-            {tools.EVENT_NAMES[event.upper()]} medal before becoming 24."
+            {meta['name']} medal before becoming 24."
 
     return flask.render_template(
         "youngstars.html",
@@ -708,6 +880,11 @@ def great_masters(event="WMTBOC", place=None):
         event: event type
         place: medal type place
     """
+    # Taky jen elita, ze stejného důvodu jako young_stars.
+    meta = tools.get_event(event)
+    if meta is None or meta["kind"] != tools.ELITE:
+        flask.abort(404)
+
     model = Results(mysql)
 
     at_last_one_participation = model.get_participation_years(event)
@@ -736,13 +913,13 @@ def great_masters(event="WMTBOC", place=None):
     result = sorted(result.items(), key=lambda kv: kv[1][0], reverse=True)
     result = [res for res in result if res[1][0] >= 35]
 
-    title = f"Great masters on {tools.EVENT_NAMES[event.upper()]}"
+    title = f"Great masters on {meta['name']}"
     if place:
         disclaimer = f"Competitors who got a \
-            {tools.EVENT_NAMES[event.upper()]} medal in age 35 and older."
+            {meta['name']} medal in age 35 and older."
     else:
         disclaimer = f"Competitors who got the \
-            {tools.EVENT_NAMES[event.upper()]} title in age 35 and older."
+            {meta['name']} title in age 35 and older."
 
     return flask.render_template(
         "youngstars.html",
@@ -752,6 +929,47 @@ def great_masters(event="WMTBOC", place=None):
         place=place,
         medal_names=MEDAL_NAMES,
         competitors=COMPETITORS,
+        flags=tools.IOC_INDEX,
+    )
+
+
+@lru_cache()
+@app.route("/progression/<path>/")
+@app.route("/progression/<path>/<int:place>/")
+def progression(path="world", place=None):
+    """
+    Závodníci, kteří získali medaili jako junioři i mezi elitou.
+
+    Bez place jsou to medailisté, s place=1 mistři - stejná konvence
+    jako /young_stars/<event>/3/. Větev (world/europe/full) drží
+    světové a evropské tituly oddělené, míchat se nesmí.
+    """
+    meta = tools.career_path(path)
+    if meta is None:
+        flask.abort(404)
+
+    groups = meta["groups"]
+    # bez parametru medailisté, jinak zadané místo omezené na 1-3
+    place = 3 if place is None else max(1, min(place, 3))
+
+    model = Results(mysql)
+    medals = model.get_individual_medals(place=place, events=tools.path_events(groups))
+    table_data = tools.build_progression(medals, COMPETITORS, groups, place=place)
+
+    stages = [stage for stage, _ in groups]
+    noun = "champions" if place == 1 else "medalists"
+    title = f"{' to '.join(stages)} {noun} - {meta['name']} championships"
+
+    return flask.render_template(
+        "progression.html",
+        title=title,
+        table_data=table_data,
+        stages=stages,
+        place=place,
+        path=path,
+        meta=meta,
+        competitors=COMPETITORS,
+        distance_names=DISTANCE_NAMES,
         flags=tools.IOC_INDEX,
     )
 
@@ -767,6 +985,10 @@ def event_summary(event: str = "WMTBOC", year: int = YEAR, organizer: str = ""):
         year: year
         event: event type
     """
+    meta = tools.get_event(event)
+    if meta is None:
+        flask.abort(404)
+
     model = Results(mysql)
 
     # Check if the event has results for the requested year
@@ -787,31 +1009,31 @@ def event_summary(event: str = "WMTBOC", year: int = YEAR, organizer: str = ""):
         else:
             flask.abort(404)
 
-    if event.upper() in ("WMTBOC", "EMTBOC"):
-        data_men, mrace_ids = model.get_summary_medals(year, event.upper())
-        data_women, wrace_ids = model.get_summary_medals(year, event.upper(), "F")
-        title = f"{tools.EVENT_NAMES[event.upper()]} {year} summary"
-        data_relays = model.get_summary_relay_medals(year, event.upper())
-        countries = model.get_participating_countries(year, event.upper())
-        nr_men = model.count_event_competitors(year, event.upper(), "M")
-        nr_women = model.count_event_competitors(year, event.upper(), "F")
-        races_info = model.get_summary_venues(year, event.upper())
-    elif event.upper() == "WCUP" and organizer:
-        data_men, mrace_ids = model.get_summary_medals(year, event.upper(), "M", organizer.upper())
-        data_women, wrace_ids = model.get_summary_medals(year, event.upper(), "F", organizer.upper())
-        title = f"{tools.EVENT_NAMES[event.upper()]} {organizer.upper()} {year} summary"
-        data_relays = model.get_summary_relay_medals(year, event.upper(), organizer.upper())
-        countries = model.get_participating_countries(year, event.upper(), organizer.upper())
-        nr_men = model.count_event_competitors(year, event.upper(), "M", organizer.upper())
-        nr_women = model.count_event_competitors(year, event.upper(), "F", organizer.upper())
-        races_info = model.get_summary_venues(year, event.upper(), organizer.upper())
-    else:
+    # Světový pohár se jede na víc místech do roka, takže potřebuje i
+    # pořadatele; u šampionátů je ročník jednoznačný.
+    if meta["needs_organizer"] and not organizer:
+        flask.abort(404)
+
+    code = event.upper()
+    host = organizer.upper() if meta["needs_organizer"] else ""
+
+    data_men, mrace_ids = model.get_summary_medals(year, code, "M", host)
+    data_women, wrace_ids = model.get_summary_medals(year, code, "F", host)
+    data_relays = model.get_summary_relay_medals(year, code, host)
+    countries = model.get_participating_countries(year, code, host)
+    nr_men = model.count_event_competitors(year, code, "M", host)
+    nr_women = model.count_event_competitors(year, code, "F", host)
+    races_info = model.get_summary_venues(year, code, host)
+
+    title = f"{meta['name']} {host + ' ' if host else ''}{year} summary"
+
+    # Bez závodů by min()/max() nad daty spadlo.
+    if not races_info:
         flask.abort(404)
 
     team_results = []
     for relay in data_relays:
         race_id, race_distance = relay
-        print(race_id, race_distance)
         team_men = []
         team_women = []
         team_mix = []
@@ -834,7 +1056,16 @@ def event_summary(event: str = "WMTBOC", year: int = YEAR, organizer: str = ""):
             result_list = result_list[:9]
             team_mix, _ = tools.prepare_relay_output(result_list)
 
-        team_results.append({"men": team_men, "women": team_women, "mix": team_mix})
+        # race_id putuje do šablony kvůli odkazu na celé výsledky - ve shrnutí
+        # jsou jen medailové týmy, kdo skončil čtvrtý se dozví až tam.
+        team_results.append(
+            {
+                "race_id": race_id,
+                "men": team_men,
+                "women": team_women,
+                "mix": team_mix,
+            }
+        )
 
     race_ids = mrace_ids | wrace_ids
     venues = [item[1] for item in races_info]
@@ -863,6 +1094,42 @@ def event_summary(event: str = "WMTBOC", year: int = YEAR, organizer: str = ""):
 
 
 @lru_cache()
+@app.route("/races/<event>/")
+def races_history(event):
+    """
+    display all races of given event type with their champions
+    params:
+        event: event type
+    """
+    meta = tools.get_event(event)
+    if meta is None:
+        flask.abort(404)
+
+    code = event.upper()
+    races_model = Races(mysql)
+    model = Results(mysql)
+
+    history = tools.build_race_history(
+        races_model.get_by_event(code),
+        model.get_event_race_winners(code),
+        model.get_event_relay_winners(code),
+        COMPETITORS,
+    )
+
+    return flask.render_template(
+        "races_history.html",
+        title=f"{meta['name']} - all races",
+        history=history,
+        event=code,
+        meta=meta,
+        years=sorted({race["year"] for race in history}, reverse=True),
+        distance_names=DISTANCE_NAMES,
+        relay_formats=RELAY_FORMATS,
+        flags=tools.IOC_INDEX,
+    )
+
+
+@lru_cache()
 @app.route("/grand_slam/<event>/")
 def grand_slam(event="WMTBOC"):
     """
@@ -870,7 +1137,12 @@ def grand_slam(event="WMTBOC"):
 
     A Grand Slam winner is someone who won all distances that existed
     during any year they competed (career-based), with a minimum of 3 wins.
+
+    Světový pohár tu Grand Slam nemá - viz tools.grand_slam_codes().
     """
+    if not tools.has_grand_slam(event):
+        flask.abort(404)
+
     event_upper = event.upper()
     result_model = Results(mysql)
     races_model = Races(mysql)
@@ -921,6 +1193,77 @@ def grand_slam(event="WMTBOC"):
         competitors=COMPETITORS,
         flags=tools.IOC_INDEX,
         medal_names=MEDAL_NAMES,
+    )
+
+
+@lru_cache()
+@app.route("/perfect_championship/<event>/")
+def perfect_championship(event="WMTBOC"):
+    """
+    Nejlepší jednotlivé šampionáty - kdo nasbíral nejvíc zlata v jednom
+    ročníku.
+
+    Grand Slam se dívá na celou kariéru, tohle na jeden ročník. Pořadí je
+    olympijské: rozhoduje zlato, při shodě stříbro, pak bronz.
+
+    Sloupce jsou tři jako v medailové tabulce - individuální závody,
+    štafety a součet. Štafetové zlato závisí na týmu, takže si čtenář
+    vybere, co ho zajímá, a nemusíme za něj rozhodovat.
+
+    Světový pohár tu není - viz tools.perfect_championship_codes().
+    """
+    if not tools.has_perfect_championship(event):
+        flask.abort(404)
+
+    meta = tools.get_event(event)
+    event_upper = event.upper()
+    model = Results(mysql)
+
+    # Medaile po (závodník, rok) - stejné dotazy jako medailová tabulka,
+    # jen se nesčítají přes roky.
+    indiv_lines = [model.get_place_count_by_year(place, event_upper) for place in range(1, 4)]
+    relay_lines = [
+        model.get_place_count_by_year(place, event_upper, "relay") for place in range(1, 4)
+    ]
+
+    individual = tools.merge_medal_lines_by_year(*indiv_lines)
+    relay = tools.merge_medal_lines_by_year(*relay_lines)
+    together = tools.merge_medal_dicts(individual, relay)
+
+    # Kolik závodů se ten který rok jelo - kontext k počtu zlat, každý
+    # sloupec má svého jmenovatele (individuál nepočítá štafetu). V roce
+    # 2026 povolila IOF na WMTBOC jen tři individuální závody, takže
+    # dokonalý ročník je tam menší číslo než jinde. Do pořadí to nevstupuje.
+    distances_by_year = Races(mysql).get_distances_by_year(event_upper)
+    races_by_year = tools.races_by_year_and_kind(distances_by_year)
+
+    # Každý sloupec se poměřuje se svým počtem závodů - kdo vyhrál všechno,
+    # co se ten rok jelo, jde při shodě medailí napřed.
+    table_content = {
+        "individual": tools.perfect_championship_table(
+            individual, COMPETITORS, races_by_year=races_by_year["individual"]
+        ),
+        "combined": tools.perfect_championship_table(
+            together, COMPETITORS, races_by_year=races_by_year["combined"]
+        ),
+    }
+
+    # Štafetový sloupec jen tam, kde se dá získat víc než jedno zlato -
+    # jinak by to byl žebříček jedniček. Viz max_relays_in_one_year.
+    if tools.max_relays_in_one_year(distances_by_year) > 1:
+        table_content["relay"] = tools.perfect_championship_table(
+            relay, COMPETITORS, races_by_year=races_by_year["relay"]
+        )
+
+    return flask.render_template(
+        "perfect_championship.html",
+        title=f"Perfect Championship - {meta['name']}",
+        event=event_upper,
+        table_content=table_content,
+        min_gold=tools.PERFECT_CHAMPIONSHIP_MIN_GOLD,
+        races_by_year=races_by_year,
+        competitors=COMPETITORS,
+        flags=tools.IOC_INDEX,
     )
 
 

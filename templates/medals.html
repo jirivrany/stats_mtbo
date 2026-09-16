@@ -1,21 +1,55 @@
 {% extends "default.html" %}
+{% from "macros.html" import medal_badge %}
 {% block content %}
 <h1>{{ title }}</h1>
+{% if country %}
 <p>
-    We have <strong>{{ stats['individual'] }} individual medalists</strong> from <strong>{{ stats['indiv_countries'] }} countries</strong>. In the relay competitions <strong>{{ stats['relay'] }} competitors</strong> from <strong>{{ stats['rel_countries'] }} countries</strong> won the medal so far. 
+    Medals won by <strong>{{ country }}</strong>:
+    <strong>{{ stats['individual'] }}</strong> individual
+    {%- if stats['individual'] == 1 %} medalist{% else %} medalists{% endif %},
+    <strong>{{ stats['relay'] }}</strong> in the relay competitions.
+    The <em>World</em> column shows the position in the overall table.
 </p>
+{% else %}
+<p>
+    We have <strong>{{ stats['individual'] }} individual medalists</strong> from <strong>{{ stats['indiv_countries'] }} countries</strong>. In the relay competitions <strong>{{ stats['relay'] }} competitors</strong> from <strong>{{ stats['rel_countries'] }} countries</strong> won the medal so far.
+</p>
+{% endif %}
 {% if disclaimer %}
    <p>{{ disclaimer }}</p>
 {% endif %}
+
+{# Filtr podle země. Medailových zemí je necelá dvacítka, takže se všechny
+   vejdou do jednoho pruhu - celkový počet medailí u vlajky z něj dělá
+   zároveň rychlé srovnání národů. #}
+<div class="mb-3">
+    <a href="/medals_table/{{ event_slug }}/"
+       class="btn btn-sm {% if country %}btn-outline-secondary{% else %}btn-secondary{% endif %} mb-1">
+        All
+    </a>
+    {% for code in all_countries %}
+    <a href="/medals_table/{{ event_slug }}/{{ code }}/"
+       class="btn btn-sm {% if code == country %}btn-info{% else %}btn-outline-secondary{% endif %} mb-1"
+       title="{{ code }} - {{ country_totals[code]|sum }} medals in total">
+        <img src="{{ url_for('static', filename='css/blank.gif') }}"
+             class="flag flag-{{ flags[code].lower() }}"
+             alt="{{ code }}" />
+        {{ code }}
+        <span class="badge text-bg-light text-muted">{{ country_totals[code]|sum }}</span>
+    </a>
+    {% endfor %}
+</div>
 
 <div class="row">
     {% for col, content in table_content.items() %}
     <div class="col-sm-4">
         <h3>{{col|capitalize}}</h3>
+        {% if content[1] %}
         <table class="table table-sm">
         <thead>
         <tr class="table-info">
             <th>#</th>
+            {% if country %}<th title="position in the overall table">World</th>{% endif %}
             <th>Competitor</th>
             <th>Gold</th>
             <th>Silver</th>
@@ -23,11 +57,16 @@
         </tr>
         </thead>
         <tbody>
-            {% for nr, competitor_id in content[1] %}
+            {% for nr, world_nr, competitor_id in content[1] %}
                 <tr>
                     <td>
                         {{ nr + 1 }}
                     </td>
+                    {% if country %}
+                    <td class="text-muted">
+                        {{ world_nr + 1 }}
+                    </td>
+                    {% endif %}
                     <td>
                     <a href="/competitor/{{ competitor_id }}/">
                         {{ competitors[competitor_id]["first"] }}
@@ -38,19 +77,24 @@
                     {{ competitors[competitor_id]["nationality"] }}
                     </td>
                     <td>
-                        {{ content[0][competitor_id][0] }}
+                        {{ medal_badge(content[0][competitor_id][0], 'gold') }}
                     </td>
                     <td>
-                        {{ content[0][competitor_id][1] }}
+                        {{ medal_badge(content[0][competitor_id][1], 'silver') }}
                     </td>
                     <td>
-                        {{ content[0][competitor_id][2] }}
+                        {{ medal_badge(content[0][competitor_id][2], 'bronze') }}
                     </td>
                 </tr>
             {% endfor %}
-        </table>
         </tbody>
-    </div>    
+        </table>
+        {% else %}
+        {# Země může mít medaile jen z jedné kategorie - SVK třeba na WMTBOC
+           jen ze štafet. Prázdný sloupec musí vypadat záměrně. #}
+        <p class="text-muted"><em>No {{ col }} medals for {{ country }}.</em></p>
+        {% endif %}
+    </div>
     {% endfor %}
 </div>
 {% endblock %}

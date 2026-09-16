@@ -1,4 +1,5 @@
 {% extends "default.html" %}
+{% from "macros.html" import medal_set %}
 {% block content %}
 <div class="container-fluid">
     <div class="row">
@@ -11,7 +12,7 @@
                     <th>Competitor</th>
                     <th></th>
                     <th>Completion</th>
-                    <th>Medals (G-S-B)</th>
+                    <th>Medals</th>
                     <th>Won Distances</th>
                     <th>Available Distances</th>
                 </tr>
@@ -38,7 +39,7 @@
                         ({{ results['won_distances']|length }}/{{ results['available_distances']|length }})
                     </td>
                     <td>
-                        {{ results['medals_str'] }}
+                        {{ medal_set(results['gold'], results['silver'], results['bronze']) }}
                     </td>
                     <td>
                         {{ results['won_distances']|sort|join(', ') }}
